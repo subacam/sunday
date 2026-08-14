@@ -1,0 +1,5 @@
+{
+  "redirects": [
+    { "source": "/", "destination": "/project-hub/", "permanent": false }
+  ]
+}

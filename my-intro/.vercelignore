@@ -1,0 +1,8 @@
+# 배포에서 뺄 것들. 여기 없는 파일은 전부 공개 주소로 접근 가능하다.
+# PRD.md · DESIGN.md는 일부러 남겨둔다 — 만든 이유를 보여주는 것이 이 사이트의 내용이다.
+
+# 에이전트 지시문과 로컬 경로가 담긴 설정
+.claude/
+CLAUDE.md
+day1/CLAUDE.md
+day2/CLAUDE.md

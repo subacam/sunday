@@ -13,7 +13,9 @@ Do not refactor toward shared assets across the two folders; the separation is i
 
 ## Tooling
 
-There is no build step, package manager, test suite, linter, or version control here — no `package.json`, no `.git`. Do not assume npm/node tooling exists, and do not run `git` commands unless the user initializes a repo first.
+There is no build step, package manager, test suite, or linter here — no `package.json`. Do not assume npm/node tooling exists.
+
+This **is** a git repository, and it is deployed to Vercel from GitHub: pushing the default branch publishes the site. Treat pushes as outward-facing.
 
 `node` happens to be installed on this machine but is **not** a project dependency. Its only use is ad-hoc syntax checking of inline scripts.
 
