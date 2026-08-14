@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LIFTOFF - 우리 동네, 다음 LIFTOFF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed": "#ffdbcc",
+                      "on-surface": "#251914",
+                      "tertiary": "#00668a",
+                      "error": "#ba1a1a",
+                      "inverse-on-surface": "#ffede6",
+                      "on-secondary-container": "#60587e",
+                      "surface-offwhite": "#FAF8F4",
+                      "on-error-container": "#93000a",
+                      "surface-container-high": "#fbe3da",
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed": "#c4e7ff",
+                      "surface-bright": "#fff8f6",
+                      "primary-container": "#f4732b",
+                      "secondary-container": "#dcd1fe",
+                      "on-primary-fixed-variant": "#7b2f00",
+                      "inverse-surface": "#3b2d27",
+                      "tertiary-container": "#00a4dd",
+                      "on-tertiary-fixed": "#001e2c",
+                      "surface-variant": "#f5ded5",
+                      "secondary-fixed-dim": "#cbc0ec",
+                      "on-tertiary-fixed-variant": "#004c69",
+                      "surface-dim": "#ecd5cc",
+                      "background": "#fff8f6",
+                      "on-tertiary-container": "#00354b",
+                      "on-primary-fixed": "#351000",
+                      "outline": "#8c7266",
+                      "tertiary-fixed-dim": "#7cd0ff",
+                      "primary": "#a14000",
+                      "on-surface-variant": "#584238",
+                      "secondary-fixed": "#e7deff",
+                      "surface-tint": "#a14000",
+                      "surface-container-low": "#fff1eb",
+                      "inverse-primary": "#ffb694",
+                      "outline-variant": "#dfc0b3",
+                      "on-secondary-fixed-variant": "#4a4166",
+                      "surface-container": "#ffeae1",
+                      "text-body": "#4A4A4A",
+                      "primary-fixed-dim": "#ffb694",
+                      "background-cream": "#FDF6EC",
+                      "on-error": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "surface": "#fff8f6",
+                      "on-secondary-fixed": "#1e1638",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "text-headline": "#1C1830",
+                      "on-primary-container": "#572000",
+                      "on-background": "#251914",
+                      "secondary": "#62597f",
+                      "surface-container-highest": "#f5ded5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "margin-mobile": "20px",
+                      "section-gap": "120px",
+                      "margin-desktop": "80px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Be Vietnam Pro"
+                      ],
+                      "label-bold": [
+                              "Be Vietnam Pro"
+                      ],
+                      "body-md": [
+                              "Be Vietnam Pro"
+                      ],
+                      "display-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "display-lg-mobile": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.7",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-bold": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "64px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "40px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "800"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .mesh-gradient-bg {
+            background: radial-gradient(circle at top left, #F4732B 0%, transparent 40%),
+                        radial-gradient(circle at bottom right, #C9BEEA 0%, transparent 50%),
+                        #FDF6EC;
+        }
+        .soft-shadow {
+            box-shadow: 0px 4px 20px rgba(28, 24, 48, 0.05);
+        }
+
+        /* 앵커 이동 시 고정 헤더에 제목이 가리지 않도록 */
+        html { scroll-behavior: smooth; }
+        section[id] { scroll-margin-top: 96px; }
+
+        /* 스크롤에 반응하는 헤더 */
+        #site-nav {
+            transition: background-color .3s ease, box-shadow .3s ease, border-color .3s ease;
+        }
+        #site-nav.is-scrolled {
+            background-color: rgba(255, 248, 246, 0.92);
+            box-shadow: 0px 4px 20px rgba(28, 24, 48, 0.08);
+        }
+
+        /* 모바일 메뉴 패널 */
+        #mobile-menu {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height .35s cubic-bezier(.2, .7, .3, 1), opacity .25s ease;
+        }
+        #mobile-menu.is-open { max-height: 320px; opacity: 1; }
+
+        /* 현재 섹션을 가리키는 내비 링크 밑줄 */
+        .nav-link { position: relative; }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; bottom: -6px;
+            height: 2px;
+            background: currentColor;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform .3s cubic-bezier(.2, .7, .3, 1);
+        }
+        .nav-link.is-active::after { transform: scaleX(1); }
+        .nav-link.is-active { color: #a14000; }
+
+        /* 스크롤 등장 애니메이션 (JS가 .reveal을 붙인다) */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity .7s cubic-bezier(.2, .7, .3, 1), transform .7s cubic-bezier(.2, .7, .3, 1);
+            transition-delay: var(--reveal-delay, 0ms);
+        }
+        .reveal.is-visible { opacity: 1; transform: none; }
+
+        /* 히어로 진입 애니메이션 */
+        .hero-in {
+            opacity: 0;
+            transform: translateY(28px);
+            animation: heroIn .9s cubic-bezier(.2, .7, .3, 1) forwards;
+            animation-delay: var(--hero-delay, 0ms);
+        }
+        @keyframes heroIn { to { opacity: 1; transform: none; } }
+
+        /* 누르는 감촉 + 키보드 포커스 링 */
+        button:active { transform: scale(.97) !important; }
+        a:focus-visible, button:focus-visible {
+            outline: 2px solid #a14000;
+            outline-offset: 3px;
+        }
+
+        /* 클릭 시 터지는 꽃잎 */
+        #petal-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .petal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 13px;
+            height: 13px;
+            /* 한쪽만 둥글려 잎사귀 모양을 만든다 */
+            border-radius: 50% 0 50% 0;
+            will-change: transform, opacity;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            .reveal, .hero-in {
+                opacity: 1 !important;
+                transform: none !important;
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+      </style>
+<!-- JS가 꺼져 있으면 스와이프 막이 화면을 덮은 채 남지 않도록 -->
+<noscript><style>#curve-swipe { display: none !important; }</style></noscript>
+</head>
+<body class="bg-background-cream text-on-surface font-body-md text-body-md antialiased overflow-x-hidden">
+<!-- Curve Swipe Overlay -->
+<div aria-hidden="true" class="fixed inset-0 z-[100] pointer-events-none" id="curve-swipe">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+<path d="M 100 0 H 0 Q 0 50 0 100 H 100 Z" fill="#f4732b" id="swipe-lead"></path>
+<path d="M 100 0 H 0 Q 0 50 0 100 H 100 Z" fill="#a14000" id="swipe-main"></path>
+</svg>
+</div>
+<!-- Petal Burst Layer -->
+<div aria-hidden="true" id="petal-layer"></div>
+<!-- TopNavBar -->
+<nav class="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant/20" id="site-nav">
+<div class="max-w-7xl mx-auto flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4">
+<a class="font-display-lg-mobile text-2xl md:text-display-lg-mobile text-primary tracking-tight font-extrabold" href="#top">
+            LIFTOFF
+        </a>
+<div class="hidden md:flex items-center gap-6">
+<a class="nav-link text-on-surface-variant font-medium hover:text-primary-container" href="#schedule">Schedule</a>
+<a class="nav-link text-on-surface-variant font-medium hover:text-primary-container" href="#guide">Guide</a>
+<a class="nav-link text-on-surface-variant font-medium hover:text-primary-container" href="#sponsors">Sponsors</a>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary text-on-primary font-label-bold text-label-bold px-6 py-2 rounded-full shadow-md">
+            Join
+        </button>
+<button aria-controls="mobile-menu" aria-expanded="false" aria-label="메뉴 열기" class="md:hidden flex items-center justify-center w-10 h-10 rounded-full text-on-surface-variant hover:bg-primary/10" id="menu-toggle" type="button">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+<div class="md:hidden" id="mobile-menu">
+<div class="flex flex-col px-margin-mobile pt-2 pb-4 border-t border-outline-variant/20">
+<a class="text-on-surface-variant font-medium py-3 hover:text-primary" href="#schedule">Schedule</a>
+<a class="text-on-surface-variant font-medium py-3 hover:text-primary" href="#guide">Guide</a>
+<a class="text-on-surface-variant font-medium py-3 hover:text-primary" href="#sponsors">Sponsors</a>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="min-h-screen mesh-gradient-bg flex items-center pt-32 pb-24 px-margin-mobile md:px-margin-desktop relative overflow-hidden" id="top">
+<div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-gutter items-center z-10">
+<!-- Hero Copy -->
+<div class="hero-in space-y-8 text-center lg:text-left" style="--hero-delay: 300ms">
+<div class="flex flex-wrap justify-center lg:justify-start gap-4">
+<span class="bg-primary/10 text-primary px-4 py-1 rounded-full font-label-bold text-label-bold">2024.11.15</span>
+<span class="bg-primary/10 text-primary px-4 py-1 rounded-full font-label-bold text-label-bold">서울 커뮤니티 센터</span>
+</div>
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-text-headline">
+                    우리 동네, 다음 LIFTOFF
+                </h1>
+<p class="font-body-lg text-body-lg text-text-body max-w-xl mx-auto lg:mx-0">
+                지역에서 시작된 아이디어가 무대에 오릅니다. 함께 새로운 시작을 축하하고 영감을 나누는 자리.
+            </p>
+<div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
+<button class="bg-primary text-on-primary px-8 py-3 rounded-full font-label-bold text-label-bold shadow-lg">참가 신청</button>
+<button class="border-2 border-primary text-primary px-8 py-3 rounded-full font-label-bold text-label-bold hover:bg-primary/5">일정 보기</button>
+</div>
+</div>
+<!-- Hero Visual -->
+<div class="hero-in relative mx-auto w-full max-w-md lg:max-w-none" style="--hero-delay: 460ms">
+<div class="absolute -inset-4 rounded-[32px] bg-primary-container/15 blur-2xl" aria-hidden="true"></div>
+<figure class="relative rounded-[24px] overflow-hidden soft-shadow shadow-2xl border border-outline-variant/30 bg-inverse-surface">
+<img class="w-full aspect-square object-cover" alt="별주(別廚) 로고 콘테스트 - 한옥 처마 위에 놓인 주황색 별주 로고 마크" src="별주%20(別廚)%20로고%20콘테스트.jpg"/>
+<figcaption class="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-t from-inverse-surface/90 to-transparent">
+<span class="font-headline-md text-lg text-inverse-on-surface">별주 別廚</span>
+<span class="font-label-bold text-label-bold text-primary-fixed-dim uppercase tracking-widest">Logo Contest</span>
+</figcaption>
+</figure>
+<span class="absolute -bottom-5 -left-3 md:-left-6 bg-surface-container-lowest text-primary font-label-bold text-label-bold px-5 py-3 rounded-full soft-shadow border border-outline-variant/30">
+                올해의 참여 브랜드
+            </span>
+</div>
+</div>
+</section>
+<!-- Introduction Section -->
+<section class="py-section-gap px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto" id="guide">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="bg-surface-lowest rounded-[20px] p-8 soft-shadow border border-outline-variant/30 flex flex-col items-start">
+<div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary-container text-2xl">rocket_launch</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-text-headline mb-4">왜 LIFTOFF인가</h3>
+<p class="font-body-md text-body-md text-text-body">
+                    지역 창작자와 스타트업이 한 자리에 모여 아이디어를 공유하고, 다음 단계로 도약할 수 있는 실질적인 기회를 제공합니다.
+                </p>
+</div>
+<div class="bg-surface-lowest rounded-[20px] p-8 soft-shadow border border-outline-variant/30 flex flex-col items-start">
+<div class="w-12 h-12 rounded-full bg-secondary-container/30 flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-secondary text-2xl">groups</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-text-headline mb-4">누구를 위한 자리인가</h3>
+<p class="font-body-md text-body-md text-text-body">
+                    새로운 프로젝트를 시작하려는 사람, 로컬 비즈니스 운영자, 그리고 지역 커뮤니티의 성장을 응원하는 모두를 환영합니다.
+                </p>
+</div>
+<div class="bg-surface-lowest rounded-[20px] p-8 soft-shadow border border-outline-variant/30 flex flex-col items-start">
+<div class="w-12 h-12 rounded-full bg-tertiary-container/20 flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-tertiary-container text-2xl">lightbulb</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-text-headline mb-4">무엇을 얻어가는가</h3>
+<p class="font-body-md text-body-md text-text-body">
+                    인사이트 넘치는 강연, 실무자 네트워킹, 그리고 아이디어를 현실로 만들어줄 멘토링 기회를 제공합니다.
+                </p>
+</div>
+</div>
+</section>
+<!-- Timetable Section -->
+<section class="py-section-gap bg-surface-container-low px-margin-mobile md:px-margin-desktop" id="schedule">
+<div class="max-w-4xl mx-auto">
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-text-headline text-center mb-12">
+                행사 일정
+            </h2>
+<div class="space-y-6">
+<!-- Session 1 -->
+<div class="flex flex-col md:flex-row gap-6 bg-surface-lowest rounded-[20px] p-6 soft-shadow border border-outline-variant/20">
+<div class="md:w-32 flex flex-col justify-center">
+<span class="font-headline-md text-headline-md text-primary">13:00</span>
+<span class="text-on-surface-variant font-label-bold text-label-bold uppercase">Opening</span>
+</div>
+<div class="flex-1 border-l-0 md:border-l-2 border-primary/20 md:pl-6">
+<h4 class="font-headline-md text-xl text-text-headline mb-2">키노트: 지역에서 시작하는 글로벌 비즈니스</h4>
+<p class="font-body-md text-body-md text-text-body">Liftoff 조직위원회 위원장의 환영사와 함께 행사의 막을 엽니다.</p>
+</div>
+</div>
+<!-- Session 2 -->
+<div class="flex flex-col md:flex-row gap-6 bg-surface-lowest rounded-[20px] p-6 soft-shadow border border-outline-variant/20">
+<div class="md:w-32 flex flex-col justify-center">
+<span class="font-headline-md text-headline-md text-primary">14:00</span>
+<span class="text-on-surface-variant font-label-bold text-label-bold uppercase">Session 1</span>
+</div>
+<div class="flex-1 border-l-0 md:border-l-2 border-primary/20 md:pl-6">
+<div class="flex gap-2 mb-2">
+<span class="bg-primary/10 text-primary px-3 py-0.5 rounded-full text-xs font-bold">Tech</span>
+</div>
+<h4 class="font-headline-md text-xl text-text-headline mb-2">로컬 커뮤니티 앱 개발기</h4>
+<p class="font-body-md text-body-md text-text-body">초기 유저 100명을 모으기까지의 고군분투 스토리.</p>
+</div>
+</div>
+<!-- Session 3 -->
+<div class="flex flex-col md:flex-row gap-6 bg-surface-lowest rounded-[20px] p-6 soft-shadow border border-outline-variant/20">
+<div class="md:w-32 flex flex-col justify-center">
+<span class="font-headline-md text-headline-md text-primary">15:30</span>
+<span class="text-on-surface-variant font-label-bold text-label-bold uppercase">Networking</span>
+</div>
+<div class="flex-1 border-l-0 md:border-l-2 border-primary/20 md:pl-6">
+<h4 class="font-headline-md text-xl text-text-headline mb-2">커피챗 및 휴식</h4>
+<p class="font-body-md text-body-md text-text-body">자유로운 분위기에서 연사 및 참가자들과 교류하세요.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Speakers/Teams Section -->
+<section class="py-section-gap px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto">
+<div class="text-center mb-16">
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-text-headline mb-4">
+                참여 팀
+            </h2>
+<p class="font-body-lg text-body-lg text-text-body">Liftoff 무대를 빛낼 멋진 팀들을 소개합니다.</p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Team 1 -->
+<div class="bg-surface-lowest rounded-[20px] p-6 soft-shadow border border-outline-variant/30 flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full bg-secondary-container mb-4 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean, minimalist logo of a modern startup featuring geometric shapes in warm orange and cream tones on a white background. High resolution, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUNLIm-Ei1h9njMvTYX095d7x1V6DJosdXNntvVTPzeQ0fnck_ltMf12t5a-zhrEieNHvKwOycugLpWxexO13qeuInn8OeWgp14plEQA5_3esQ5Xave95lpY2BcnMbeN5lr3MH3SwGuHsNnpXBSBCKvE9vwkNTt9gpoiphITErLaFA8bgZUfsVlZLWGCl0-eXSYRFL2jZ8OZkkybxOqFX_7mHMJ5ednY1Vb86qOgIFaTJA4Gn-feidRg"/>
+</div>
+<h4 class="font-headline-md text-xl text-text-headline mb-2">로컬릿 (LocalEat)</h4>
+<p class="font-body-sm text-sm text-text-body">동네 맛집 큐레이션 서비스</p>
+</div>
+<!-- Team 2 -->
+<div class="bg-surface-lowest rounded-[20px] p-6 soft-shadow border border-outline-variant/30 flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full bg-tertiary-container mb-4 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean, minimalist logo of an eco-friendly local startup featuring leaf motifs in soft teal and cream tones on a white background. High resolution, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKk-YHH1-tm2wJk_PrODDh8dJV1ic9qiSvuCIXSLJXtY63P2ofS9RpcQoAmCJTfHk5LS9w7Y8Ria-6yjbPGiSgGv2GX-PZJKAXvNa56SAnAPJ0iMGwN7TuOYMZYWxlAJSDQlfIUxNSWZ-e8D0dcO0YZry4sIRbISKQNI8slMBnExIYoF2rYbmA8DZquFDweD1JeEaRmHXUWbpwFCluIxpMEZb2L5KXVFUnEOveaD7-Wg1wHpyKVDCe3g"/>
+</div>
+<h4 class="font-headline-md text-xl text-text-headline mb-2">에코스테이</h4>
+<p class="font-body-sm text-sm text-text-body">친환경 로컬 숙박 플랫폼</p>
+</div>
+<!-- Team 3 -->
+<div class="bg-surface-lowest rounded-[20px] p-6 soft-shadow border border-outline-variant/30 flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full bg-primary-container/20 mb-4 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A bold, modern abstract logo for an art collective using vibrant mesh gradients and intersecting shapes. High resolution, bright and airy feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMO2ZUDKb0nWW5SPMhCJ3ibHrclTpSjGmwVmbx1SKnuaxyXq_Uu471J1x6Xz-a10ttyy7Zx-xSzk_3N-TsijoVJFi7tiV8ZB8WzOL8lJ_P9yKoWRyXUYSIIEneFViT7Za4deHqxEcfKU3ie2z-DJQA4yPXtSKIccONKMkg5llYVWZwOgOyOr1VL0XkqlMzB2avTkRcU0qaAD5xoQDKkKNf-yRjyyFEG3BlmdBSwdURHHmncnGEW4Cepw"/>
+</div>
+<h4 class="font-headline-md text-xl text-text-headline mb-2">아트워크 동네</h4>
+<p class="font-body-sm text-sm text-text-body">지역 아티스트 네트워킹</p>
+</div>
+<!-- Team 4 -->
+<div class="bg-surface-lowest rounded-[20px] p-6 soft-shadow border border-outline-variant/30 flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full bg-surface-variant mb-4 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A simple, friendly typographic logo for a tech community app, utilizing soft rounded sans-serif fonts in dark brown and orange. High resolution, modern casual." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAntxu3TO6JLZBt7jN8-acr2bMG4_ZkI70k3fznkujr5bsBELj_XwCoIimYN_ox3ISeSkmL3HM9eRo0z-7ag0UDdYFqKgD_I7hmM82_0r6QiRT6KQbW0bCQeQupGSDoyIgZXhRx7JTGQ1j4JWQs1uXcD0DLuVGCTXFayAEiDvt002G8NVzHhKPeCwZorGp8IQZ-WznKdLMBbDsi8OZcg7F9b5rz04MYcZ4PWlZ7fJeDj7vSZO32pUtbHw"/>
+</div>
+<h4 class="font-headline-md text-xl text-text-headline mb-2">동네코더</h4>
+<p class="font-body-sm text-sm text-text-body">주니어 개발자 모임</p>
+</div>
+</div>
+</section>
+<!-- Location Section -->
+<section class="py-section-gap px-margin-mobile md:px-margin-desktop bg-surface-container-low">
+<div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center">
+<div class="lg:w-1/2 w-full h-[400px] rounded-[20px] overflow-hidden soft-shadow bg-surface-variant relative">
+<img class="w-full h-full object-cover absolute inset-0" data-alt="A clear, modern stylized map view of Seoul showing a specific central community building marked with an orange pin. The map style is minimal, light mode, using cream, light brown, and soft orange colors." data-location="Seoul" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9ksyY0VvSNUj9l5PENkNxyCMajdxcmAGC2G779D2ErWGSUj2tNAdF3RiIKiwkPHqFp3bBvUbEvJk3LzzA_KmiZfPdITx58gmqRRjsPzrsUvAqzbFYneHLtqh_zVkpNNa_ax04Yy9EKRrHbscM099qpbSha1hEpz0guW8omrrSNw_KvM_757_Ksbxrg-MHgudrbGn8d64ORY7kp9CKSayKGjsITNusbrnf-9ZDMt9pV_BN_eUAoR8ebw"/>
+</div>
+<div class="lg:w-1/2 space-y-6">
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-text-headline">
+                    오시는 길
+                </h2>
+<div class="bg-surface-lowest rounded-[20px] p-8 soft-shadow border border-outline-variant/30">
+<div class="flex items-start gap-4 mb-4">
+<span class="material-symbols-outlined text-primary mt-1">location_on</span>
+<div>
+<h4 class="font-headline-md text-xl text-text-headline">서울 커뮤니티 센터 3층 메인홀</h4>
+<p class="font-body-md text-body-md text-text-body mt-1">서울특별시 마포구 월드컵로 10길 55</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary mt-1">directions_bus</span>
+<div>
+<h4 class="font-headline-md text-xl text-text-headline">대중교통</h4>
+<p class="font-body-md text-body-md text-text-body mt-1">지하철 6호선 망원역 2번 출구 도보 10분<br/>버스 7011, 271 정류장 앞</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Sponsors Section -->
+<section class="py-section-gap px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto text-center border-t border-outline-variant/20" id="sponsors">
+<div class="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale">
+<!-- Sponsor Logos placeholders -->
+<div class="h-12 w-32 bg-outline-variant/20 rounded"></div>
+<div class="h-12 w-40 bg-outline-variant/20 rounded"></div>
+<div class="h-12 w-32 bg-outline-variant/20 rounded"></div>
+<div class="h-12 w-28 bg-outline-variant/20 rounded"></div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="py-section-gap px-margin-mobile md:px-margin-desktop text-center mesh-gradient-bg">
+<div class="max-w-3xl mx-auto space-y-8 bg-surface-lowest/80 backdrop-blur-sm p-12 rounded-[20px] soft-shadow border border-outline-variant/20">
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-text-headline">
+                지금 바로 이륙 준비하세요
+            </h2>
+<p class="font-body-lg text-body-lg text-text-body mb-8">
+                LIFTOFF와 함께 새로운 여정을 시작할 준비가 되셨나요? 한정된 좌석이 빠르게 마감되고 있습니다.
+            </p>
+<button class="bg-primary text-on-primary px-10 py-4 rounded-full font-label-bold text-lg shadow-xl">
+                참가 신청하기
+            </button>
+</div>
+</section>
+<!-- Footer -->
+<footer class="w-full py-section-gap px-margin-mobile md:px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-8 bg-surface-container">
+<div class="font-headline-md text-headline-md text-primary">
+            LIFTOFF
+        </div>
+<div class="flex flex-wrap gap-6 text-center md:text-left">
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md" href="#">Terms of Service</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md" href="#">Contact Us</a>
+</div>
+<div class="text-on-surface-variant font-body-md text-body-md">
+            © 2024 LIFTOFF. All rights reserved.
+        </div>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+      (function () {
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* 1. 스크롤하면 헤더가 불투명해지고 그림자가 생긴다 */
+        var nav = document.getElementById('site-nav');
+        function syncNav() {
+          nav.classList.toggle('is-scrolled', window.scrollY > 8);
+        }
+        syncNav();
+        window.addEventListener('scroll', syncNav, { passive: true });
+
+        /* 2. 모바일 햄버거 메뉴 */
+        var toggle = document.getElementById('menu-toggle');
+        var menu = document.getElementById('mobile-menu');
+        var icon = toggle.querySelector('.material-symbols-outlined');
+
+        function setMenu(open) {
+          menu.classList.toggle('is-open', open);
+          toggle.setAttribute('aria-expanded', String(open));
+          toggle.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+          icon.textContent = open ? 'close' : 'menu';
+        }
+        toggle.addEventListener('click', function () {
+          setMenu(!menu.classList.contains('is-open'));
+        });
+        // 링크를 누르면 닫고, Esc로도 닫고, 데스크톱 폭이 되면 열린 채로 남지 않게 한다
+        menu.querySelectorAll('a').forEach(function (a) {
+          a.addEventListener('click', function () { setMenu(false); });
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') setMenu(false);
+        });
+        window.matchMedia('(min-width: 768px)').addEventListener('change', function (e) {
+          if (e.matches) setMenu(false);
+        });
+
+        /* 3. 화면에 들어오면 카드가 순서대로 떠오른다 */
+        if (!reduceMotion && 'IntersectionObserver' in window) {
+          var targets = new Set();
+          document.querySelectorAll('section:not(#top)').forEach(function (section) {
+            // .soft-shadow는 이 페이지의 모든 카드/행/이미지 박스에 이미 붙어 있다
+            section.querySelectorAll('h2, h2 + p, .soft-shadow').forEach(function (el) {
+              targets.add(el);
+            });
+          });
+          document.querySelectorAll('#sponsors > div').forEach(function (el) {
+            targets.add(el);
+          });
+
+          // 이미 대상인 요소 안에 들어 있는 건 빼준다 (부모와 겹쳐 두 번 페이드되는 걸 방지)
+          targets.forEach(function (el) {
+            for (var p = el.parentElement; p; p = p.parentElement) {
+              if (targets.has(p)) { targets.delete(el); return; }
+            }
+          });
+
+          var revealer = new IntersectionObserver(function (entries, obs) {
+            entries.forEach(function (entry) {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add('is-visible');
+              obs.unobserve(entry.target);
+            });
+          }, { threshold: 0.15, rootMargin: '0px 0px -10% 0px' });
+
+          targets.forEach(function (el) {
+            el.classList.add('reveal');
+            // 같은 부모 안에서의 순서만큼 지연을 줘 그리드가 차례로 올라오게 한다
+            var siblings = Array.prototype.filter.call(el.parentElement.children, function (c) {
+              return targets.has(c);
+            });
+            el.style.setProperty('--reveal-delay', Math.min(siblings.indexOf(el), 4) * 90 + 'ms');
+            revealer.observe(el);
+          });
+        }
+
+        /* 4. 보고 있는 섹션의 내비 링크에 밑줄이 그어진다 */
+        var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+        var sections = links
+          .map(function (a) { return document.querySelector(a.getAttribute('href')); })
+          .filter(Boolean);
+
+        if ('IntersectionObserver' in window && sections.length) {
+          var spy = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (!entry.isIntersecting) return;
+              links.forEach(function (a) {
+                var active = a.getAttribute('href') === '#' + entry.target.id;
+                a.classList.toggle('is-active', active);
+                if (active) {
+                  a.setAttribute('aria-current', 'true');
+                } else {
+                  a.removeAttribute('aria-current');
+                }
+              });
+            });
+          }, { rootMargin: '-45% 0px -50% 0px' });
+          sections.forEach(function (s) { spy.observe(s); });
+        }
+
+        /* 5. GSAP 커브 스와이프 전환 */
+        var overlay = document.getElementById('curve-swipe');
+        var hasGsap = typeof window.gsap !== 'undefined';
+
+        // 곡선의 최대 볼록량(뷰포트 폭의 %). 스와이프 중앙에서 가장 크게 휜다.
+        var BULGE = 22;
+        var layers = [
+          { el: document.getElementById('swipe-lead'), p: 0 },
+          { el: document.getElementById('swipe-main'), p: 0 }
+        ];
+        var phase = 'exit';   // 'enter' = 덮는 중, 'exit' = 걷히는 중
+        var sweeping = false;
+
+        // 진행도 p(0~1)로부터 곡선 가장자리를 가진 path를 만든다.
+        // 가장자리 x는 선형으로, 휨은 sin 곡선이라 중간에서 최대가 되고 양 끝에서 0이 된다.
+        function drawCurve() {
+          for (var i = 0; i < layers.length; i++) {
+            var l = layers[i];
+            var x = l.p * 100;
+            var c = Math.sin(l.p * Math.PI) * BULGE;
+            l.el.setAttribute('d', phase === 'enter'
+              ? 'M 0 0 H ' + x + ' Q ' + (x + c) + ' 50 ' + x + ' 100 H 0 Z'
+              : 'M 100 0 H ' + x + ' Q ' + (x + c) + ' 50 ' + x + ' 100 H 100 Z');
+          }
+        }
+
+        // 한 방향(덮기 또는 걷기) 스위프를 타임라인의 at 위치에 얹는다.
+        function addPhase(tl, dir, at) {
+          tl.call(function () {
+            phase = dir;
+            layers.forEach(function (l) { l.p = 0; });
+            drawCurve();
+          }, null, at);
+          layers.forEach(function (l, i) {
+            // 덮을 땐 밝은 층이 앞서고, 걷힐 땐 위에 덮인 진한 층이 먼저 빠진다
+            var lag = (dir === 'enter' ? i : layers.length - 1 - i) * 0.08;
+            tl.to(l, {
+              p: 1,
+              duration: 0.85,
+              ease: 'power3.inOut',
+              immediateRender: false
+            }, at + lag);
+          });
+        }
+
+        // 덮었다가 걷히는 왕복 스위프. 완전히 덮인 순간에 onCovered가 호출된다.
+        function sweep(onCovered, onDone) {
+          var COVERED_AT = 0.98;
+          var tl = gsap.timeline({
+            onUpdate: drawCurve,
+            onStart: function () { overlay.style.pointerEvents = 'auto'; },
+            onComplete: function () {
+              overlay.style.pointerEvents = 'none';
+              if (onDone) onDone();
+            }
+          });
+          addPhase(tl, 'enter', 0);
+          tl.call(function () { if (onCovered) onCovered(); }, null, COVERED_AT);
+          addPhase(tl, 'exit', COVERED_AT + 0.06);
+          return tl;
+        }
+
+        // 스무스 스크롤을 잠시 끄고 즉시 이동한다 (막에 가려진 동안 순간이동시키기 위해)
+        function jumpTo(target) {
+          var root = document.documentElement;
+          var prev = root.style.scrollBehavior;
+          root.style.scrollBehavior = 'auto';
+          target.scrollIntoView();
+          root.style.scrollBehavior = prev;
+        }
+
+        if (!hasGsap || reduceMotion) {
+          // GSAP 로드 실패나 모션 최소화 설정이면 막을 아예 치운다
+          overlay.style.display = 'none';
+        } else {
+          // 첫 진입: 덮인 상태에서 걷히기만 한다
+          var intro = gsap.timeline({ onUpdate: drawCurve });
+          addPhase(intro, 'exit', 0.15);
+        }
+
+        document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+          link.addEventListener('click', function (e) {
+            var hash = link.getAttribute('href');
+            if (hash === '#') return;
+            var target = document.querySelector(hash);
+            if (!target) return;
+
+            e.preventDefault();
+            setMenu(false);
+
+            if (!hasGsap || reduceMotion) {
+              target.scrollIntoView();
+              return;
+            }
+            if (sweeping) return;
+            sweeping = true;
+            sweep(
+              function () { jumpTo(target); },
+              function () { sweeping = false; }
+            );
+          });
+        });
+
+        /* 6. 클릭하면 꽃잎이 터진다 */
+        var petalLayer = document.getElementById('petal-layer');
+        var PETAL_COLORS = ['#f4732b', '#a14000', '#ffb694', '#ffdbcc', '#e7deff'];
+        var MAX_PETALS = 120;
+        var livePetals = 0;
+
+        function burst(cx, cy) {
+          var count = 10 + Math.floor(Math.random() * 4);
+          if (livePetals + count > MAX_PETALS) return;
+          livePetals += count;
+
+          for (var i = 0; i < count; i++) {
+            var el = document.createElement('span');
+            el.className = 'petal';
+            el.style.background = PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)];
+            petalLayer.appendChild(el);
+
+            // 방사형으로 고르게 퍼뜨리되 각도에 흔들림을 줘 기계적으로 보이지 않게 한다
+            var angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.7;
+            var dist = 70 + Math.random() * 110;
+            var dur = 0.9 + Math.random() * 0.6;
+
+            gsap.set(el, { x: cx, y: cy, scale: 0, rotation: Math.random() * 360 });
+
+            gsap.to(el, {
+              x: cx + Math.cos(angle) * dist,
+              y: cy + Math.sin(angle) * dist + 55,   // 아래로 처지게 해 중력 느낌을 준다
+              rotation: '+=' + (200 + Math.random() * 400),
+              duration: dur,
+              ease: 'power2.out',
+              onComplete: function (node) {
+                node.remove();
+                livePetals--;
+              },
+              onCompleteParams: [el]
+            });
+            // 튀어나오는 순간의 팝
+            gsap.to(el, {
+              scale: 0.5 + Math.random() * 0.7,
+              duration: 0.28,
+              ease: 'back.out(2.5)'
+            });
+            // 날아가다 후반에 사라진다
+            gsap.to(el, {
+              opacity: 0,
+              duration: dur * 0.5,
+              delay: dur * 0.5,
+              ease: 'power1.in'
+            });
+          }
+        }
+
+        if (hasGsap && !reduceMotion) {
+          var lastPointerType = 'mouse';
+          document.addEventListener('pointerdown', function (e) {
+            lastPointerType = e.pointerType;
+            // 터치는 스크롤 시작과 구분되지 않으므로 아래 click에서 처리한다
+            if (e.pointerType === 'touch' || e.button !== 0) return;
+            burst(e.clientX, e.clientY);
+          });
+          document.addEventListener('click', function (e) {
+            if (lastPointerType !== 'touch') return;
+            burst(e.clientX, e.clientY);
+          });
+        }
+      })();
+    </script>
+</body></html>

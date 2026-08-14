@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCHIVE — 아카이브</title>
+<meta name="description" content="만든 것과 그렇게 만든 이유를 모아둔 작업 보관소.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- JS가 꺼져 있으면 인트로에 갇히지 않도록 리스트를 바로 보여준다 -->
+<noscript><style>
+  #intro { display: none !important; }
+  #list { display: block !important; }
+</style></noscript>
+<style>
+  /* ──────────────────────────────────────────────────────────
+     :root는 DESIGN.md 프론트매터를 미러링한다.
+     토큰을 바꾸려면 DESIGN.md와 이 블록을 함께 고칠 것.
+     ────────────────────────────────────────────────────────── */
+  :root {
+    /* colors — 보랏빛 다크 */
+    --canvas: #0B0714;
+    --canvas-deep: #070510;
+    --surface: rgba(255, 255, 255, 0.055);
+    --surface-strong: rgba(255, 255, 255, 0.09);
+    --ink: #F4F1FB;
+    --ink-secondary: #C9C3DE;
+    --muted: #9B93B4;
+    --hairline: rgba(255, 255, 255, 0.10);
+    --hairline-strong: rgba(255, 255, 255, 0.26);
+    --accent: #A78BFA;
+    --accent-deep: #7C5CFC;
+    --on-accent: #0B0714;
+    --on-ink: #0B0714;
+    --overlay: rgba(7, 5, 16, 0.72);
+
+    /* 배경 광원 — 인트로와 리스트가 같은 빛을 공유한다 */
+    --glow-1: #7C3AED;
+    --glow-2: #C026D3;
+    --glow-3: #4338CA;
+
+    /* 표면 결. 넓은 그라디언트의 띠 현상을 덮는다 */
+    --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+    /* typography — 단일 서체. 폴백 없이 Pretendard만 두지 말 것 */
+    --font: Pretendard, -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    --fs-display-xl: 40px;
+    --fs-display-lg: 32px;
+    --fs-number: 44px;
+    --fs-heading-1: 24px;
+    --fs-heading-2: 22px;
+    --fs-body-lg: 18px;
+    --fs-body: 16px;
+    --fs-body-sm: 14px;
+    --fs-caption: 13px;
+    --fs-label: 12px;
+
+    /* rounded — 상한 4px */
+    --rounded-none: 0;
+    --rounded-xs: 2px;
+    --rounded-sm: 4px;
+
+    /* spacing */
+    --sp-xxs: 4px;
+    --sp-xs: 8px;
+    --sp-sm: 12px;
+    --sp-md: 16px;
+    --sp-lg: 24px;
+    --sp-xl: 32px;
+    --sp-xxl: 48px;
+    --sp-section: 80px;
+    --sp-section-lg: 120px;
+
+    /* elevation */
+    --elevation-glass: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+    --elevation-modal: 0 48px 120px -32px rgba(0, 0, 0, 0.85);
+
+    /* motion */
+    --dur-fast: 200ms;
+    --dur-base: 400ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* layout */
+    --container: 1120px;
+    --header-h: 93px;
+  }
+
+  @media (min-width: 640px) {
+    :root {
+      --fs-display-xl: 56px;
+      --fs-display-lg: 40px;
+      --fs-number: 52px;
+      --fs-heading-1: 28px;
+    }
+  }
+  @media (min-width: 1024px) {
+    :root {
+      --fs-display-xl: 88px;
+      --fs-display-lg: 56px;
+      --fs-number: 60px;
+      --fs-heading-1: 32px;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* 여러 컴포넌트가 display를 직접 지정하므로 !important가 필요하다.
+     이게 없으면 hidden 처리한 요소가 그대로 보인다. */
+  [hidden] { display: none !important; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, p, dl, dd, figure { margin: 0; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: var(--rounded-xs);
+  }
+
+  .container {
+    max-width: var(--container);
+    margin: 0 auto;
+    padding-left: var(--sp-lg);
+    padding-right: var(--sp-lg);
+  }
+  @media (min-width: 640px) {
+    .container { padding-left: var(--sp-xl); padding-right: var(--sp-xl); }
+  }
+
+  /* ── 배경 광원 · 노이즈 (인트로 · 리스트 공용) ─────────────
+     원을 border-radius로 그리면 「모서리 4px 초과 금지」에 걸린다.
+     radial-gradient로 그리면 규칙을 건드리지 않고 같은 결과를 얻는다. */
+  .blob {
+    position: absolute;
+    width: 62vmax;
+    height: 62vmax;
+    filter: blur(70px);
+    will-change: transform;
+  }
+  .blob-1 {
+    top: -22%; left: -14%;
+    background: radial-gradient(circle at center, var(--glow-1) 0%, transparent 66%);
+    opacity: 0.5;
+  }
+  .blob-2 {
+    top: 6%; right: -20%;
+    background: radial-gradient(circle at center, var(--glow-2) 0%, transparent 64%);
+    opacity: 0.36;
+  }
+  .blob-3 {
+    bottom: -30%; left: 16%;
+    background: radial-gradient(circle at center, var(--glow-3) 0%, transparent 68%);
+    opacity: 0.5;
+  }
+
+  .noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.055;
+    pointer-events: none;
+    background-image: var(--noise);
+    background-size: 200px 200px;
+  }
+
+  /* ── 인트로 (FR-1) ───────────────────────────────────────── */
+  #intro {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--sp-section-lg) var(--sp-lg);
+    background: var(--canvas);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .intro-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .intro-content { position: relative; }
+
+  /* 마스크 리빌 — 줄을 감싼 틀이 넘치는 부분을 자르고, 안쪽 줄이
+     아래에서 올라온다. 아래 여백은 g·y 같은 글자가 잘리지 않게 두고
+     같은 값만큼 당겨 레이아웃을 되돌린다 */
+  .line-mask {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
+  }
+  .line { display: block; }
+
+  .intro-title {
+    font-size: var(--fs-display-xl);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .intro-ko {
+    margin-top: var(--sp-sm);
+    color: var(--muted);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.4em;
+    text-indent: 0.4em;
+  }
+  .intro-sub {
+    margin-top: var(--sp-lg);
+    max-width: 30em;
+    font-size: var(--fs-body-lg);
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .intro-enter {
+    margin-top: var(--sp-xxl);
+    min-height: 44px;
+    padding: var(--sp-md) var(--sp-xl);
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--rounded-sm);
+    font-family: inherit;
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: background-color var(--dur-fast) linear,
+                border-color var(--dur-fast) linear,
+                color var(--dur-fast) linear;
+  }
+  .intro-enter:hover { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+  .intro-enter:active { background: var(--ink-secondary); color: var(--on-ink); }
+
+  /* FR-1.4 — 3초간 조작이 없으면 다음 행동을 유도한다. 크기는 바꾸지 않는다 */
+  .intro-enter.is-nudging { animation: nudge 2s ease-in-out infinite; }
+  @keyframes nudge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  .intro-hint {
+    margin-top: var(--sp-md);
+    color: var(--muted);
+    font-size: var(--fs-caption);
+  }
+
+  /* ── 화면 전환 (FR-2) ────────────────────────────────────
+     떠나는 화면만 뷰포트에 고정해 위로 겹친다. 남는 화면은 흐름에
+     그대로 두므로 안쪽의 고정 헤더가 기준을 잃지 않는다. */
+  .screen-over {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+  }
+
+  /* ── 리스트 (FR-3) ───────────────────────────────────────── */
+  #list {
+    position: relative;
+    min-height: 100vh;
+    isolation: isolate;
+  }
+  .list-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--canvas);
+  }
+  .list-bg .blob { filter: blur(90px); }
+  .list-bg .blob-1 { opacity: 0.34; }
+  .list-bg .blob-2 { opacity: 0.22; }
+  .list-bg .blob-3 { opacity: 0.32; }
+
+  /* 헤더 — 유리 */
+  .list-header {
+    position: fixed;
+    top: 0;
+    inset-inline: 0;
+    z-index: 50;
+    background: rgba(11, 7, 20, 0.55);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .list-header .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-md);
+    padding-top: var(--sp-lg);
+    padding-bottom: var(--sp-lg);
+  }
+  .header-logo {
+    background: none;
+    border: 0;
+    padding: var(--sp-xxs) 0;
+    min-height: 44px;
+    font-family: inherit;
+    font-size: var(--fs-body);
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .header-contact {
+    color: var(--muted);
+    font-size: var(--fs-caption);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    transition: color var(--dur-fast) linear;
+  }
+  .header-contact:hover { color: var(--accent); }
+
+  .list-main { padding-top: calc(var(--header-h) + var(--sp-section)); }
+
+  .list-intro { margin-bottom: var(--sp-xxl); }
+  .list-title {
+    font-size: var(--fs-display-lg);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+  .list-count {
+    margin-top: var(--sp-sm);
+    color: var(--muted);
+    font-size: var(--fs-caption);
+    letter-spacing: 0.12em;
+  }
+
+  .project-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--sp-xl);
+    padding-bottom: var(--sp-section);
+  }
+  /* 2열 고정. 열을 늘리면 작품이 상품이 된다 */
+  @media (min-width: 1024px) {
+    .project-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* 두 겹으로 나눈 이유: 바깥은 둥실거림(y), 안쪽은 마우스 기울기.
+     한 요소에 둘을 걸면 서로 transform을 덮어쓴다 */
+  .card-float {
+    perspective: 1100px;
+    will-change: transform;
+  }
+
+  /* 카드 — 반투명 유리 */
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: var(--sp-xl);
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-sm);
+    box-shadow: var(--elevation-glass);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    cursor: pointer;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: border-color var(--dur-fast) linear,
+                background-color var(--dur-fast) linear;
+  }
+  /* 유리 윗면에 얹히는 빛. 유리처럼 보이게 하는 것은 이 한 줄이다 */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.14) 0%, transparent 42%);
+  }
+  .card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: var(--noise);
+    background-size: 200px 200px;
+  }
+  .card:hover {
+    border-color: var(--hairline-strong);
+    background: var(--surface-strong);
+  }
+
+  .card-number {
+    font-size: var(--fs-number);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+  }
+  .card-rule {
+    height: 1px;
+    margin: var(--sp-lg) 0;
+    background: var(--hairline);
+  }
+  .card-title {
+    font-size: var(--fs-heading-1);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .card-subtitle {
+    margin-top: var(--sp-xs);
+    color: var(--muted);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+  }
+  .card-tagline {
+    margin-top: var(--sp-md);
+    color: var(--ink-secondary);
+    font-size: var(--fs-body-sm);
+    line-height: 1.7;
+  }
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs);
+    margin-top: var(--sp-lg);
+    padding-top: var(--sp-lg);
+    border-top: 1px solid var(--hairline);
+  }
+  .stack-tag {
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-xs);
+    padding: var(--sp-xxs) var(--sp-xs);
+    color: var(--muted);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+
+  .list-footer {
+    border-top: 1px solid var(--hairline);
+    color: var(--muted);
+    font-size: var(--fs-caption);
+  }
+  .list-footer .container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-sm) var(--sp-lg);
+    justify-content: space-between;
+    padding-top: var(--sp-xxl);
+    padding-bottom: var(--sp-xxl);
+  }
+
+  /* ── 모달 (FR-5) ─────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: var(--overlay);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: var(--sp-lg);
+    overflow-y: auto;
+    opacity: 0;
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+  .modal-overlay.is-open { opacity: 1; }
+
+  .modal-panel {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    margin: auto;
+    background: rgba(20, 14, 34, 0.86);
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-sm);
+    box-shadow: var(--elevation-modal);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    padding: var(--sp-lg);
+    transform: translateY(16px);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .modal-overlay.is-open .modal-panel { transform: none; }
+  @media (min-width: 640px) {
+    .modal-panel { padding: var(--sp-xxl); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: var(--sp-lg);
+    right: var(--sp-lg);
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--sp-sm);
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-sm);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: border-color var(--dur-fast) linear;
+  }
+  .modal-close:hover { border-color: var(--hairline-strong); }
+
+  .modal-number {
+    display: block;
+    font-size: var(--fs-number);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+  }
+  .modal-title {
+    margin-top: var(--sp-md);
+    padding-right: 64px;
+    font-size: var(--fs-display-lg);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+  .modal-subtitle {
+    margin-top: var(--sp-xs);
+    color: var(--muted);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+  }
+
+  .modal-thumb {
+    margin-top: var(--sp-xl);
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-sm);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+  }
+  .modal-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .modal-thumb--fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-xs);
+    color: var(--muted);
+    text-align: center;
+    padding: var(--sp-lg);
+  }
+  .modal-thumb--fallback .thumb-no {
+    font-size: var(--fs-number);
+    font-weight: 400;
+    line-height: 1;
+    color: var(--hairline-strong);
+  }
+  .modal-thumb--fallback .thumb-name {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+
+  .modal-meta {
+    margin-top: var(--sp-xl);
+    border-top: 1px solid var(--hairline);
+  }
+  .modal-meta > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs) var(--sp-lg);
+    padding: var(--sp-sm) 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: var(--fs-caption);
+    color: var(--muted);
+  }
+  .modal-meta dt {
+    flex: 0 0 5.5em;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    color: var(--ink);
+  }
+  .modal-meta dd { margin: 0; flex: 1 1 12em; }
+
+  .study { margin-top: var(--sp-xl); }
+  .study-heading {
+    font-size: var(--fs-heading-2);
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  .study-body {
+    margin-top: var(--sp-sm);
+    color: var(--ink-secondary);
+    font-size: var(--fs-body-lg);
+    line-height: 1.7;
+  }
+  .study-highlights { margin-top: var(--sp-md); }
+  /* 불릿 대신 왼쪽 포인트 선. 색이 면이 아니라 선으로 등장한다 */
+  .study-highlights li {
+    border-left: 2px solid var(--accent);
+    padding: var(--sp-sm) 0 var(--sp-sm) var(--sp-md);
+    color: var(--ink-secondary);
+    font-size: var(--fs-body);
+  }
+  .study-highlights li + li { margin-top: var(--sp-sm); }
+
+  .modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-sm);
+    margin-top: var(--sp-xxl);
+    padding-top: var(--sp-lg);
+    border-top: 1px solid var(--hairline);
+  }
+  .btn-primary, .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--sp-md) var(--sp-xl);
+    border-radius: var(--rounded-sm);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) linear,
+                border-color var(--dur-fast) linear,
+                color var(--dur-fast) linear;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--on-ink);
+    border: 1px solid var(--ink);
+  }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--hairline-strong);
+  }
+  .btn-secondary:hover { border-color: var(--ink); }
+
+  /* ── 축소 모션 (FR-7.6) ──────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .modal-panel, .modal-overlay, .intro-enter.is-nudging {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- 인트로 (FR-1) -->
+<section id="intro">
+  <div class="intro-bg" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+    <span class="noise"></span>
+  </div>
+
+  <div class="intro-content">
+    <h1 class="intro-title"><span class="line-mask"><span class="line">ARCHIVE</span></span></h1>
+    <p class="intro-ko"><span class="line-mask"><span class="line">아카이브</span></span></p>
+    <p class="intro-sub">
+      <span class="line-mask"><span class="line">만든 것과, 그렇게 만든 이유를</span></span>
+      <span class="line-mask"><span class="line">모아둔 작업 보관소.</span></span>
+    </p>
+    <div class="intro-actions">
+      <button type="button" id="enter-btn" class="intro-enter">PRESS ENTER</button>
+      <p class="intro-hint">엔터를 누르거나 아래로 스크롤하세요</p>
+    </div>
+  </div>
+</section>
+
+<!-- 리스트 (FR-3) -->
+<div id="list" hidden>
+  <div class="list-bg" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+    <span class="noise"></span>
+  </div>
+
+  <header class="list-header">
+    <div class="container">
+      <button type="button" id="logo-btn" class="header-logo">ARCHIVE</button>
+      <a class="header-contact" href="mailto:emj2994@gmail.com">emj2994@gmail.com</a>
+    </div>
+  </header>
+
+  <main class="list-main">
+    <div class="container">
+      <div class="list-intro">
+        <h2 class="list-title">Projects</h2>
+        <p class="list-count" id="project-count"></p>
+      </div>
+      <div class="project-grid" id="project-grid"></div>
+    </div>
+  </main>
+
+  <footer class="list-footer">
+    <div class="container">
+      <span>© 2026 JYS</span>
+      <span>my-intro / day5</span>
+    </div>
+  </footer>
+</div>
+
+<!-- 상세 모달 (FR-5) -->
+<div class="modal-overlay" id="modal" hidden>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title" id="modal-panel">
+    <button type="button" class="modal-close" id="modal-close" aria-label="닫기">CLOSE</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ──────────────────────────────────────────────────────────
+     프로젝트 데이터. 이 배열만 고치면 카드가 늘고 준다.
+     (day1/fortune.html의 FORTUNES 배열과 같은 패턴)
+     ────────────────────────────────────────────────────────── */
+  var PROJECTS = [
+    {
+      id: 'exam',
+      no: '01',
+      title: '모의고사 연습장',
+      subtitle: 'Answer Sheet',
+      tagline: '내 기출문제를 넣으면 시험지가 되고, 틀린 문제는 저절로 오답노트가 되는 개인 연습장',
+      period: '2026.08',
+      role: '기획 · 디자인 · 개발 전체',
+      stack: ['HTML', 'CSS', 'JavaScript', 'localStorage'],
+      thumb: 'thumbs/01.jpg',
+      liveUrl: '../day2/index.html',
+      sourceUrl: null,
+      study: {
+        problem: '자격증 기출 PDF는 확보했는데 반복해서 풀 방법이 없었다. 시중 문제은행에는 원하는 자격증이 없거나, 있어도 내가 가진 자료를 넣을 수 없었다.',
+        approach: '문제 콘텐츠는 사용자가 소유하고, 앱은 출제·채점·오답 추적만 담당하도록 역할을 갈랐다. 계정도 서버도 두지 않았다.',
+        highlights: [
+          '이미지를 문제별 개별 키로 저장해 localStorage 항목당 5MB 한도를 우회했다. 문제 배열에 인라인하면 이미지 몇 개만에 저장이 깨진다.',
+          '오답노트를 연속 2회 정답 시 자동 제외로 설계했다. 1회는 우연히 맞을 수 있고, 3회는 노트가 비워지지 않는다.',
+          '샌드박스 환경에서 confirm·prompt가 차단되면 화면이 멈춘 것처럼 보여, Promise 기반 다이얼로그로 전부 대체했다.'
+        ],
+        result: 'PRD와 디자인 토큰 문서를 먼저 쓰고 구현한 유일한 프로젝트다. 브라우저 저장소의 물리적 한계가 데이터 모델을 결정한다는 것을 배웠다. PDF 자동 추출은 API 키를 둘 곳이 없어 의도적으로 남겨두고, 그 사실을 문서에 명시했다.'
+      }
+    },
+    {
+      id: 'arirang',
+      no: '02',
+      title: '아리랑시네센터',
+      subtitle: '성북구 공립영화관',
+      tagline: '국내 최초 공립영화관을 동네 극장의 언어로 소개하는 랜딩 페이지',
+      period: '2026.08',
+      role: '정보 구조 · 디자인 · 개발',
+      stack: ['HTML', 'CSS', 'JavaScript'],
+      thumb: 'thumbs/02.jpg',
+      liveUrl: '../day4/index.html',
+      sourceUrl: null,
+      study: {
+        problem: '실존하는 공공기관을 소개해야 했다. 공공기관 페이지는 정보를 나열하다 딱딱해지기 쉬운데, 정작 전하고 싶은 것은 "가까운 동네 극장"이라는 감각이었다.',
+        approach: '기관 소개가 아니라 "이런 곳입니다"라는 성격 서술을 축으로 잡았다. 개관 연도·상영관 수·독립영화전용관 같은 숫자를 앞세워 신뢰를 주고, 예매처럼 자주 바뀌는 정보는 공식 홈페이지로 넘겼다.',
+        highlights: [
+          '상영 시간표와 예매를 페이지에 담지 않고 공식 홈페이지로 연결했다. 정적 페이지가 감당할 수 없는 정보를 떠안지 않기 위해서다.',
+          '의존성 없이 단일 HTML 13.5KB로 완결했다.'
+        ],
+        result: '실제로 존재하는 대상을 다룰 때는 무엇을 싣지 않을지 정하는 일이 먼저라는 것을 배웠다.'
+      }
+    },
+    {
+      id: 'liftoff',
+      no: '03',
+      title: 'LIFTOFF',
+      subtitle: '지역 창작자 행사 랜딩',
+      tagline: '인터랙션을 가장 깊게 다뤄본 페이지',
+      period: '2026.08',
+      role: '디자인 · 인터랙션 · 개발',
+      stack: ['HTML', 'Tailwind CSS', 'JavaScript', 'GSAP'],
+      thumb: 'thumbs/03.jpg',
+      liveUrl: '../day3/landing%20page.html',
+      sourceUrl: null,
+      study: {
+        problem: '행사 랜딩에 움직임을 넣되, 장식으로 겉돌지 않고 읽는 흐름을 도와야 했다. 초기 버전은 고정 헤더의 가장자리가 화면 중간에서 잘려 보이고, 모바일에는 내비게이션이 아예 없었다.',
+        approach: '움직임을 세 층으로 나눴다. 진입(커브 스와이프), 스크롤 반응(헤더 상태 변화·카드 등장), 입력 피드백. 각 층이 서로 다른 목적을 갖게 했다.',
+        highlights: [
+          'position: fixed 요소에 mx-auto가 먹지 않아 헤더가 왼쪽에 붙고 오른쪽이 잘려 있었다. 고정 레이어와 콘텐츠 컨테이너를 분리해 해결했다.',
+          '커브 스와이프는 진행도 p 하나만 트윈하고, 가장자리 x = p×100 · 휨 = sin(p×π)×22로 SVG path를 매 프레임 재생성한다. 값 하나로 위치와 곡률이 동시에 결정된다.',
+          '스크롤 등장 효과는 JS가 클래스를 부여하는 방식이라 스크립트가 실패해도 콘텐츠가 사라지지 않는다. 터치 기기에서는 hover 확대가 손을 떼도 남아 @media (hover: none)으로 껐다.'
+        ],
+        result: '애니메이션에서 정작 시간이 드는 것은 효과 자체가 아니라 실패했을 때의 상태를 설계하는 일이었다. 막이 걷히지 않으면 페이지 전체가 잠긴다.'
+      }
+    },
+    {
+      id: 'fortune',
+      no: '04',
+      title: '오늘의 운세',
+      subtitle: "Today's Fortune",
+      tagline: '카드 한 장을 뽑으면 오늘의 메시지가 열리는 작은 페이지',
+      period: '2026.08',
+      role: '기획 · 디자인 · 개발 전체',
+      stack: ['HTML', 'CSS', 'JavaScript'],
+      thumb: 'thumbs/04.jpg',
+      liveUrl: '../day1/fortune.html',
+      sourceUrl: null,
+      study: {
+        problem: '사용자가 "무언가 했다"는 감각을 남기는 작은 인터랙션을 만들어보고 싶었다. 결과를 그냥 보여주면 읽고 끝이지만, 직접 고르게 하면 그 결과가 자기 것이 된다.',
+        approach: '뽑기라는 최소 단위의 선택을 넣었다. 카드를 고르면 행운의 색·숫자·키워드가 열리고, 다시 뽑을 수 있다.',
+        highlights: [
+          '운세 데이터를 FORTUNES 배열 하나로 모으고 나머지는 전부 프레젠테이션으로 뒀다. 데이터와 표현의 분리를 처음 의식적으로 적용한 코드다.',
+          '외부 의존성 없이 CSS·JS를 모두 인라인해 파일 하나로 완결했다.'
+        ],
+        result: '이 배열 구조가 마음에 들어 ARCHIVE의 PROJECTS 배열도 같은 방식으로 설계했다.'
+      }
+    }
+  ];
+
+  var MAX_STACK_TAGS = 5;   /* FR-4.4 */
+  var LINE_STAGGER = 0.12;  /* DESIGN.md motion.stagger-line */
+  var CARD_STAGGER = 0.1;   /* DESIGN.md motion.stagger-card */
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hasGsap = typeof window.gsap !== 'undefined';
+  var canHover = window.matchMedia('(hover: hover)').matches;
+
+  var intro = document.getElementById('intro');
+  var list = document.getElementById('list');
+  var grid = document.getElementById('project-grid');
+  var modal = document.getElementById('modal');
+  var modalPanel = document.getElementById('modal-panel');
+  var modalContent = document.getElementById('modal-content');
+  var modalClose = document.getElementById('modal-close');
+  var enterBtn = document.getElementById('enter-btn');
+  var logoBtn = document.getElementById('logo-btn');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ══ 카드 렌더링 (FR-3, FR-4) ═══════════════════════════════
+     카드는 스크린샷이 아니라 타이포로 프로젝트를 미리 보여준다.
+     스크린샷은 상세 모달에서 크게 본다. */
+
+  function renderCards() {
+    document.getElementById('project-count').textContent = PROJECTS.length + ' PROJECTS';
+
+    PROJECTS.forEach(function (p) {
+      var wrap = document.createElement('div');
+      wrap.className = 'card-float';
+
+      var card = document.createElement('article');
+      card.className = 'card';
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-labelledby', 'card-title-' + p.id);
+      card.dataset.id = p.id;
+
+      var tags = p.stack.slice(0, MAX_STACK_TAGS).map(function (s) {
+        return '<li class="stack-tag">' + esc(s) + '</li>';
+      }).join('');
+
+      card.innerHTML =
+        '<span class="card-number">' + esc(p.no) + '</span>' +
+        '<div class="card-rule"></div>' +
+        '<h3 class="card-title" id="card-title-' + p.id + '">' + esc(p.title) + '</h3>' +
+        '<p class="card-subtitle">' + esc(p.subtitle) + '</p>' +
+        '<p class="card-tagline">' + esc(p.tagline) + '</p>' +
+        '<ul class="stack">' + tags + '</ul>';
+
+      card.addEventListener('click', function () { openModal(p.id, card); });
+      card.addEventListener('keydown', function (e) {
+        /* FR-4.2 — Enter와 Space로 열린다 */
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          openModal(p.id, card);
+        }
+      });
+
+      wrap.appendChild(card);
+      grid.appendChild(wrap);
+    });
+  }
+
+  /* ══ 인트로 연출 ═══════════════════════════════════════════
+     초기 상태를 CSS가 아니라 JS로만 숨긴다 —
+     스크립트가 실패해도 제목이 사라지지 않는다. */
+
+  var blobsStarted = false;
+
+  function playIntro() {
+    if (!hasGsap || reduceMotion) return;
+
+    if (!blobsStarted) {
+      blobsStarted = true;
+      /* 주기를 일부러 어긋나게 잡아 같은 배열로 되돌아오지 않게 한다 */
+      var drift = [
+        { x: 90, y: -60, s: 1.12, d: 21 },
+        { x: -110, y: 70, s: 1.18, d: 27 },
+        { x: 70, y: 90, s: 1.09, d: 24 }
+      ];
+      document.querySelectorAll('.blob').forEach(function (blob, i) {
+        var f = drift[i % 3];
+        gsap.to(blob, {
+          x: f.x, y: f.y, scale: f.s,
+          duration: f.d,
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true
+        });
+      });
+    }
+
+    var lines = document.querySelectorAll('#intro .line');
+    gsap.set(lines, { yPercent: 110 });
+    gsap.to(lines, {
+      yPercent: 0,
+      duration: 1.05,
+      ease: 'power4.out',
+      stagger: LINE_STAGGER,
+      delay: 0.15
+    });
+
+    var actions = document.querySelector('.intro-actions');
+    gsap.set(actions, { autoAlpha: 0, y: 12 });
+    gsap.to(actions, {
+      autoAlpha: 1, y: 0,
+      duration: 0.7,
+      ease: 'power2.out',
+      delay: 0.15 + LINE_STAGGER * lines.length + 0.35
+    });
+  }
+
+  /* ══ 카드 부유 + 마우스 반응 ═══════════════════════════════
+     바깥 .card-float은 둥실거림(y), 안쪽 .card는 마우스 기울기.
+     한 요소에 둘을 걸면 서로 transform을 덮어쓴다. */
+
+  var floatTweens = [];
+  var tilters = [];
+
+  function startFloat() {
+    if (!hasGsap || reduceMotion || floatTweens.length) return;
+
+    document.querySelectorAll('.card-float').forEach(function (el, i) {
+      floatTweens.push(gsap.to(el, {
+        y: 9 + i * 2.5,
+        duration: 3.4 + i * 0.8,   /* 주기를 어긋나게 — 넷이 함께 오르내리면 기계처럼 보인다 */
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+        delay: i * 0.35
+      }));
+    });
+  }
+
+  function stopFloat() {
+    floatTweens.forEach(function (t) { t.kill(); });
+    floatTweens = [];
+    if (hasGsap) gsap.set('.card-float', { clearProps: 'transform' });
+  }
+
+  function initTilt() {
+    /* 터치 기기는 제외한다 — 포인터가 없으면 기울일 기준도 없다 */
+    if (!hasGsap || reduceMotion || !canHover || tilters.length) return;
+
+    document.querySelectorAll('.card').forEach(function (card, i) {
+      tilters.push({
+        ry: gsap.quickTo(card, 'rotationY', { duration: 0.8, ease: 'power3' }),
+        rx: gsap.quickTo(card, 'rotationX', { duration: 0.8, ease: 'power3' }),
+        tx: gsap.quickTo(card, 'x', { duration: 0.8, ease: 'power3' }),
+        depth: 1 + (i % 2) * 0.35
+      });
+    });
+
+    list.addEventListener('mousemove', function (e) {
+      var nx = (e.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
+      var ny = (e.clientY - window.innerHeight / 2) / (window.innerHeight / 2);
+      tilters.forEach(function (t) {
+        t.ry(nx * 3.2 * t.depth);
+        t.rx(-ny * 2.4 * t.depth);
+        t.tx(nx * 5 * t.depth);
+      });
+    });
+
+    list.addEventListener('mouseleave', function () {
+      tilters.forEach(function (t) { t.ry(0); t.rx(0); t.tx(0); });
+    });
+  }
+
+  /* ══ 화면 전환 (FR-2) ══════════════════════════════════════
+     떠나는 인트로만 뷰포트에 고정해 위로 겹치고, 물러나며 흐려진다.
+     리스트는 아주 살짝 확대된 상태에서 제자리를 찾고 카드가 차례로
+     떠오른다. expo.out은 초반에 빠르고 끝이 길어 급하지 않게 멎는다. */
+
+  var animating = false;
+
+  function jumpTop() {
+    var root = document.documentElement;
+    var prev = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 0);
+    root.style.scrollBehavior = prev;
+  }
+
+  function goToList(after) {
+    if (animating) return;
+
+    list.hidden = false;
+    syncHeaderHeight();   /* hidden 상태에서는 높이가 0으로 측정된다 */
+    jumpTop();
+
+    var settle = function () {
+      intro.hidden = true;
+      intro.classList.remove('screen-over');
+      if (hasGsap) {
+        gsap.set(intro, { clearProps: 'all' });
+        gsap.set(list, { clearProps: 'transform,opacity' });
+        gsap.set('.card-float', { clearProps: 'opacity' });
+      }
+      jumpTop();
+      logoBtn.focus({ preventScroll: true });
+      startFloat();
+      initTilt();
+      if (after) after();
+    };
+
+    /* FR-2.5 / FR-2.7 — GSAP이 없거나 모션 최소화면 전환 없이 즉시 교체한다 */
+    if (!hasGsap || reduceMotion) { settle(); return; }
+
+    animating = true;
+    intro.classList.add('screen-over');
+
+    var tl = gsap.timeline({
+      onComplete: function () { animating = false; settle(); }
+    });
+    tl.to(intro, { opacity: 0, scale: 1.06, duration: 0.8, ease: 'power2.in' }, 0)
+      .fromTo(list,
+        { opacity: 0, scale: 1.03 },
+        { opacity: 1, scale: 1, duration: 1.2, ease: 'expo.out' }, 0.25)
+      .fromTo('.card-float',
+        { opacity: 0, y: 54 },
+        { opacity: 1, y: 0, duration: 1.3, ease: 'expo.out', stagger: CARD_STAGGER }, 0.4);
+  }
+
+  function goToIntro() {
+    if (animating) return;
+
+    intro.hidden = false;
+    jumpTop();
+
+    var settle = function () {
+      list.hidden = true;
+      intro.classList.remove('screen-over');
+      if (hasGsap) {
+        gsap.set(intro, { clearProps: 'all' });
+        gsap.set(list, { clearProps: 'transform,opacity' });
+      }
+      jumpTop();
+      wheelBlockedUntil = Date.now() + 700;
+      enterBtn.focus({ preventScroll: true });
+      playIntro();        /* 돌아왔을 때도 줄이 다시 올라온다 */
+    };
+
+    if (!hasGsap || reduceMotion) { settle(); return; }
+
+    stopFloat();
+    animating = true;
+    intro.classList.add('screen-over');
+
+    var tl = gsap.timeline({
+      onComplete: function () { animating = false; settle(); }
+    });
+    tl.to(list, { opacity: 0, scale: 1.02, duration: 0.6, ease: 'power2.in' }, 0)
+      .fromTo(intro,
+        { opacity: 0, scale: 1.04 },
+        { opacity: 1, scale: 1, duration: 1.0, ease: 'expo.out' }, 0.15);
+  }
+
+  var entered = false;
+  function enterList() {
+    if (entered || animating) return;
+    entered = true;
+    stopNudge();
+    goToList();
+  }
+  function backToIntro() {
+    if (!entered || animating) return;
+    entered = false;
+    goToIntro();
+  }
+
+  /* FR-1.2 — 엔터 키 · 클릭 · 스크롤 세 가지 모두로 진입한다 */
+  enterBtn.addEventListener('click', enterList);
+  logoBtn.addEventListener('click', backToIntro);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !modal.hidden) { closeModal(); return; }
+    if (e.key === 'Enter' && !intro.hidden && document.activeElement !== enterBtn) {
+      enterList();
+    }
+  });
+
+  /* 인트로로 돌아온 직후에는 스크롤 관성 때문에 곧바로 되튕길 수 있어 잠시 막는다 */
+  var wheelBlockedUntil = 0;
+
+  window.addEventListener('wheel', function (e) {
+    if (Date.now() < wheelBlockedUntil) return;
+    if (!intro.hidden && e.deltaY > 0) enterList();
+  }, { passive: true });
+
+  var touchStartY = null;
+  window.addEventListener('touchstart', function (e) {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  window.addEventListener('touchmove', function (e) {
+    if (intro.hidden || touchStartY === null) return;
+    if (touchStartY - e.touches[0].clientY > 40) enterList();
+  }, { passive: true });
+
+  /* FR-1.4 — 3초간 조작이 없으면 다음 행동을 유도한다 */
+  var nudgeTimer = setTimeout(function () {
+    if (!intro.hidden) enterBtn.classList.add('is-nudging');
+  }, 3000);
+  function stopNudge() {
+    clearTimeout(nudgeTimer);
+    enterBtn.classList.remove('is-nudging');
+  }
+
+  /* ══ 모달 (FR-5, FR-6) ═════════════════════════════════════ */
+
+  var lastFocused = null;
+  var savedScrollY = 0;
+  var closing = false;
+
+  function thumbHtml(p) {
+    if (p.thumb) {
+      return '<div class="modal-thumb"><img src="' + esc(p.thumb) +
+             '" alt="' + esc(p.title) + ' 화면" loading="lazy" decoding="async"></div>';
+    }
+    /* FR-4.3 — 빈 영역을 남기지 않는다 */
+    return '<div class="modal-thumb modal-thumb--fallback" aria-hidden="true">' +
+             '<span class="thumb-no">' + esc(p.no) + '</span>' +
+             '<span class="thumb-name">' + esc(p.title) + '</span>' +
+           '</div>';
+  }
+
+  function metaRow(term, value) {
+    return '<div><dt>' + esc(term) + '</dt><dd>' + esc(value) + '</dd></div>';
+  }
+
+  function studyBlock(heading, body) {
+    if (!body) return '';
+    return '<section class="study"><h3 class="study-heading">' + esc(heading) +
+           '</h3><p class="study-body">' + esc(body) + '</p></section>';
+  }
+
+  function buildModal(p) {
+    var s = p.study;
+
+    /* FR-5.6 — 구현 포인트가 없으면 블록 자체를 렌더링하지 않는다 */
+    var highlights = '';
+    if (s.highlights && s.highlights.length) {
+      highlights =
+        '<section class="study"><h3 class="study-heading">구현 포인트</h3>' +
+        '<ul class="study-highlights">' +
+        s.highlights.map(function (h) { return '<li>' + esc(h) + '</li>'; }).join('') +
+        '</ul></section>';
+    }
+
+    /* FR-6.3 — 소스 링크가 없으면 버튼을 만들지 않는다 */
+    var actions = '<a class="btn-primary" href="' + esc(p.liveUrl) +
+                  '" target="_blank" rel="noopener">라이브 보기</a>';
+    if (p.sourceUrl) {
+      actions += '<a class="btn-secondary" href="' + esc(p.sourceUrl) +
+                 '" target="_blank" rel="noopener">소스 보기</a>';
+    }
+
+    return '<span class="modal-number">' + esc(p.no) + '</span>' +
+           '<h2 class="modal-title" id="modal-title">' + esc(p.title) + '</h2>' +
+           '<p class="modal-subtitle">' + esc(p.subtitle) + '</p>' +
+           thumbHtml(p) +
+           '<dl class="modal-meta">' +
+             metaRow('기간', p.period) +
+             metaRow('역할', p.role) +
+             metaRow('스택', p.stack.join(' · ')) +
+           '</dl>' +
+           studyBlock('문제', s.problem) +
+           studyBlock('접근', s.approach) +
+           highlights +
+           studyBlock('결과 / 배운 점', s.result) +
+           '<div class="modal-actions">' + actions + '</div>';
+  }
+
+  function openModal(id, trigger) {
+    var p = PROJECTS.filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+
+    lastFocused = trigger || document.activeElement;
+    modalContent.innerHTML = buildModal(p);
+
+    /* FR-5.2 — 배경 스크롤을 잠그되 위치를 기억해 닫을 때 복원한다 */
+    savedScrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = -savedScrollY + 'px';
+    document.body.style.width = '100%';
+
+    modal.hidden = false;
+    void modal.offsetWidth;          /* 트랜지션을 태우기 위한 강제 리플로우 */
+    modal.classList.add('is-open');
+    modalClose.focus();
+  }
+
+  function closeModal() {
+    /* 사라지는 동안 ESC나 배경 클릭이 또 들어와 두 번 닫히는 것을 막는다 */
+    if (modal.hidden || closing) return;
+    closing = true;
+    modal.classList.remove('is-open');
+
+    var finish = function () {
+      modal.hidden = true;
+      modalContent.innerHTML = '';
+
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, savedScrollY);
+
+      /* FR-5.3 — 직전에 클릭했던 카드로 포커스를 되돌린다 */
+      if (lastFocused && document.contains(lastFocused)) {
+        lastFocused.focus({ preventScroll: true });
+      }
+      lastFocused = null;
+      closing = false;
+    };
+
+    if (reduceMotion) { finish(); return; }
+    setTimeout(finish, 400);
+  }
+
+  modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();   /* 배경 클릭 */
+  });
+
+  /* FR-5.3 — Tab 순환을 모달 안에 가둔다 */
+  modalPanel.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab') return;
+    var focusable = modalPanel.querySelectorAll('a[href], button, [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  /* ══ 시작 ══════════════════════════════════════════════════ */
+
+  /* 헤더 높이를 실측해 본문 상단 여백에 반영한다.
+     글꼴 로드나 폭 변화로 높이가 달라져도 콘텐츠가 헤더에 가리지 않는다 */
+  function syncHeaderHeight() {
+    var header = document.querySelector('.list-header');
+    if (!header) return;
+    var h = header.offsetHeight;
+    if (h > 0) document.documentElement.style.setProperty('--header-h', h + 'px');
+  }
+  window.addEventListener('resize', syncHeaderHeight);
+  window.addEventListener('load', syncHeaderHeight);
+
+  renderCards();
+  playIntro();
+})();
+</script>
+</body>
+</html>

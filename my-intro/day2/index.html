@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모의고사 연습장</title>
+<meta name="description" content="내 기출문제를 넣으면 시험지가 되고, 틀린 문제는 저절로 오답노트가 되는 개인 연습장">
+<style>
+/* ===========================================================
+   모의고사 연습장 — DESIGN.md 토큰 구현
+   색상 / 타이포 / 간격 / 컴포넌트는 DESIGN.md를 그대로 따른다.
+   DESIGN.md에 없는 앱 전용 토큰은 "확장" 표시를 달아 분리했다.
+   =========================================================== */
+
+/* ---------- colors ---------- */
+:root {
+  --c-primary: #00ed64;
+  --c-primary-deep: #00b545;
+  --c-primary-pressed: #008c34;
+  --c-on-primary: #001e2b;
+  --c-brand-green: #00ed64;
+  --c-brand-green-dark: #00684a;
+  --c-brand-green-mid: #00a35c;
+  --c-brand-green-soft: #c3f0d2;
+  --c-brand-teal-deep: #001e2b;
+  --c-brand-teal: #003d4f;
+  --c-brand-teal-mid: #00684a;
+  --c-accent-purple: #7b3ff2;
+  --c-accent-orange: #fa6e39;
+  --c-accent-pink: #f06bb8;
+  --c-accent-blue: #3d4f9f;
+  --c-warning-bg: #fff8e0;
+  --c-warning-text: #946f3f;
+  --c-canvas: #ffffff;
+  --c-canvas-dark: #001e2b;
+  --c-surface: #f9fbfa;
+  --c-surface-soft: #f4f7f6;
+  --c-surface-feature: #e3fcef;
+  --c-hairline: #e1e5e8;
+  --c-hairline-soft: #eceff1;
+  --c-hairline-strong: #c1ccd6;
+  --c-hairline-dark: #1c2d38;
+  --c-ink: #001e2b;
+  --c-charcoal: #1c2d38;
+  --c-slate: #3d4f5b;
+  --c-steel: #5c6c7a;
+  --c-stone: #7c8c9a;
+  --c-muted: #a8b3bc;
+  --c-on-dark: #ffffff;
+  --c-on-dark-muted: #a8b3bc;
+
+  /* 확장: DESIGN.md에 success/error 시맨틱이 없어 팔레트 안에서 파생함.
+     정답 = brand-green 계열, 오답 = accent-orange (팔레트 밖 색을 새로 만들지 않음).
+     색만으로 구분하지 않도록 항상 텍스트 라벨을 함께 쓴다. */
+  --c-correct: var(--c-brand-green-dark);
+  --c-correct-bg: var(--c-brand-green-soft);
+  --c-wrong: #c2410c;
+  --c-wrong-mark: var(--c-accent-orange);
+  --c-wrong-bg: #ffece3;
+}
+
+/* ---------- rounded ---------- */
+:root {
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-xxl: 24px;
+  --r-full: 9999px;
+}
+
+/* ---------- spacing ---------- */
+:root {
+  --sp-xxs: 4px;
+  --sp-xs: 8px;
+  --sp-sm: 12px;
+  --sp-md: 16px;
+  --sp-lg: 20px;
+  --sp-xl: 24px;
+  --sp-xxl: 32px;
+  --sp-xxxl: 40px;
+  --sp-section-sm: 48px;
+  --sp-section: 64px;
+  --sp-section-lg: 96px;
+  --sp-hero: 120px;
+}
+
+/* ---------- elevation ---------- */
+:root {
+  --el-1: rgba(0, 30, 43, 0.04) 0px 1px 2px 0px;
+  --el-2: rgba(0, 30, 43, 0.08) 0px 4px 12px 0px;
+  --el-3: rgba(0, 30, 43, 0.12) 0px 12px 24px -4px;
+  --el-4: rgba(0, 30, 43, 0.16) 0px 16px 48px -8px;
+}
+
+/* ---------- typography ----------
+   Euclid Circular A는 상용 서체이고 한글 글리프가 없다.
+   외부 의존성 없이 쓰기 위해 로컬 우선 + 한글 폴백 스택으로 둔다. */
+:root {
+  --font-display: "Euclid Circular A", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", Roboto, sans-serif;
+  --font-code: "Source Code Pro", "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+/* 아래 컴포넌트들이 display를 직접 지정하므로 UA의 [hidden] 규칙을 이긴다.
+   hidden 속성으로 토글하는 요소가 많아 전역에서 못박아 둔다. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-canvas);
+  color: var(--c-ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 타이포 스케일 (DESIGN.md typography 토큰) */
+.t-hero-display  { font-size: 72px; font-weight: 500; line-height: 1.10; letter-spacing: -1.5px; }
+.t-display-lg    { font-size: 56px; font-weight: 500; line-height: 1.15; letter-spacing: -1px; }
+.t-h1            { font-size: 48px; font-weight: 500; line-height: 1.20; letter-spacing: -0.5px; }
+.t-h2            { font-size: 36px; font-weight: 500; line-height: 1.25; letter-spacing: -0.5px; }
+.t-h3            { font-size: 28px; font-weight: 500; line-height: 1.30; }
+.t-h4            { font-size: 22px; font-weight: 500; line-height: 1.35; }
+.t-h5            { font-size: 18px; font-weight: 600; line-height: 1.40; }
+.t-subtitle      { font-size: 18px; font-weight: 400; line-height: 1.50; }
+.t-body          { font-size: 16px; font-weight: 400; line-height: 1.55; }
+.t-body-medium   { font-size: 16px; font-weight: 500; line-height: 1.55; }
+.t-body-sm       { font-size: 14px; font-weight: 400; line-height: 1.50; }
+.t-body-sm-med   { font-size: 14px; font-weight: 500; line-height: 1.50; }
+.t-caption       { font-size: 13px; font-weight: 400; line-height: 1.40; }
+.t-caption-bold  { font-size: 13px; font-weight: 600; line-height: 1.40; }
+.t-micro         { font-size: 12px; font-weight: 500; line-height: 1.40; }
+.t-eyebrow       { font-size: 11px; font-weight: 600; line-height: 1.40; letter-spacing: 1px; text-transform: uppercase; }
+.t-code          { font-family: var(--font-code); font-size: 14px; font-weight: 400; line-height: 1.55; }
+
+h1, h2, h3, h4, h5 { margin: 0; font-weight: 500; }
+
+/* 색 유틸 */
+.c-steel  { color: var(--c-steel); }
+.c-slate  { color: var(--c-slate); }
+.c-stone  { color: var(--c-stone); }
+.c-muted  { color: var(--c-muted); }
+.c-green  { color: var(--c-brand-green-dark); }
+
+/* ===========================================================
+   레이아웃
+   =========================================================== */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--sp-xxl);
+}
+/* 응시·등록처럼 밀도가 필요한 화면은 좁은 컨테이너를 쓴다 */
+.container-narrow { max-width: 860px; }
+
+/* promo-banner */
+.promo-banner {
+  background: var(--c-brand-teal-deep);
+  color: var(--c-on-dark);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.50;
+  padding: var(--sp-sm) var(--sp-md);
+  text-align: center;
+}
+.promo-banner strong { color: var(--c-brand-green); font-weight: 600; }
+
+/* top navigation */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--c-canvas);
+  border-bottom: 1px solid var(--c-hairline);
+}
+.topnav-inner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xl);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--c-ink);
+  flex: none;
+}
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  background: var(--c-brand-teal-deep);
+  color: var(--c-brand-green);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.nav-tabs {
+  display: flex;
+  gap: var(--sp-xs);
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-right { display: flex; align-items: center; gap: var(--sp-sm); flex: none; }
+
+/* ===========================================================
+   components — buttons (DESIGN.md)
+   =========================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-xs);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.30;
+  border: 1px solid transparent;
+  border-radius: var(--r-full);
+  padding: 10px 22px;
+  min-height: 44px;           /* 접근성: WCAG 2.5.5 터치 영역 */
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.btn:disabled { cursor: not-allowed; }
+
+.btn-primary { background: var(--c-brand-green); color: var(--c-on-primary); }
+.btn-primary:active { background: var(--c-primary-pressed); }
+.btn-primary:disabled { background: var(--c-hairline); color: var(--c-muted); }
+
+.btn-secondary { background: transparent; color: var(--c-ink); border-color: var(--c-hairline-strong); }
+.btn-secondary:active { background: var(--c-surface-soft); }
+.btn-secondary:disabled { color: var(--c-muted); border-color: var(--c-hairline); }
+
+.btn-on-dark { background: var(--c-brand-green); color: var(--c-on-primary); }
+.btn-on-dark:active { background: var(--c-primary-pressed); }
+
+.btn-secondary-on-dark { background: transparent; color: var(--c-on-dark); border-color: var(--c-hairline-dark); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--c-ink);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+}
+.btn-ghost:active { background: var(--c-surface-soft); }
+
+.btn-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  color: var(--c-brand-green-dark);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-link:active { color: var(--c-primary-pressed); }
+
+.btn-sm { padding: 6px 14px; min-height: 36px; font-size: 13px; }
+.btn-danger { color: var(--c-wrong); border-color: var(--c-hairline-strong); background: transparent; }
+.btn-block { width: 100%; }
+
+/* focus는 전 컴포넌트 공통 */
+:focus-visible {
+  outline: 2px solid var(--c-brand-green-dark);
+  outline-offset: 2px;
+}
+
+/* ===========================================================
+   components — cards
+   =========================================================== */
+.card-base {
+  background: var(--c-canvas);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xl);
+}
+.card-feature {
+  background: var(--c-canvas);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xxl);
+}
+.card-feature-dark {
+  background: var(--c-brand-teal-deep);
+  color: var(--c-on-dark);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xxl);
+}
+.why-card {
+  background: var(--c-surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xl);
+}
+.card-elevated { box-shadow: var(--el-2); }
+
+/* ===========================================================
+   components — inputs
+   =========================================================== */
+.field { display: block; }
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.40;
+  color: var(--c-slate);
+  margin-bottom: var(--sp-xxs);
+}
+.text-input {
+  width: 100%;
+  background: var(--c-canvas);
+  color: var(--c-ink);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.55;
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm) var(--sp-md);
+  height: 44px;
+  transition: border-color 150ms ease;
+}
+textarea.text-input { height: auto; min-height: 180px; resize: vertical; line-height: 1.6; }
+select.text-input { appearance: none; padding-right: var(--sp-xxl); }
+.text-input:focus {
+  outline: none;
+  border: 2px solid var(--c-brand-green-dark);
+  padding: calc(var(--sp-sm) - 1px) calc(var(--sp-md) - 1px);
+}
+.text-input::placeholder { color: var(--c-muted); }
+
+.search-pill {
+  width: 100%;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-family: inherit;
+  font-size: 16px;
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm) var(--sp-md);
+  height: 44px;
+}
+.search-pill::placeholder { color: var(--c-steel); }
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--sp-md);
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  min-height: 44px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.check-row input { width: 18px; height: 18px; accent-color: var(--c-brand-green-dark); }
+
+/* ===========================================================
+   components — tabs
+   =========================================================== */
+.pill-tab {
+  background: transparent;
+  color: var(--c-steel);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.50;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-full);
+  padding: var(--sp-xs) var(--sp-md);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.pill-tab[aria-selected="true"] {
+  background: var(--c-ink);
+  color: var(--c-on-dark);
+  border-color: var(--c-ink);
+}
+
+.segmented {
+  display: flex;
+  gap: var(--sp-lg);
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: var(--sp-xl);
+  overflow-x: auto;
+}
+.segmented-tab {
+  background: transparent;
+  color: var(--c-steel);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  min-height: 44px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.segmented-tab[aria-selected="true"] {
+  color: var(--c-brand-green-dark);
+  border-bottom-color: var(--c-brand-green-dark);
+}
+
+/* ===========================================================
+   components — badges
+   =========================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.40;
+  border-radius: var(--r-sm);
+  padding: 2px 8px;
+}
+.badge-green      { background: var(--c-brand-green); color: var(--c-on-primary); }
+.badge-green-soft { background: var(--c-brand-green-soft); color: var(--c-brand-green-dark); border-radius: var(--r-full); padding: 4px 10px; }
+.badge-purple     { background: var(--c-accent-purple); color: var(--c-on-dark); }
+.badge-orange     { background: var(--c-accent-orange); color: var(--c-on-dark); }
+.badge-popular    { background: var(--c-brand-teal-deep); color: var(--c-brand-green); border-radius: var(--r-full); padding: 4px 10px; }
+.badge-outline    { background: transparent; color: var(--c-steel); border: 1px solid var(--c-hairline); border-radius: var(--r-full); padding: 3px 9px; }
+.badge-warning    { background: var(--c-warning-bg); color: var(--c-warning-text); border-radius: var(--r-full); padding: 4px 10px; }
+
+/* 탭 옆 카운트 배지 */
+.count-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: var(--c-brand-green-soft);
+  color: var(--c-brand-green-dark);
+  font-size: 12px;
+  font-weight: 600;
+}
+.pill-tab[aria-selected="true"] .count-badge {
+  background: var(--c-brand-green);
+  color: var(--c-on-primary);
+}
+
+/* ===========================================================
+   hero / cta / footer (signature)
+   =========================================================== */
+.hero-band-dark {
+  background: var(--c-brand-teal-deep);
+  color: var(--c-on-dark);
+  padding: var(--sp-hero) 0;
+  background-image: radial-gradient(120% 90% at 50% 0%, #003d4f 0%, #001e2b 62%);
+}
+.hero-inner { text-align: center; max-width: 780px; margin: 0 auto; }
+.hero-inner h1 { color: var(--c-on-dark); margin-bottom: var(--sp-lg); }
+.hero-sub { color: var(--c-on-dark-muted); margin: 0 0 var(--sp-xxl); }
+.hero-actions { display: flex; gap: var(--sp-sm); justify-content: center; flex-wrap: wrap; }
+
+.cta-banner-dark {
+  background: var(--c-brand-teal-deep);
+  color: var(--c-on-dark);
+  border-radius: var(--r-lg);
+  padding: var(--sp-section);
+  text-align: center;
+}
+
+.footer-region {
+  background: var(--c-brand-teal-deep);
+  color: var(--c-on-dark);
+  padding: var(--sp-section) var(--sp-xxl);
+  margin-top: var(--sp-section-lg);
+}
+.footer-grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--sp-xxl);
+}
+.footer-col h4 { font-size: 14px; font-weight: 500; color: var(--c-on-dark); margin-bottom: var(--sp-sm); }
+.footer-link {
+  display: block;
+  color: var(--c-on-dark-muted);
+  font-size: 14px;
+  padding: var(--sp-xxs) 0;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.footer-note {
+  max-width: 1280px;
+  margin: var(--sp-xxl) auto 0;
+  padding-top: var(--sp-lg);
+  border-top: 1px solid var(--c-hairline-dark);
+  color: var(--c-on-dark-muted);
+  font-size: 13px;
+}
+
+/* code mockup */
+.code-mockup-card {
+  background: var(--c-canvas-dark);
+  color: var(--c-on-dark);
+  border-radius: var(--r-lg);
+  padding: var(--sp-lg);
+  box-shadow: var(--el-3);
+  border: 1px solid var(--c-hairline-dark);
+  text-align: left;
+  overflow-x: auto;
+}
+.code-mockup-card pre { margin: 0; }
+.code-dot-row { display: flex; gap: 6px; margin-bottom: var(--sp-sm); }
+.code-dot { width: 10px; height: 10px; border-radius: var(--r-full); background: var(--c-hairline-dark); }
+
+/* ===========================================================
+   앱 화면 공통
+   =========================================================== */
+main { min-height: 60vh; }
+.view { display: none; }
+.view.is-active { display: block; }
+
+.section { padding: var(--sp-section-sm) 0; }
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-xl);
+}
+.section-head p { margin: var(--sp-xxs) 0 0; }
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--sp-md);
+}
+
+.empty-state {
+  border: 1px dashed var(--c-hairline-strong);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xxxl) var(--sp-xl);
+  text-align: center;
+  color: var(--c-steel);
+  background: var(--c-surface);
+}
+.empty-state p { margin: 0 0 var(--sp-lg); }
+
+.stack > * + * { margin-top: var(--sp-md); }
+.stack-lg > * + * { margin-top: var(--sp-xl); }
+.row { display: flex; gap: var(--sp-xs); flex-wrap: wrap; align-items: center; }
+.row-end { justify-content: flex-end; }
+.spacer { flex: 1; }
+
+/* 시험 카드 */
+.exam-card { display: flex; flex-direction: column; gap: var(--sp-sm); }
+.exam-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-sm); }
+.exam-meta { display: flex; gap: var(--sp-md); flex-wrap: wrap; color: var(--c-steel); font-size: 13px; }
+.exam-score {
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--c-ink);
+}
+.exam-score small { font-size: 14px; font-weight: 400; color: var(--c-steel); }
+
+/* ===========================================================
+   응시 화면
+   =========================================================== */
+.quiz-bar {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  background: var(--c-canvas);
+  border-bottom: 1px solid var(--c-hairline);
+  padding: var(--sp-sm) 0;
+}
+.quiz-bar-inner { display: flex; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
+.timer {
+  font-family: var(--font-code);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--c-ink);
+  padding: 4px 12px;
+  border-radius: var(--r-full);
+  background: var(--c-surface-soft);
+  border: 1px solid var(--c-hairline);
+}
+.timer.is-urgent {
+  color: var(--c-on-dark);
+  background: var(--c-accent-orange);
+  border-color: var(--c-accent-orange);
+}
+
+.progress-track {
+  flex: 1;
+  min-width: 120px;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--c-hairline-soft);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--c-brand-green);
+  border-radius: var(--r-full);
+  transition: width 200ms ease;
+}
+
+.question-card {
+  background: var(--c-canvas);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xxl);
+  box-shadow: var(--el-2);
+}
+.question-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-md);
+}
+.question-no {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-brand-green-dark);
+  letter-spacing: 1px;
+}
+.question-stem {
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 0 0 var(--sp-xl);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.question-image {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-hairline);
+  margin-bottom: var(--sp-xl);
+}
+
+/* 선지 마킹 버튼 — 확장 컴포넌트 */
+.choice-list { display: flex; flex-direction: column; gap: var(--sp-xs); }
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--c-ink);
+  background: var(--c-canvas);
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm) var(--sp-md);
+  min-height: 44px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.choice-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--c-hairline-strong);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-steel);
+  background: var(--c-canvas);
+}
+.choice-text { flex: 1; word-break: break-word; }
+
+.choice[aria-pressed="true"] {
+  border-color: var(--c-brand-green-dark);
+  background: var(--c-surface-feature);
+}
+.choice[aria-pressed="true"] .choice-mark {
+  background: var(--c-brand-green-dark);
+  border-color: var(--c-brand-green-dark);
+  color: var(--c-on-dark);
+}
+.choice:disabled { cursor: default; }
+
+/* 채점 표시 — 색 + 텍스트 라벨 병기 */
+.choice.is-correct {
+  border-color: var(--c-correct);
+  background: var(--c-correct-bg);
+}
+.choice.is-correct .choice-mark { background: var(--c-correct); border-color: var(--c-correct); color: var(--c-on-dark); }
+.choice.is-wrong {
+  border-color: var(--c-wrong-mark);
+  background: var(--c-wrong-bg);
+}
+.choice.is-wrong .choice-mark { background: var(--c-wrong-mark); border-color: var(--c-wrong-mark); color: var(--c-on-dark); }
+.choice-tag {
+  flex: none;
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+}
+.choice.is-correct .choice-tag { background: var(--c-correct); color: var(--c-on-dark); }
+.choice.is-wrong .choice-tag { background: var(--c-wrong-mark); color: var(--c-on-dark); }
+
+/* 학습 모드 해설 */
+.explain-box {
+  margin-top: var(--sp-lg);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+  background: var(--c-surface);
+  border-left: 3px solid var(--c-brand-green-dark);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.explain-box .explain-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--c-brand-green-dark);
+  display: block;
+  margin-bottom: var(--sp-xxs);
+}
+
+/* 답안지 스트립 — 확장 컴포넌트 */
+.answer-strip {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--c-canvas);
+  border-top: 1px solid var(--c-hairline);
+  padding: var(--sp-sm) 0 var(--sp-md);
+  box-shadow: 0 -4px 12px rgba(0, 30, 43, 0.06);
+}
+.strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-xs);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-steel);
+}
+.strip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 96px;
+  overflow-y: auto;
+}
+.strip-cell {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-hairline-strong);
+  background: var(--c-canvas);
+  color: var(--c-steel);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.strip-cell.is-marked {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+  color: var(--c-on-dark);
+}
+.strip-cell.is-current {
+  outline: 2px solid var(--c-brand-green);
+  outline-offset: 1px;
+}
+.strip-cell.is-correct { background: var(--c-correct); border-color: var(--c-correct); color: var(--c-on-dark); }
+.strip-cell.is-wrong { background: var(--c-wrong-mark); border-color: var(--c-wrong-mark); color: var(--c-on-dark); }
+
+/* ===========================================================
+   결과 화면
+   =========================================================== */
+.score-hero {
+  background: var(--c-brand-teal-deep);
+  color: var(--c-on-dark);
+  border-radius: var(--r-xl);
+  padding: var(--sp-xxl);
+  text-align: center;
+}
+.score-value {
+  font-size: 56px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  color: var(--c-brand-green);
+}
+.score-sub { color: var(--c-on-dark-muted); font-size: 14px; margin-top: var(--sp-xs); }
+
+.rate-row { display: flex; flex-direction: column; gap: var(--sp-xxs); }
+.rate-label { display: flex; justify-content: space-between; font-size: 14px; gap: var(--sp-sm); }
+.rate-track { height: 10px; border-radius: var(--r-full); background: var(--c-hairline-soft); overflow: hidden; }
+.rate-fill { height: 100%; background: var(--c-brand-green-mid); border-radius: var(--r-full); }
+.rate-fill.is-low { background: var(--c-accent-orange); }
+
+.review-item {
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xl);
+  background: var(--c-canvas);
+}
+.review-answers {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: var(--sp-xxs) var(--sp-sm);
+  font-size: 14px;
+  margin-top: var(--sp-sm);
+}
+.review-answers dt { color: var(--c-steel); font-size: 13px; }
+.review-answers dd { margin: 0; word-break: break-word; }
+.ans-wrong { color: var(--c-wrong); font-weight: 600; }
+.ans-correct { color: var(--c-correct); font-weight: 600; }
+
+/* ===========================================================
+   오답노트
+   =========================================================== */
+.note-item {
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--sp-lg) var(--sp-xl);
+  background: var(--c-canvas);
+  display: flex;
+  gap: var(--sp-md);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.note-body { flex: 1; min-width: 220px; }
+.note-stem {
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 0 0 var(--sp-xs);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.streak-dots { display: inline-flex; gap: 4px; align-items: center; }
+.streak-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--c-hairline-strong);
+}
+.streak-dot.is-on { background: var(--c-brand-green-mid); }
+
+/* ===========================================================
+   문제 등록
+   =========================================================== */
+.parse-preview {
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  padding: var(--sp-md);
+  max-height: 340px;
+  overflow-y: auto;
+}
+.preview-q { padding: var(--sp-sm) 0; border-bottom: 1px solid var(--c-hairline-soft); font-size: 14px; }
+.preview-q:last-child { border-bottom: 0; }
+.preview-q .pq-stem { font-weight: 500; margin-bottom: 2px; }
+.preview-q .pq-meta { color: var(--c-steel); font-size: 13px; }
+
+.choice-editor-row { display: flex; gap: var(--sp-xs); align-items: center; }
+.choice-editor-row .mark-btn {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--c-hairline-strong);
+  background: var(--c-canvas);
+  color: var(--c-steel);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.choice-editor-row .mark-btn[aria-pressed="true"] {
+  background: var(--c-brand-green-dark);
+  border-color: var(--c-brand-green-dark);
+  color: var(--c-on-dark);
+}
+.drop-zone {
+  border: 1px dashed var(--c-hairline-strong);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+  text-align: center;
+  color: var(--c-steel);
+  font-size: 14px;
+  background: var(--c-surface);
+}
+.drop-zone img { max-width: 100%; max-height: 200px; border-radius: var(--r-sm); }
+
+.hint {
+  background: var(--c-warning-bg);
+  color: var(--c-warning-text);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm) var(--sp-md);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ===========================================================
+   모달 · 토스트 (PRD 8장: 브라우저 기본 팝업 미사용)
+   =========================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 30, 43, 0.5);
+  display: grid;
+  place-items: center;
+  padding: var(--sp-md);
+  z-index: 100;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  background: var(--c-canvas);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xxl);
+  width: 100%;
+  max-width: 460px;
+  box-shadow: var(--el-4);
+}
+.modal h3 { margin-bottom: var(--sp-xs); }
+.modal p { margin: 0 0 var(--sp-xl); color: var(--c-slate); font-size: 15px; }
+.modal-actions { display: flex; gap: var(--sp-xs); justify-content: flex-end; flex-wrap: wrap; }
+
+.toast-host {
+  position: fixed;
+  left: 50%;
+  bottom: var(--sp-xxl);
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  background: var(--c-brand-teal-deep);
+  color: var(--c-on-dark);
+  border-radius: var(--r-full);
+  padding: var(--sp-sm) var(--sp-lg);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--el-3);
+  max-width: 90vw;
+}
+.toast.is-error { background: var(--c-wrong); }
+
+/* ===========================================================
+   반응형 (DESIGN.md breakpoints)
+   =========================================================== */
+@media (max-width: 1023px) {
+  .t-hero-display { font-size: 56px; letter-spacing: -1px; }
+  .hero-band-dark { padding: var(--sp-section-lg) 0; }
+}
+@media (max-width: 767px) {
+  .container { padding: 0 var(--sp-md); }
+  .t-hero-display { font-size: 48px; letter-spacing: -0.5px; }
+  .t-h1 { font-size: 32px; }
+  .t-h2 { font-size: 26px; }
+  .t-h3 { font-size: 22px; }
+  .hero-band-dark { padding: var(--sp-section) 0; }
+  .card-feature, .question-card, .modal { padding: var(--sp-lg); }
+  .cta-banner-dark { padding: var(--sp-xxl) var(--sp-lg); }
+  .footer-region { padding: var(--sp-xxl) var(--sp-md); }
+  .section { padding: var(--sp-xxl) 0; }
+  .topnav-inner { height: 56px; gap: var(--sp-sm); }
+  .quiz-bar { top: 56px; }
+  .brand span { display: none; }
+}
+@media (max-width: 479px) {
+  .t-hero-display { font-size: 36px; }
+  .score-value { font-size: 44px; }
+  .strip-cell { width: 34px; height: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+@media print {
+  .topnav, .promo-banner, .answer-strip, .footer-region, .quiz-bar { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="promo-banner">
+  문제 데이터는 이 브라우저에만 저장됩니다 · <strong>JSON 백업</strong>을 정기적으로 내려받으세요
+</div>
+
+<header class="topnav">
+  <div class="container topnav-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">답</span>
+      <span>모의고사 연습장</span>
+    </div>
+    <nav class="nav-tabs" aria-label="주요 화면">
+      <button class="pill-tab" data-nav="home" aria-selected="true" type="button">시험</button>
+      <button class="pill-tab" data-nav="register" aria-selected="false" type="button">문제 등록</button>
+      <button class="pill-tab" data-nav="setup" aria-selected="false" type="button">응시</button>
+      <button class="pill-tab" data-nav="note" aria-selected="false" type="button">
+        오답노트 <span class="count-badge" id="note-badge" hidden>0</span>
+      </button>
+      <button class="pill-tab" data-nav="backup" aria-selected="false" type="button">백업</button>
+    </nav>
+    <div class="nav-right">
+      <button class="btn btn-primary btn-sm" type="button" id="btn-new-exam">시험 만들기</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ 시험 목록 ============ -->
+  <section class="view is-active" id="view-home">
+    <div class="hero-band-dark" id="hero-band">
+      <div class="container hero-inner">
+        <h1 class="t-hero-display">내 기출문제가<br>곧 시험지가 된다</h1>
+        <p class="hero-sub t-subtitle">
+          문제를 한 번 넣어두면 몇 번이든 다시 응시할 수 있고,<br>
+          틀린 문제는 손대지 않아도 오답노트에 쌓입니다.
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-on-dark" type="button" data-action="new-exam">시험 만들기</button>
+          <button class="btn btn-secondary-on-dark" type="button" data-nav-to="register">문제 등록하기</button>
+        </div>
+        <div class="code-mockup-card" style="margin-top:var(--sp-xxl)">
+          <div class="code-dot-row" aria-hidden="true">
+            <span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span>
+          </div>
+<pre class="t-code">1. 빅데이터 분석과 관련된 기술에 대한 설명으로 옳지 않은 것은?
+① 하둡은 분산 저장을 담당한다
+② 맵리듀스는 분산 연산 모델이다
+③ NoSQL은 스키마가 항상 고정된다
+④ 스파크는 인메모리 처리를 지원한다
+정답: 3
+해설: NoSQL은 유연한 스키마를 전제로 한다.</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="container section">
+      <div class="section-head">
+        <div>
+          <span class="t-eyebrow c-green">내 시험</span>
+          <h2 class="t-h2" style="margin-top:var(--sp-xxs)">등록한 시험</h2>
+          <p class="t-body-sm c-steel">시험마다 문제와 오답 기록을 따로 보관합니다.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" type="button" data-action="new-exam">+ 시험 만들기</button>
+      </div>
+      <div id="exam-list" class="grid-3"></div>
+    </div>
+  </section>
+
+  <!-- ============ 문제 등록 ============ -->
+  <section class="view" id="view-register">
+    <div class="container container-narrow section">
+      <div class="section-head">
+        <div>
+          <span class="t-eyebrow c-green">문제 등록</span>
+          <h2 class="t-h2" style="margin-top:var(--sp-xxs)">문제 넣기</h2>
+          <p class="t-body-sm c-steel" id="register-target">대상 시험: —</p>
+        </div>
+      </div>
+
+      <div class="segmented" role="tablist" aria-label="등록 방식">
+        <button class="segmented-tab" role="tab" data-regtab="pdf" aria-selected="false" type="button">PDF 자동 추출</button>
+        <button class="segmented-tab" role="tab" data-regtab="bulk" aria-selected="true" type="button">일괄 붙여넣기</button>
+        <button class="segmented-tab" role="tab" data-regtab="manual" aria-selected="false" type="button">직접 입력</button>
+      </div>
+
+      <!-- PDF -->
+      <div class="reg-panel" data-regpanel="pdf" hidden>
+        <div class="card-feature stack">
+          <div class="hint">
+            PDF 자동 추출(FR-2)은 AI API 호출이 필요합니다. 이 파일은 외부 의존성 없는 정적 페이지라
+            추출 요청을 보낼 엔드포인트가 아직 연결되어 있지 않습니다. 화면과 흐름만 준비된 상태입니다.
+          </div>
+          <div>
+            <span class="field-label">기출 PDF</span>
+            <div class="drop-zone">PDF 파일을 선택하면 문항 수 · 과목 구간 · 정답표 유무를 먼저 파악합니다.</div>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label">회차 일괄 지정</span>
+              <input class="text-input" type="text" placeholder="예: 10회 필기" disabled>
+            </label>
+            <label class="check-row" style="align-self:end">
+              <input type="checkbox" disabled> 해설 자동 생성
+            </label>
+          </div>
+          <button class="btn btn-primary" type="button" disabled>추출 시작</button>
+        </div>
+      </div>
+
+      <!-- 일괄 붙여넣기 -->
+      <div class="reg-panel" data-regpanel="bulk">
+        <div class="card-feature stack">
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label">과목</span>
+              <input class="text-input" type="text" id="bulk-subject" list="subject-options" placeholder="예: 빅데이터 분석 기획">
+            </label>
+            <label class="field">
+              <span class="field-label">회차</span>
+              <input class="text-input" type="text" id="bulk-round" list="round-options" placeholder="예: 10회 필기">
+            </label>
+          </div>
+          <label class="field">
+            <span class="field-label">문제 텍스트</span>
+            <textarea class="text-input" id="bulk-text" spellcheck="false" placeholder="1. 문제 지문을 적습니다&#10;① 첫 번째 선지&#10;② 두 번째 선지&#10;③ 세 번째 선지&#10;④ 네 번째 선지&#10;정답: 3&#10;해설: 필요하면 적습니다&#10;&#10;2. 다음 문제..."></textarea>
+          </label>
+          <div class="hint">
+            <strong>규칙</strong> · <code>1.</code> 또는 <code>1,</code> = 문제 시작 · <code>①~⑩</code> 또는 <code>1)</code> = 선지 ·
+            <code>정답:</code> <code>해설:</code> = 각 필드. 선지가 없으면 주관식, 정답이 여러 개면 복수정답으로 자동 판정합니다.
+          </div>
+          <div id="bulk-preview-wrap" hidden>
+            <span class="field-label">미리보기</span>
+            <div class="parse-preview" id="bulk-preview"></div>
+          </div>
+          <div class="row row-end">
+            <button class="btn btn-secondary" type="button" id="btn-bulk-preview">미리보기</button>
+            <button class="btn btn-primary" type="button" id="btn-bulk-save">등록하기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 직접 입력 -->
+      <div class="reg-panel" data-regpanel="manual" hidden>
+        <div class="card-feature stack">
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label">과목</span>
+              <input class="text-input" type="text" id="m-subject" list="subject-options" placeholder="예: 빅데이터 분석 기획">
+            </label>
+            <label class="field">
+              <span class="field-label">회차</span>
+              <input class="text-input" type="text" id="m-round" list="round-options" placeholder="예: 10회 필기">
+            </label>
+          </div>
+          <label class="field">
+            <span class="field-label">문제 지문</span>
+            <textarea class="text-input" id="m-stem" style="min-height:96px" placeholder="문제 지문을 입력합니다"></textarea>
+          </label>
+          <div>
+            <span class="field-label">선지 · 번호를 눌러 정답을 표시합니다 (복수 선택 가능)</span>
+            <div class="stack" id="m-choices" style="--sp-md:8px"></div>
+            <div class="row" style="margin-top:var(--sp-xs)">
+              <button class="btn btn-link" type="button" id="btn-add-choice">+ 선지 추가</button>
+              <span class="c-stone t-caption">· 선지를 모두 비우면 주관식으로 등록됩니다</span>
+            </div>
+          </div>
+          <label class="field" id="m-short-wrap" hidden>
+            <span class="field-label">주관식 정답 (여러 개면 쉼표로 구분)</span>
+            <input class="text-input" type="text" id="m-short" placeholder="예: 하둡, hadoop">
+          </label>
+          <label class="field">
+            <span class="field-label">해설 (선택)</span>
+            <textarea class="text-input" id="m-explain" style="min-height:72px"></textarea>
+          </label>
+          <div>
+            <span class="field-label">문제 이미지 (선택)</span>
+            <div class="drop-zone" id="m-drop" tabindex="0">
+              여기를 클릭한 뒤 <strong>Ctrl+V</strong>로 붙여넣거나 파일을 선택하세요
+              <div style="margin-top:var(--sp-xs)">
+                <input type="file" accept="image/*" id="m-file">
+              </div>
+            </div>
+          </div>
+          <div class="row row-end">
+            <button class="btn btn-secondary" type="button" id="btn-manual-reset">지우기</button>
+            <button class="btn btn-primary" type="button" id="btn-manual-save">이 문제 등록</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="padding-bottom:0">
+        <div class="section-head">
+          <h3 class="t-h4">등록된 문제 <span class="c-stone t-body-sm" id="q-count"></span></h3>
+        </div>
+        <div class="stack" id="question-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 응시 설정 ============ -->
+  <section class="view" id="view-setup">
+    <div class="container container-narrow section">
+      <div class="section-head">
+        <div>
+          <span class="t-eyebrow c-green">응시</span>
+          <h2 class="t-h2" style="margin-top:var(--sp-xxs)">시험 시작 전 설정</h2>
+          <p class="t-body-sm c-steel" id="setup-target">대상 시험: —</p>
+        </div>
+      </div>
+      <div class="card-feature stack-lg">
+        <div>
+          <span class="field-label">범위</span>
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label c-stone">과목</span>
+              <select class="text-input" id="s-subject"><option value="">전체 과목</option></select>
+            </label>
+            <label class="field">
+              <span class="field-label c-stone">회차</span>
+              <select class="text-input" id="s-round"><option value="">전체 회차</option></select>
+            </label>
+            <label class="field">
+              <span class="field-label c-stone">문항 수 제한</span>
+              <input class="text-input" type="number" id="s-limit" min="0" step="1" placeholder="0 = 제한 없음">
+            </label>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">모드</span>
+          <div class="row">
+            <button class="pill-tab" type="button" data-mode="real" aria-selected="true">실전 · 끝까지 풀고 일괄 채점</button>
+            <button class="pill-tab" type="button" data-mode="study" aria-selected="false">학습 · 답하면 즉시 해설</button>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">옵션</span>
+          <div class="field-row">
+            <label class="check-row"><input type="checkbox" id="s-shuffle"> 문제 순서 랜덤 섞기</label>
+            <label class="field">
+              <span class="field-label c-stone">제한시간 (분)</span>
+              <input class="text-input" type="number" id="s-time" min="0" step="1" placeholder="0 = 무제한">
+            </label>
+          </div>
+        </div>
+        <div class="row row-end">
+          <span class="c-steel t-body-sm spacer" id="setup-count">응시 가능 문항 —</span>
+          <button class="btn btn-primary" type="button" id="btn-start">시험 시작</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 응시 ============ -->
+  <section class="view" id="view-quiz">
+    <div class="quiz-bar">
+      <div class="container container-narrow quiz-bar-inner">
+        <span class="badge badge-outline" id="quiz-mode-badge">실전</span>
+        <span class="t-body-sm-med" id="quiz-pos">1 / 1</span>
+        <div class="progress-track"><div class="progress-fill" id="quiz-progress" style="width:0%"></div></div>
+        <span class="timer" id="quiz-timer" hidden>00:00</span>
+        <button class="btn btn-secondary btn-sm" type="button" id="btn-quit">나가기</button>
+      </div>
+    </div>
+
+    <div class="container container-narrow" style="padding-top:var(--sp-xl);padding-bottom:var(--sp-xl)">
+      <div class="question-card" id="quiz-card"></div>
+      <div class="row row-end" style="margin-top:var(--sp-md)">
+        <button class="btn btn-secondary" type="button" id="btn-prev">← 이전</button>
+        <button class="btn btn-secondary" type="button" id="btn-next">다음 →</button>
+        <button class="btn btn-primary" type="button" id="btn-submit">제출하고 채점</button>
+      </div>
+    </div>
+
+    <div class="answer-strip">
+      <div class="container container-narrow">
+        <div class="strip-head">
+          <span>답안지</span>
+          <span id="strip-summary">표기 0 / 0</span>
+        </div>
+        <div class="strip-grid" id="strip-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 결과 ============ -->
+  <section class="view" id="view-result">
+    <div class="container container-narrow section">
+      <div class="score-hero">
+        <span class="t-eyebrow" style="color:var(--c-on-dark-muted)">채점 결과</span>
+        <div class="score-value" id="r-score">0</div>
+        <div class="score-sub" id="r-summary">정답 0 · 오답 0</div>
+        <div class="row" style="justify-content:center;margin-top:var(--sp-xl)">
+          <button class="btn btn-on-dark" type="button" id="btn-retry-wrong">틀린 문제만 다시 풀기</button>
+          <button class="btn btn-secondary-on-dark" type="button" data-nav-to="home">시험 목록으로</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="t-h4" style="margin-bottom:var(--sp-md)">과목별 정답률</h3>
+        <div class="card-base stack" id="r-subjects"></div>
+      </div>
+
+      <div class="section" style="padding-top:0">
+        <h3 class="t-h4" style="margin-bottom:var(--sp-md)">오답 문항 <span class="c-stone t-body-sm" id="r-wrong-count"></span></h3>
+        <div class="stack" id="r-wrong-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 오답노트 ============ -->
+  <section class="view" id="view-note">
+    <div class="container container-narrow section">
+      <div class="section-head">
+        <div>
+          <span class="t-eyebrow c-green">오답노트</span>
+          <h2 class="t-h2" style="margin-top:var(--sp-xxs)">다시 봐야 할 문제</h2>
+          <p class="t-body-sm c-steel">연속 2회 정답이면 자동으로 목록에서 빠집니다.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button" id="btn-note-quiz">오답노트 전체 풀기</button>
+      </div>
+      <div class="stack" id="note-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ 백업 ============ -->
+  <section class="view" id="view-backup">
+    <div class="container container-narrow section">
+      <div class="section-head">
+        <div>
+          <span class="t-eyebrow c-green">백업</span>
+          <h2 class="t-h2" style="margin-top:var(--sp-xxs)">데이터 내보내기 · 가져오기</h2>
+          <p class="t-body-sm c-steel">브라우저 저장소가 초기화돼도 JSON 파일이 있으면 그대로 복원됩니다.</p>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card-feature stack">
+          <h3 class="t-h5">내보내기</h3>
+          <p class="t-body-sm c-steel" style="margin:0">문제 · 정답 · 오답 통계를 시험 단위로 저장합니다.</p>
+          <div class="row">
+            <label class="check-row"><input type="radio" name="exp-mode" value="full" checked> 이미지 포함</label>
+            <label class="check-row"><input type="radio" name="exp-mode" value="text"> 텍스트만</label>
+          </div>
+          <button class="btn btn-primary btn-block" type="button" id="btn-export">현재 시험 내보내기</button>
+        </div>
+
+        <div class="card-feature stack">
+          <h3 class="t-h5">가져오기</h3>
+          <p class="t-body-sm c-steel" style="margin:0">
+            내려받은 JSON을 <strong>새 시험</strong>으로 복원합니다(PRD FR-7.3).
+            같은 파일을 두 번 넣으면 시험이 두 개 생깁니다.
+          </p>
+          <input class="text-input" type="file" accept="application/json,.json" id="import-file"
+                 style="height:auto;padding:10px 12px">
+        </div>
+
+        <div class="card-feature-dark stack">
+          <h3 class="t-h5" style="color:var(--c-on-dark)">저장 상태</h3>
+          <p class="t-body-sm" style="color:var(--c-on-dark-muted);margin:0" id="storage-state">확인 중…</p>
+          <div class="row"><span class="badge badge-popular" id="storage-badge">—</span></div>
+        </div>
+      </div>
+
+      <div class="cta-banner-dark" style="margin-top:var(--sp-section-sm)">
+        <h3 class="t-h3" style="color:var(--c-on-dark);margin-bottom:var(--sp-sm)">백업이 곧 정본입니다</h3>
+        <p class="t-subtitle" style="color:var(--c-on-dark-muted);margin:0 auto var(--sp-xl);max-width:52ch">
+          브라우저 저장소는 언제든 비워질 수 있습니다. 문제를 새로 등록한 날에는 JSON을 한 번 내려받아 두세요.
+        </p>
+        <button class="btn btn-on-dark" type="button" id="btn-export-2">지금 내보내기</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer-region">
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h4>연습장</h4>
+      <button class="footer-link" data-nav-to="home" type="button">시험 목록</button>
+      <button class="footer-link" data-nav-to="register" type="button">문제 등록</button>
+      <button class="footer-link" data-nav-to="setup" type="button">응시 설정</button>
+    </div>
+    <div class="footer-col">
+      <h4>학습</h4>
+      <button class="footer-link" data-nav-to="note" type="button">오답노트</button>
+      <button class="footer-link" data-nav-to="backup" type="button">백업</button>
+    </div>
+    <div class="footer-col">
+      <h4>원칙</h4>
+      <span class="footer-link">문제는 사용자 소유</span>
+      <span class="footer-link">응시 · 채점은 오프라인</span>
+      <span class="footer-link">계정 없음</span>
+    </div>
+  </div>
+  <div class="footer-note">
+    v1 · 개인용 단일 사용자 · 데이터는 이 브라우저에만 저장됩니다
+  </div>
+</footer>
+
+<datalist id="subject-options"></datalist>
+<datalist id="round-options"></datalist>
+
+<div class="modal-backdrop" id="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h3 class="t-h4" id="modal-title">확인</h3>
+    <p id="modal-desc"></p>
+    <div id="modal-input-wrap" hidden>
+      <input class="text-input" type="text" id="modal-input" style="margin-bottom:var(--sp-xl)">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" type="button" id="modal-cancel">취소</button>
+      <button class="btn btn-primary" type="button" id="modal-ok">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-host" id="toast-host" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     저장소 — 접근이 막히면 메모리로 폴백 (PRD 7장)
+     ========================================================= */
+  var memory = {};
+  var storageOk = (function () {
+    try {
+      var k = '__probe__';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      return true;
+    } catch (e) { return false; }
+  })();
+
+  var store = {
+    get: function (key, fallback) {
+      try {
+        var raw = storageOk ? localStorage.getItem(key) : memory[key];
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (e) { return fallback; }
+    },
+    set: function (key, value) {
+      var raw = JSON.stringify(value);
+      try {
+        if (storageOk) localStorage.setItem(key, raw);
+        else memory[key] = raw;
+        return true;
+      } catch (e) {
+        memory[key] = raw;          // 용량 초과 시에도 세션 동안은 유지
+        toast('저장 공간이 부족합니다. JSON으로 내보내 두세요.', true);
+        return false;
+      }
+    },
+    remove: function (key) {
+      try { if (storageOk) localStorage.removeItem(key); } catch (e) {}
+      delete memory[key];
+    }
+  };
+
+  var K = {
+    index: 'exams:index',
+    questions: function (id) { return 'exam:' + id + ':questions'; },
+    stats: function (id) { return 'exam:' + id + ':stats'; },
+    img: function (examId, qId) { return 'img:' + examId + ':' + qId; },
+    current: 'app:currentExam'
+  };
+
+  /* =========================================================
+     유틸
+     ========================================================= */
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  var CIRCLED = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+  function circled(i) { return CIRCLED[i] || String(i + 1); }
+
+  function toast(msg, isError) {
+    var host = $('#toast-host');
+    var el = document.createElement('div');
+    el.className = 'toast' + (isError ? ' is-error' : '');
+    el.textContent = msg;
+    host.appendChild(el);
+    setTimeout(function () { el.remove(); }, 2600);
+  }
+
+  /* 브라우저 기본 팝업 대신 쓰는 다이얼로그 (PRD 8장) */
+  var modalResolve = null;
+  function dialog(opts) {
+    return new Promise(function (resolve) {
+      modalResolve = resolve;
+      $('#modal-title').textContent = opts.title || '확인';
+      $('#modal-desc').textContent = opts.message || '';
+      $('#modal-desc').hidden = !opts.message;
+      $('#modal-ok').textContent = opts.okText || '확인';
+      $('#modal-ok').className = 'btn ' + (opts.danger ? 'btn-secondary btn-danger' : 'btn-primary');
+      var wrap = $('#modal-input-wrap');
+      wrap.hidden = !opts.input;
+      if (opts.input) {
+        $('#modal-input').value = opts.value || '';
+        $('#modal-input').placeholder = opts.placeholder || '';
+      }
+      $('#modal-backdrop').hidden = false;
+      setTimeout(function () {
+        (opts.input ? $('#modal-input') : $('#modal-ok')).focus();
+      }, 0);
+    });
+  }
+  function closeModal(value) {
+    $('#modal-backdrop').hidden = true;
+    if (modalResolve) { modalResolve(value); modalResolve = null; }
+  }
+  $('#modal-ok').addEventListener('click', function () {
+    var wrap = $('#modal-input-wrap');
+    closeModal(wrap.hidden ? true : $('#modal-input').value.trim());
+  });
+  $('#modal-cancel').addEventListener('click', function () { closeModal(null); });
+  $('#modal-backdrop').addEventListener('click', function (e) {
+    if (e.target === this) closeModal(null);
+  });
+  $('#modal-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('#modal-ok').click(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('#modal-backdrop').hidden) closeModal(null);
+  });
+
+  /* =========================================================
+     앱 상태
+     ========================================================= */
+  var state = {
+    exams: store.get(K.index, []),
+    currentExamId: store.get(K.current, null),
+    questions: [],
+    stats: {},
+    setup: { mode: 'real' },
+    quiz: null,
+    result: null,
+    manualChoices: [],
+    manualAnswer: [],
+    manualImage: null
+  };
+
+  function currentExam() {
+    for (var i = 0; i < state.exams.length; i++) {
+      if (state.exams[i].id === state.currentExamId) return state.exams[i];
+    }
+    return null;
+  }
+
+  function loadExamData() {
+    if (!state.currentExamId) { state.questions = []; state.stats = {}; return; }
+    state.questions = store.get(K.questions(state.currentExamId), []);
+    state.stats = store.get(K.stats(state.currentExamId), {});
+  }
+
+  function saveQuestions() { store.set(K.questions(state.currentExamId), state.questions); }
+  function saveStats() { store.set(K.stats(state.currentExamId), state.stats); }
+  function saveIndex() { store.set(K.index, state.exams); }
+
+  /* =========================================================
+     화면 전환
+     ========================================================= */
+  function show(name) {
+    $$('.view').forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + name); });
+    $$('.pill-tab[data-nav]').forEach(function (t) {
+      t.setAttribute('aria-selected', String(t.dataset.nav === name));
+    });
+    window.scrollTo(0, 0);
+    if (name === 'home') renderExams();
+    if (name === 'register') renderRegister();
+    if (name === 'setup') renderSetup();
+    if (name === 'note') renderNote();
+    if (name === 'backup') renderBackup();
+  }
+
+  function requireExam() {
+    if (!currentExam()) {
+      toast('먼저 시험을 만들어 주세요.', true);
+      show('home');
+      return false;
+    }
+    return true;
+  }
+
+  document.addEventListener('click', function (e) {
+    var nav = e.target.closest('[data-nav], [data-nav-to]');
+    if (nav) {
+      var target = nav.dataset.nav || nav.dataset.navTo;
+      if (target !== 'home' && target !== 'backup' && !requireExam()) return;
+      show(target);
+      return;
+    }
+    if (e.target.closest('[data-action="new-exam"]')) newExam();
+  });
+  $('#btn-new-exam').addEventListener('click', newExam);
+
+  /* =========================================================
+     시험 관리 (FR-1)
+     ========================================================= */
+  function newExam() {
+    dialog({
+      title: '새 시험 만들기',
+      message: '시험 이름을 입력하세요. 문제와 오답 기록은 시험별로 따로 관리됩니다.',
+      input: true,
+      placeholder: '예: 빅데이터분석기사 필기',
+      okText: '만들기'
+    }).then(function (name) {
+      if (!name) return;
+      var exam = {
+        id: uid(),
+        name: name,
+        createdAt: Date.now(),
+        questionCount: 0,
+        attempts: 0,
+        lastScore: null,
+        lastAttemptAt: null
+      };
+      state.exams.unshift(exam);
+      saveIndex();
+      selectExam(exam.id);
+      toast('“' + name + '” 시험을 만들었습니다.');
+      show('register');
+    });
+  }
+
+  function selectExam(id) {
+    state.currentExamId = id;
+    store.set(K.current, id);
+    loadExamData();
+    renderNoteBadge();
+  }
+
+  function deleteExam(id) {
+    var exam = null;
+    state.exams.forEach(function (x) { if (x.id === id) exam = x; });
+    if (!exam) return;
+    dialog({
+      title: '시험을 삭제할까요?',
+      message: '“' + exam.name + '”의 문제·이미지·오답 기록이 모두 지워집니다. 되돌릴 수 없습니다.',
+      okText: '삭제',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      var qs = store.get(K.questions(id), []);
+      qs.forEach(function (q) { store.remove(K.img(id, q.id)); });   // 이미지 키까지 정리
+      store.remove(K.questions(id));
+      store.remove(K.stats(id));
+      state.exams = state.exams.filter(function (x) { return x.id !== id; });
+      saveIndex();
+      if (state.currentExamId === id) {
+        selectExam(state.exams.length ? state.exams[0].id : null);
+      }
+      renderExams();
+      renderNoteBadge();
+      toast('시험을 삭제했습니다.');
+    });
+  }
+
+  function renderExams() {
+    var host = $('#exam-list');
+    $('#hero-band').hidden = state.exams.length > 0;
+    if (!state.exams.length) {
+      host.innerHTML =
+        '<div class="empty-state" style="grid-column:1/-1">' +
+        '<p>아직 등록된 시험이 없습니다.<br>시험을 만든 뒤 기출문제를 넣어보세요.</p>' +
+        '<button class="btn btn-primary" type="button" data-action="new-exam">시험 만들기</button></div>';
+      return;
+    }
+    host.innerHTML = state.exams.map(function (x) {
+      var stats = store.get(K.stats(x.id), {});
+      var noteCount = Object.keys(stats).filter(function (k) { return stats[k].inNote; }).length;
+      var isCurrent = x.id === state.currentExamId;
+      return '' +
+        '<article class="card-base exam-card' + (isCurrent ? ' card-elevated' : '') + '"' +
+        (isCurrent ? ' style="border-color:var(--c-brand-green)"' : '') + '>' +
+          '<div class="exam-card-top">' +
+            '<h3 class="t-h5">' + esc(x.name) + '</h3>' +
+            (isCurrent ? '<span class="badge badge-green-soft">선택됨</span>' : '') +
+          '</div>' +
+          '<div class="exam-score">' +
+            (x.lastScore == null ? '<span class="c-muted t-h5">미응시</span>'
+              : x.lastScore + '<small> 점 · 최근</small>') +
+          '</div>' +
+          '<div class="exam-meta">' +
+            '<span>문제 ' + x.questionCount + '</span>' +
+            '<span>응시 ' + x.attempts + '회</span>' +
+            '<span>오답노트 ' + noteCount + '</span>' +
+          '</div>' +
+          '<div class="row" style="margin-top:auto">' +
+            '<button class="btn btn-primary btn-sm" type="button" data-exam-start="' + x.id + '">응시</button>' +
+            '<button class="btn btn-secondary btn-sm" type="button" data-exam-open="' + x.id + '">문제 관리</button>' +
+            '<span class="spacer"></span>' +
+            '<button class="btn btn-ghost btn-sm" type="button" data-exam-del="' + x.id + '" aria-label="삭제">삭제</button>' +
+          '</div>' +
+        '</article>';
+    }).join('');
+  }
+
+  $('#exam-list').addEventListener('click', function (e) {
+    var start = e.target.closest('[data-exam-start]');
+    var open = e.target.closest('[data-exam-open]');
+    var del = e.target.closest('[data-exam-del]');
+    if (start) { selectExam(start.dataset.examStart); show('setup'); }
+    else if (open) { selectExam(open.dataset.examOpen); show('register'); }
+    else if (del) { deleteExam(del.dataset.examDel); }
+  });
+
+  /* =========================================================
+     문제 등록 (FR-3)
+     ========================================================= */
+  $$('[data-regtab]').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      $$('[data-regtab]').forEach(function (t) {
+        t.setAttribute('aria-selected', String(t === tab));
+      });
+      $$('[data-regpanel]').forEach(function (p) {
+        p.hidden = p.dataset.regpanel !== tab.dataset.regtab;
+      });
+    });
+  });
+
+  function renderRegister() {
+    var exam = currentExam();
+    $('#register-target').textContent = '대상 시험: ' + (exam ? exam.name : '—');
+    renderDatalists();
+    renderQuestionList();
+    if (!state.manualChoices.length) resetManual();
+  }
+
+  function renderDatalists() {
+    var subjects = {}, rounds = {};
+    state.questions.forEach(function (q) {
+      if (q.subject) subjects[q.subject] = 1;
+      if (q.round) rounds[q.round] = 1;
+    });
+    $('#subject-options').innerHTML = Object.keys(subjects).map(function (s) {
+      return '<option value="' + esc(s) + '">';
+    }).join('');
+    $('#round-options').innerHTML = Object.keys(rounds).map(function (r) {
+      return '<option value="' + esc(r) + '">';
+    }).join('');
+  }
+
+  function renderQuestionList() {
+    $('#q-count').textContent = '· ' + state.questions.length + '문항';
+    var host = $('#question-list');
+    if (!state.questions.length) {
+      host.innerHTML = '<div class="empty-state"><p style="margin:0">등록된 문제가 없습니다.</p></div>';
+      return;
+    }
+    host.innerHTML = state.questions.map(function (q, i) {
+      var typeLabel = q.type === 'single' ? '단일정답' : q.type === 'multi' ? '복수정답' : '주관식';
+      return '' +
+        '<div class="note-item">' +
+          '<div class="note-body">' +
+            '<div class="row" style="gap:var(--sp-xxs);margin-bottom:var(--sp-xxs)">' +
+              '<span class="question-no">' + (i + 1) + '번</span>' +
+              '<span class="badge badge-outline">' + typeLabel + '</span>' +
+              (q.subject ? '<span class="badge badge-outline">' + esc(q.subject) + '</span>' : '') +
+              (q.round ? '<span class="badge badge-outline">' + esc(q.round) + '</span>' : '') +
+              (q.needsReview ? '<span class="badge badge-warning">정답 검토</span>' : '') +
+              (q.hasImage ? '<span class="badge badge-outline">이미지</span>' : '') +
+            '</div>' +
+            '<p class="note-stem">' + esc(q.stem) + '</p>' +
+            '<span class="c-steel t-caption">정답 ' + esc(answerLabel(q)) + '</span>' +
+          '</div>' +
+          '<button class="btn btn-ghost btn-sm" type="button" data-q-del="' + q.id + '">삭제</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  $('#question-list').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-q-del]');
+    if (!btn) return;
+    var id = btn.dataset.qDel;
+    dialog({ title: '문제를 삭제할까요?', okText: '삭제', danger: true }).then(function (ok) {
+      if (!ok) return;
+      store.remove(K.img(state.currentExamId, id));
+      state.questions = state.questions.filter(function (q) { return q.id !== id; });
+      delete state.stats[id];
+      saveQuestions(); saveStats(); syncExamMeta();
+      renderQuestionList(); renderNoteBadge();
+      toast('삭제했습니다.');
+    });
+  });
+
+  function answerLabel(q) {
+    if (!q.answer || !q.answer.length) return '미지정';
+    if (q.type === 'short') return q.answer.join(' / ');
+    return q.answer.map(function (i) { return circled(i); }).join(' ');
+  }
+
+  function syncExamMeta() {
+    var exam = currentExam();
+    if (!exam) return;
+    exam.questionCount = state.questions.length;
+    saveIndex();
+  }
+
+  /* ---------- 일괄 붙여넣기 파서 (FR-3.1) ---------- */
+  function parseBulk(text, subject, round) {
+    var lines = text.split(/\r?\n/);
+    var out = [], cur = null;
+
+    function push() {
+      if (!cur) return;
+      cur.stem = cur.stem.trim();
+      if (!cur.stem) { cur = null; return; }
+      finalizeParsed(cur);
+      out.push(cur);
+      cur = null;
+    }
+
+    lines.forEach(function (raw) {
+      var line = raw.trim();
+      if (!line) return;
+
+      var mQ = line.match(/^(\d{1,3})\s*[.,]\s*(.*)$/);
+      var mCircle = line.match(/^([①-⑩])\s*(.*)$/);
+      var mParen = line.match(/^(\d{1,2})\s*\)\s*(.*)$/);
+      var mAns = line.match(/^정답\s*[:：]\s*(.*)$/);
+      var mExp = line.match(/^해설\s*[:：]\s*(.*)$/);
+
+      if (mAns && cur) { cur._answerRaw = mAns[1].trim(); return; }
+      if (mExp && cur) { cur.explanation = mExp[1].trim(); cur._inExp = true; return; }
+      if (mCircle && cur) {
+        cur.choices.push(mCircle[2].trim()); cur._inExp = false; return;
+      }
+      if (mParen && cur && cur.choices.length < 10) {
+        cur.choices.push(mParen[2].trim()); cur._inExp = false; return;
+      }
+      if (mQ) {
+        push();
+        cur = {
+          id: uid(), subject: subject || '', round: round || '',
+          type: 'single', stem: mQ[2], hasImage: false,
+          choices: [], answer: [], explanation: '', needsReview: false,
+          _answerRaw: '', _inExp: false
+        };
+        return;
+      }
+      if (cur) {
+        // 이어지는 줄: 해설 뒤면 해설에, 선지 뒤면 마지막 선지에, 아니면 지문에 붙인다
+        if (cur._inExp) cur.explanation += '\n' + line;
+        else if (cur.choices.length) cur.choices[cur.choices.length - 1] += ' ' + line;
+        else cur.stem += '\n' + line;
+      }
+    });
+    push();
+    return out;
+  }
+
+  function finalizeParsed(q) {
+    var raw = (q._answerRaw || '').trim();
+    if (q.choices.length === 0) {
+      q.type = 'short';
+      q.answer = raw ? raw.split(/[,/]/).map(function (s) { return s.trim(); }).filter(Boolean) : [];
+    } else {
+      var picks = [];
+      raw.split('').forEach(function (ch) {
+        var ci = CIRCLED.indexOf(ch);
+        if (ci >= 0) picks.push(ci);
+      });
+      if (!picks.length) {
+        (raw.match(/\d+/g) || []).forEach(function (n) {
+          var idx = parseInt(n, 10) - 1;
+          if (idx >= 0 && idx < q.choices.length) picks.push(idx);
+        });
+      }
+      picks = picks.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
+      q.answer = picks;
+      q.type = picks.length > 1 ? 'multi' : 'single';
+      if (!picks.length) q.needsReview = true;   // 정답 없이 들어온 문항은 검토 대상
+    }
+    delete q._answerRaw;
+    delete q._inExp;
+  }
+
+  $('#btn-bulk-preview').addEventListener('click', function () {
+    var parsed = parseBulk($('#bulk-text').value, $('#bulk-subject').value.trim(), $('#bulk-round').value.trim());
+    var wrap = $('#bulk-preview-wrap');
+    if (!parsed.length) { wrap.hidden = true; toast('인식된 문제가 없습니다.', true); return; }
+    wrap.hidden = false;
+    $('#bulk-preview').innerHTML = parsed.map(function (q, i) {
+      var t = q.type === 'single' ? '단일정답' : q.type === 'multi' ? '복수정답' : '주관식';
+      return '<div class="preview-q">' +
+        '<div class="pq-stem">' + (i + 1) + '. ' + esc(q.stem.split('\n')[0]) + '</div>' +
+        '<div class="pq-meta">' + t + ' · 선지 ' + q.choices.length +
+        ' · 정답 ' + esc(answerLabel(q) || '없음') +
+        (q.needsReview ? ' · 검토 필요' : '') + '</div></div>';
+    }).join('');
+    toast(parsed.length + '문항을 인식했습니다.');
+  });
+
+  $('#btn-bulk-save').addEventListener('click', function () {
+    if (!requireExam()) return;
+    var parsed = parseBulk($('#bulk-text').value, $('#bulk-subject').value.trim(), $('#bulk-round').value.trim());
+    if (!parsed.length) { toast('인식된 문제가 없습니다.', true); return; }
+    state.questions = state.questions.concat(parsed);
+    saveQuestions(); syncExamMeta();
+    $('#bulk-text').value = '';
+    $('#bulk-preview-wrap').hidden = true;
+    renderDatalists(); renderQuestionList();
+    toast(parsed.length + '문항을 등록했습니다.');
+  });
+
+  /* ---------- 직접 입력 (FR-3.3 ~ FR-3.6) ---------- */
+  function resetManual() {
+    state.manualChoices = ['', '', '', ''];
+    state.manualAnswer = [];
+    state.manualImage = null;
+    $('#m-stem').value = '';
+    $('#m-explain').value = '';
+    $('#m-short').value = '';
+    renderManualChoices();
+  }
+
+  function renderManualChoices() {
+    var host = $('#m-choices');
+    host.innerHTML = state.manualChoices.map(function (text, i) {
+      var on = state.manualAnswer.indexOf(i) >= 0;
+      return '<div class="choice-editor-row">' +
+        '<button class="mark-btn" type="button" data-mark="' + i + '" aria-pressed="' + on + '"' +
+        ' aria-label="' + (i + 1) + '번 선지를 정답으로 표시">' + circled(i) + '</button>' +
+        '<input class="text-input" type="text" data-choice="' + i + '" value="' + esc(text) + '"' +
+        ' placeholder="' + (i + 1) + '번 선지">' +
+        '<button class="btn btn-ghost btn-sm" type="button" data-choice-del="' + i + '" aria-label="선지 삭제">✕</button>' +
+        '</div>';
+    }).join('');
+    var isShort = state.manualChoices.every(function (c) { return !c.trim(); });
+    $('#m-short-wrap').hidden = !isShort;
+  }
+
+  $('#m-choices').addEventListener('click', function (e) {
+    var mark = e.target.closest('[data-mark]');
+    var del = e.target.closest('[data-choice-del]');
+    if (mark) {
+      var i = +mark.dataset.mark;
+      var at = state.manualAnswer.indexOf(i);
+      if (at >= 0) state.manualAnswer.splice(at, 1);
+      else state.manualAnswer.push(i);
+      state.manualAnswer.sort(function (a, b) { return a - b; });
+      renderManualChoices();
+    } else if (del) {
+      var idx = +del.dataset.choiceDel;
+      state.manualChoices.splice(idx, 1);
+      state.manualAnswer = state.manualAnswer
+        .filter(function (a) { return a !== idx; })
+        .map(function (a) { return a > idx ? a - 1 : a; });
+      renderManualChoices();
+    }
+  });
+
+  $('#m-choices').addEventListener('input', function (e) {
+    var input = e.target.closest('[data-choice]');
+    if (!input) return;
+    state.manualChoices[+input.dataset.choice] = input.value;
+    $('#m-short-wrap').hidden = !state.manualChoices.every(function (c) { return !c.trim(); });
+  });
+
+  $('#btn-add-choice').addEventListener('click', function () {
+    if (state.manualChoices.length >= 10) { toast('선지는 10개까지 넣을 수 있습니다.', true); return; }
+    state.manualChoices.push('');
+    renderManualChoices();
+  });
+
+  $('#btn-manual-reset').addEventListener('click', resetManual);
+
+  /* 이미지: Ctrl+V 붙여넣기 또는 파일 선택 (FR-3.5) */
+  function setManualImage(dataUrl) {
+    state.manualImage = dataUrl;
+    var zone = $('#m-drop');
+    zone.innerHTML = '<img src="' + dataUrl + '" alt="첨부한 문제 이미지 미리보기">' +
+      '<div style="margin-top:var(--sp-xs)"><button class="btn btn-link" type="button" id="m-img-clear">이미지 제거</button></div>';
+    $('#m-img-clear').addEventListener('click', function () {
+      state.manualImage = null;
+      zone.innerHTML = '여기를 클릭한 뒤 <strong>Ctrl+V</strong>로 붙여넣거나 파일을 선택하세요' +
+        '<div style="margin-top:var(--sp-xs)"><input type="file" accept="image/*" id="m-file"></div>';
+      bindFileInput();
+    });
+  }
+  function readImage(file) {
+    var reader = new FileReader();
+    reader.onload = function () { setManualImage(reader.result); };
+    reader.readAsDataURL(file);
+  }
+  function bindFileInput() {
+    var f = $('#m-file');
+    if (f) f.addEventListener('change', function () { if (this.files[0]) readImage(this.files[0]); });
+  }
+  bindFileInput();
+  document.addEventListener('paste', function (e) {
+    var panel = $('[data-regpanel="manual"]');
+    if (!panel || panel.hidden || !$('#view-register').classList.contains('is-active')) return;
+    var items = (e.clipboardData || {}).items || [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') === 0) {
+        readImage(items[i].getAsFile());
+        e.preventDefault();
+        return;
+      }
+    }
+  });
+
+  $('#btn-manual-save').addEventListener('click', function () {
+    if (!requireExam()) return;
+    var stem = $('#m-stem').value.trim();
+    if (!stem) { toast('문제 지문을 입력하세요.', true); return; }
+
+    var choices = state.manualChoices.map(function (c) { return c.trim(); }).filter(Boolean);
+    var q = {
+      id: uid(),
+      subject: $('#m-subject').value.trim(),
+      round: $('#m-round').value.trim(),
+      type: 'single',
+      stem: stem,
+      hasImage: !!state.manualImage,
+      choices: choices,
+      answer: [],
+      explanation: $('#m-explain').value.trim(),
+      needsReview: false
+    };
+
+    if (!choices.length) {
+      var short = $('#m-short').value.trim();
+      if (!short) { toast('주관식 정답을 입력하세요.', true); return; }
+      q.type = 'short';
+      q.answer = short.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    } else {
+      // 비어 있는 선지를 지운 뒤 정답 인덱스를 다시 매핑한다
+      var kept = [];
+      state.manualChoices.forEach(function (c, i) { if (c.trim()) kept.push(i); });
+      var mapped = state.manualAnswer
+        .map(function (a) { return kept.indexOf(a); })
+        .filter(function (v) { return v >= 0; });
+      if (!mapped.length) { toast('정답 선지를 번호로 표시하세요.', true); return; }
+      q.answer = mapped.sort(function (a, b) { return a - b; });
+      q.type = mapped.length > 1 ? 'multi' : 'single';
+    }
+
+    if (state.manualImage) store.set(K.img(state.currentExamId, q.id), state.manualImage);
+    state.questions.push(q);
+    saveQuestions(); syncExamMeta();
+    resetManual();
+    renderDatalists(); renderQuestionList();
+    toast('1문항을 등록했습니다.');
+  });
+
+  /* =========================================================
+     응시 설정 (FR-4)
+     ========================================================= */
+  function renderSetup() {
+    var exam = currentExam();
+    $('#setup-target').textContent = '대상 시험: ' + (exam ? exam.name : '—');
+    var subjects = {}, rounds = {};
+    state.questions.forEach(function (q) {
+      if (q.subject) subjects[q.subject] = 1;
+      if (q.round) rounds[q.round] = 1;
+    });
+    $('#s-subject').innerHTML = '<option value="">전체 과목</option>' +
+      Object.keys(subjects).map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('');
+    $('#s-round').innerHTML = '<option value="">전체 회차</option>' +
+      Object.keys(rounds).map(function (r) { return '<option>' + esc(r) + '</option>'; }).join('');
+    updateSetupCount();
+  }
+
+  function pickQuestions() {
+    var subject = $('#s-subject').value;
+    var round = $('#s-round').value;
+    var limit = parseInt($('#s-limit').value, 10) || 0;
+    var list = state.questions.filter(function (q) {
+      return (!subject || q.subject === subject) && (!round || q.round === round);
+    });
+    if ($('#s-shuffle').checked) list = shuffle(list.slice());
+    if (limit > 0) list = list.slice(0, limit);
+    return list;
+  }
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function updateSetupCount() {
+    $('#setup-count').textContent = '응시 가능 문항 ' + pickQuestions().length;
+  }
+  ['#s-subject', '#s-round', '#s-limit', '#s-shuffle'].forEach(function (sel) {
+    $(sel).addEventListener('change', updateSetupCount);
+    $(sel).addEventListener('input', updateSetupCount);
+  });
+
+  $$('[data-mode]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.setup.mode = btn.dataset.mode;
+      $$('[data-mode]').forEach(function (b) {
+        b.setAttribute('aria-selected', String(b === btn));
+      });
+    });
+  });
+
+  $('#btn-start').addEventListener('click', function () {
+    var list = pickQuestions();
+    if (!list.length) { toast('조건에 맞는 문제가 없습니다.', true); return; }
+    startQuiz(list, state.setup.mode, (parseInt($('#s-time').value, 10) || 0) * 60);
+  });
+
+  /* =========================================================
+     응시 진행
+     ========================================================= */
+  var timerHandle = null;
+
+  function startQuiz(list, mode, seconds) {
+    state.quiz = {
+      list: list,
+      mode: mode,
+      index: 0,
+      answers: list.map(function () { return null; }),
+      locked: list.map(function () { return false; }),
+      remain: seconds,
+      startedAt: Date.now()
+    };
+    $('#quiz-mode-badge').textContent = mode === 'study' ? '학습' : '실전';
+    $('#quiz-timer').hidden = !seconds;
+    if (timerHandle) clearInterval(timerHandle);
+    if (seconds) {
+      renderTimer();
+      timerHandle = setInterval(tick, 1000);
+    }
+    show('quiz');
+    renderQuiz();
+  }
+
+  function tick() {
+    var q = state.quiz;
+    if (!q) return;
+    q.remain--;
+    renderTimer();
+    if (q.remain <= 0) {
+      clearInterval(timerHandle);
+      timerHandle = null;
+      toast('제한시간이 끝나 자동 제출합니다.');
+      grade();
+    }
+  }
+
+  function renderTimer() {
+    var q = state.quiz;
+    var el = $('#quiz-timer');
+    var m = Math.floor(Math.max(0, q.remain) / 60);
+    var s = Math.max(0, q.remain) % 60;
+    el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    el.classList.toggle('is-urgent', q.remain < 60);   // FR-4.2 잔여 60초 강조
+  }
+
+  function renderQuiz() {
+    var q = state.quiz;
+    var item = q.list[q.index];
+    var given = q.answers[q.index];
+    var locked = q.locked[q.index];
+    var img = item.hasImage ? store.get(K.img(state.currentExamId, item.id), null) : null;
+
+    $('#quiz-pos').textContent = (q.index + 1) + ' / ' + q.list.length;
+    var answered = q.answers.filter(function (a) { return a !== null && a !== '' && !(Array.isArray(a) && !a.length); }).length;
+    $('#quiz-progress').style.width = (answered / q.list.length * 100) + '%';
+    $('#strip-summary').textContent = '표기 ' + answered + ' / ' + q.list.length;
+
+    var typeLabel = item.type === 'single' ? '단일정답' : item.type === 'multi' ? '복수정답' : '주관식';
+    var html = '' +
+      '<div class="question-head">' +
+        '<span class="question-no">Q' + (q.index + 1) + '</span>' +
+        '<span class="badge badge-outline">' + typeLabel + '</span>' +
+        (item.subject ? '<span class="badge badge-outline">' + esc(item.subject) + '</span>' : '') +
+        (item.round ? '<span class="badge badge-outline">' + esc(item.round) + '</span>' : '') +
+        (item.needsReview ? '<span class="badge badge-warning">정답 검토</span>' : '') +
+      '</div>' +
+      '<p class="question-stem">' + esc(item.stem) + '</p>' +
+      (img ? '<img class="question-image" src="' + img + '" alt="문제 이미지">' : '');
+
+    if (item.type === 'short') {
+      html += '<label class="field"><span class="field-label">답 입력</span>' +
+        '<input class="text-input" type="text" id="short-input" value="' + esc(given || '') + '"' +
+        (locked ? ' disabled' : '') + ' placeholder="답을 입력하세요"></label>';
+      if (q.mode === 'study' && !locked) {
+        html += '<div class="row" style="margin-top:var(--sp-md)">' +
+          '<button class="btn btn-secondary btn-sm" type="button" id="btn-reveal">정답 확인</button></div>';
+      }
+    } else {
+      html += '<div class="choice-list">' + item.choices.map(function (c, i) {
+        var picked = Array.isArray(given) && given.indexOf(i) >= 0;
+        var cls = 'choice';
+        var tag = '';
+        if (locked) {
+          var isAns = item.answer.indexOf(i) >= 0;
+          if (isAns) { cls += ' is-correct'; tag = '<span class="choice-tag">정답</span>'; }
+          else if (picked) { cls += ' is-wrong'; tag = '<span class="choice-tag">내 답</span>'; }
+        }
+        return '<button class="' + cls + '" type="button" data-choice-pick="' + i + '"' +
+          ' aria-pressed="' + picked + '"' + (locked ? ' disabled' : '') + '>' +
+          '<span class="choice-mark" aria-hidden="true">' + circled(i) + '</span>' +
+          '<span class="choice-text">' + esc(c) + '</span>' + tag + '</button>';
+      }).join('') + '</div>';
+      if (q.mode === 'study' && item.type === 'multi' && !locked) {
+        html += '<div class="row" style="margin-top:var(--sp-md)">' +
+          '<button class="btn btn-secondary btn-sm" type="button" id="btn-reveal">정답 확인</button></div>';
+      }
+    }
+
+    if (locked && q.mode === 'study') {
+      var ok = isCorrect(item, given);
+      html += '<div class="explain-box">' +
+        '<span class="explain-title">' + (ok ? '정답입니다' : '오답입니다') + '</span>' +
+        (item.type === 'short'
+          ? '정답: ' + esc(item.answer.join(' / ')) + (item.explanation ? '\n\n' : '')
+          : '') +
+        esc(item.explanation || (item.type === 'short' ? '' : '등록된 해설이 없습니다.')) +
+        '</div>';
+    }
+
+    $('#quiz-card').innerHTML = html;
+
+    var shortInput = $('#short-input');
+    if (shortInput) {
+      shortInput.addEventListener('input', function () {
+        state.quiz.answers[state.quiz.index] = this.value;
+        renderStrip();
+      });
+    }
+    var reveal = $('#btn-reveal');
+    if (reveal) {
+      reveal.addEventListener('click', function () {
+        state.quiz.locked[state.quiz.index] = true;
+        renderQuiz();
+      });
+    }
+
+    $('#btn-prev').disabled = q.index === 0;
+    $('#btn-next').disabled = q.index === q.list.length - 1;
+    renderStrip();
+  }
+
+  function renderStrip() {
+    var q = state.quiz;
+    $('#strip-grid').innerHTML = q.list.map(function (item, i) {
+      var a = q.answers[i];
+      var marked = a !== null && a !== '' && !(Array.isArray(a) && !a.length);
+      var cls = 'strip-cell' + (marked ? ' is-marked' : '') + (i === q.index ? ' is-current' : '');
+      if (q.mode === 'study' && q.locked[i]) {
+        cls = 'strip-cell ' + (isCorrect(item, a) ? 'is-correct' : 'is-wrong') + (i === q.index ? ' is-current' : '');
+      }
+      return '<button class="' + cls + '" type="button" data-goto="' + i + '"' +
+        ' aria-label="' + (i + 1) + '번 문항으로 이동' + (marked ? ', 표기함' : ', 미표기') + '">' + (i + 1) + '</button>';
+    }).join('');
+  }
+
+  $('#strip-grid').addEventListener('click', function (e) {
+    var cell = e.target.closest('[data-goto]');
+    if (!cell) return;
+    state.quiz.index = +cell.dataset.goto;
+    renderQuiz();
+  });
+
+  $('#quiz-card').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-choice-pick]');
+    if (!btn) return;
+    var q = state.quiz;
+    var item = q.list[q.index];
+    var i = +btn.dataset.choicePick;
+    var cur = Array.isArray(q.answers[q.index]) ? q.answers[q.index].slice() : [];
+
+    if (item.type === 'multi') {
+      var at = cur.indexOf(i);
+      if (at >= 0) cur.splice(at, 1); else cur.push(i);
+      cur.sort(function (a, b) { return a - b; });
+      q.answers[q.index] = cur;
+      renderQuiz();
+    } else {
+      q.answers[q.index] = [i];
+      // FR-4.3 학습 모드: 단일정답은 선택 즉시 잠그고 해설 노출
+      if (q.mode === 'study') q.locked[q.index] = true;
+      renderQuiz();
+    }
+  });
+
+  $('#btn-prev').addEventListener('click', function () {
+    if (state.quiz.index > 0) { state.quiz.index--; renderQuiz(); }
+  });
+  $('#btn-next').addEventListener('click', function () {
+    if (state.quiz.index < state.quiz.list.length - 1) { state.quiz.index++; renderQuiz(); }
+  });
+  $('#btn-submit').addEventListener('click', function () {
+    var q = state.quiz;
+    var blank = q.answers.filter(function (a) {
+      return a === null || a === '' || (Array.isArray(a) && !a.length);
+    }).length;
+    dialog({
+      title: '제출할까요?',
+      message: blank ? '아직 표기하지 않은 문항이 ' + blank + '개 있습니다. 무응답은 오답으로 처리됩니다.' : '지금까지의 답안으로 채점합니다.',
+      okText: '제출'
+    }).then(function (ok) { if (ok) grade(); });
+  });
+  $('#btn-quit').addEventListener('click', function () {
+    dialog({
+      title: '응시를 중단할까요?',
+      message: '지금까지의 답안은 채점되지 않고 사라집니다.',
+      okText: '나가기', danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+      state.quiz = null;
+      show('home');
+    });
+  });
+
+  /* =========================================================
+     채점 (FR-5) · 오답노트 갱신 (FR-6)
+     ========================================================= */
+  function normalizeShort(s) {
+    return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase();
+  }
+
+  function isCorrect(item, given) {
+    if (item.type === 'short') {
+      if (!given) return false;
+      var g = normalizeShort(given);
+      return item.answer.some(function (a) { return normalizeShort(a) === g; });
+    }
+    if (!Array.isArray(given) || !given.length) return false;
+    if (given.length !== item.answer.length) return false;         // 복수정답: 완전 일치
+    var sorted = given.slice().sort(function (a, b) { return a - b; });
+    var ans = item.answer.slice().sort(function (a, b) { return a - b; });
+    return sorted.every(function (v, i) { return v === ans[i]; });
+  }
+
+  function grade() {
+    if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+    var q = state.quiz;
+    var rows = q.list.map(function (item, i) {
+      return { item: item, given: q.answers[i], ok: isCorrect(item, q.answers[i]) };
+    });
+
+    // 오답노트 갱신
+    rows.forEach(function (r) {
+      var st = state.stats[r.item.id] || { wrong: 0, streak: 0, inNote: false, lastWrongAt: null };
+      if (r.ok) {
+        st.streak += 1;
+        if (st.streak >= 2) { st.inNote = false; st.streak = 2; }   // 연속 2회 정답 → 제외
+      } else {
+        st.wrong += 1;
+        st.streak = 0;
+        st.inNote = true;
+        st.lastWrongAt = Date.now();
+      }
+      state.stats[r.item.id] = st;
+    });
+    saveStats();
+
+    var correct = rows.filter(function (r) { return r.ok; }).length;
+    var score = Math.round(correct / rows.length * 100);
+
+    var exam = currentExam();
+    if (exam) {
+      exam.attempts += 1;
+      exam.lastScore = score;
+      exam.lastAttemptAt = Date.now();
+      saveIndex();
+    }
+
+    state.result = { rows: rows, score: score, correct: correct };
+    state.quiz = null;
+    renderResult();
+    renderNoteBadge();
+    show('result');
+  }
+
+  function renderResult() {
+    var r = state.result;
+    var total = r.rows.length;
+    $('#r-score').textContent = r.score;
+    $('#r-summary').textContent = '총 ' + total + '문항 · 정답 ' + r.correct + ' · 오답 ' + (total - r.correct);
+
+    // 과목별 정답률
+    var bySubject = {};
+    r.rows.forEach(function (row) {
+      var key = row.item.subject || '과목 미지정';
+      if (!bySubject[key]) bySubject[key] = { total: 0, ok: 0 };
+      bySubject[key].total++;
+      if (row.ok) bySubject[key].ok++;
+    });
+    $('#r-subjects').innerHTML = Object.keys(bySubject).map(function (name) {
+      var s = bySubject[name];
+      var rate = Math.round(s.ok / s.total * 100);
+      return '<div class="rate-row">' +
+        '<div class="rate-label"><span>' + esc(name) + '</span>' +
+        '<span class="c-steel">' + s.ok + ' / ' + s.total + ' · ' + rate + '%</span></div>' +
+        '<div class="rate-track"><div class="rate-fill' + (rate < 60 ? ' is-low' : '') +
+        '" style="width:' + rate + '%"></div></div></div>';
+    }).join('');
+
+    // 오답 상세
+    var wrong = r.rows.filter(function (row) { return !row.ok; });
+    $('#r-wrong-count').textContent = '· ' + wrong.length + '문항';
+    $('#btn-retry-wrong').disabled = !wrong.length;
+    if (!wrong.length) {
+      $('#r-wrong-list').innerHTML = '<div class="empty-state"><p style="margin:0">틀린 문제가 없습니다.</p></div>';
+      return;
+    }
+    $('#r-wrong-list').innerHTML = wrong.map(function (row) {
+      var item = row.item;
+      var mine = item.type === 'short'
+        ? (row.given || '무응답')
+        : (Array.isArray(row.given) && row.given.length
+            ? row.given.map(function (i) { return circled(i); }).join(' ')
+            : '무응답');
+      var ans = item.type === 'short'
+        ? item.answer.join(' / ')
+        : item.answer.map(function (i) { return circled(i); }).join(' ');
+      return '<div class="review-item">' +
+        '<div class="row" style="gap:var(--sp-xxs);margin-bottom:var(--sp-xs)">' +
+          (item.subject ? '<span class="badge badge-outline">' + esc(item.subject) + '</span>' : '') +
+          (item.round ? '<span class="badge badge-outline">' + esc(item.round) + '</span>' : '') +
+        '</div>' +
+        '<p class="t-body-medium" style="margin:0">' + esc(item.stem) + '</p>' +
+        '<dl class="review-answers">' +
+          '<dt>내 답</dt><dd class="ans-wrong">' + esc(mine) + '</dd>' +
+          '<dt>정답</dt><dd class="ans-correct">' + esc(ans) + '</dd>' +
+          (item.explanation ? '<dt>해설</dt><dd>' + esc(item.explanation) + '</dd>' : '') +
+        '</dl></div>';
+    }).join('');
+  }
+
+  $('#btn-retry-wrong').addEventListener('click', function () {
+    var list = state.result.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.item; });
+    if (!list.length) return;
+    startQuiz(shuffle(list.slice()), 'study', 0);
+  });
+
+  /* =========================================================
+     오답노트 (FR-6)
+     ========================================================= */
+  function noteQuestions() {
+    return state.questions.filter(function (q) {
+      var st = state.stats[q.id];
+      return st && st.inNote;
+    });
+  }
+
+  function renderNoteBadge() {
+    var n = noteQuestions().length;
+    var badge = $('#note-badge');
+    badge.hidden = n === 0;
+    badge.textContent = n;
+  }
+
+  function renderNote() {
+    var list = noteQuestions();
+    var host = $('#note-list');
+    $('#btn-note-quiz').disabled = !list.length;
+    if (!list.length) {
+      host.innerHTML = '<div class="empty-state"><p style="margin:0">오답노트가 비어 있습니다.<br>' +
+        '연속 2회 맞힌 문제는 여기서 자동으로 빠집니다.</p></div>';
+      return;
+    }
+    host.innerHTML = list.map(function (q) {
+      var st = state.stats[q.id];
+      return '<div class="note-item">' +
+        '<div class="note-body">' +
+          '<div class="row" style="gap:var(--sp-xxs);margin-bottom:var(--sp-xxs)">' +
+            (q.subject ? '<span class="badge badge-outline">' + esc(q.subject) + '</span>' : '') +
+            '<span class="badge badge-orange">오답 ' + st.wrong + '회</span>' +
+          '</div>' +
+          '<p class="note-stem">' + esc(q.stem) + '</p>' +
+          '<span class="c-steel t-caption">정답 ' + esc(answerLabel(q)) + '</span>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div class="t-caption c-steel" style="margin-bottom:4px">연속정답 ' + st.streak + ' / 2</div>' +
+          '<span class="streak-dots" aria-hidden="true">' +
+            '<span class="streak-dot' + (st.streak >= 1 ? ' is-on' : '') + '"></span>' +
+            '<span class="streak-dot' + (st.streak >= 2 ? ' is-on' : '') + '"></span>' +
+          '</span>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  $('#btn-note-quiz').addEventListener('click', function () {
+    var list = noteQuestions();
+    if (!list.length) return;
+    startQuiz(shuffle(list.slice()), 'study', 0);   // FR-6.5 학습 모드 · 랜덤
+  });
+
+  /* =========================================================
+     백업 (FR-7)
+     ========================================================= */
+  function renderBackup() {
+    $('#storage-state').textContent = storageOk
+      ? '브라우저 로컬 저장소를 사용 중입니다. 저장소를 비우면 데이터가 사라지므로 JSON 백업을 권장합니다.'
+      : '저장소 접근이 차단되어 메모리에만 보관 중입니다. 새로고침하면 데이터가 사라집니다.';
+    $('#storage-badge').textContent = storageOk ? 'localStorage' : '메모리 폴백';
+    $('#btn-export').disabled = !currentExam();
+  }
+
+  function exportExam(mode) {
+    var exam = currentExam();
+    if (!exam) { toast('내보낼 시험이 없습니다.', true); return; }
+    var payload = {
+      format: 'mock-exam-backup',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      exam: { name: exam.name },
+      questions: state.questions,
+      stats: state.stats,
+      images: {}
+    };
+    if (mode === 'full') {
+      state.questions.forEach(function (q) {
+        if (!q.hasImage) return;
+        var data = store.get(K.img(exam.id, q.id), null);
+        if (data) payload.images[q.id] = data;
+      });
+    }
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = exam.name.replace(/[\\/:*?"<>|]/g, '_') + '.json';
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast('JSON을 내려받았습니다.');
+  }
+
+  function currentExportMode() {
+    var checked = $('input[name="exp-mode"]:checked');
+    return checked ? checked.value : 'full';
+  }
+  $('#btn-export').addEventListener('click', function () { exportExam(currentExportMode()); });
+  $('#btn-export-2').addEventListener('click', function () { exportExam(currentExportMode()); });
+
+  $('#import-file').addEventListener('change', function () {
+    var file = this.files[0];
+    if (!file) return;
+    var input = this;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(reader.result); }
+      catch (e) { toast('JSON을 읽을 수 없습니다.', true); input.value = ''; return; }
+      if (!data || !Array.isArray(data.questions)) {
+        toast('이 앱의 백업 파일이 아닙니다.', true); input.value = ''; return;
+      }
+      var name = (data.exam && data.exam.name ? data.exam.name : '가져온 시험') + ' (복원)';
+      var exam = {
+        id: uid(),
+        name: name,
+        createdAt: Date.now(),
+        questionCount: data.questions.length,
+        attempts: 0,
+        lastScore: null,
+        lastAttemptAt: null
+      };
+      var images = data.images || {};
+      data.questions.forEach(function (q) {
+        if (images[q.id]) store.set(K.img(exam.id, q.id), images[q.id]);
+        else if (q.hasImage) q.hasImage = false;   // 텍스트만 백업이면 플래그를 내려 정합성을 맞춘다
+      });
+      store.set(K.questions(exam.id), data.questions);
+      store.set(K.stats(exam.id), data.stats || {});
+      state.exams.unshift(exam);
+      saveIndex();
+      selectExam(exam.id);
+      input.value = '';
+      toast('“' + name + '”으로 복원했습니다.');
+      show('home');
+    };
+    reader.readAsText(file);
+  });
+
+  /* =========================================================
+     시작
+     ========================================================= */
+  if (state.currentExamId && !currentExam()) state.currentExamId = null;
+  if (!state.currentExamId && state.exams.length) state.currentExamId = state.exams[0].id;
+  loadExamData();
+  renderNoteBadge();
+  renderExams();
+  resetManual();
+})();
+</script>
+
+</body>
+</html>
