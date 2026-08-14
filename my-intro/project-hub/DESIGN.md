@@ -577,7 +577,7 @@ Pretendard, -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic
 
 `day2`가 쓰는 방식을 그대로 따른다 (`day2/CLAUDE.md` 참조).
 
-- `portfolio/index.html`의 `:root` 블록이 이 문서 프론트매터의 `colors` · `typography` · `rounded` · `spacing` · `elevation` · `motion`을 **미러링한다**
+- `project-hub/index.html`의 `:root` 블록이 이 문서 프론트매터의 `colors` · `typography` · `rounded` · `spacing` · `elevation` · `motion`을 **미러링한다**
 - **토큰을 바꾸려면 두 파일을 함께 고친다.** 프론트매터가 정본이고 산문은 해설이다
 - 이 문서에 없는 값이 필요하면 `index.html`에 `확장` 주석으로 이유를 남기고 여기에 토큰을 추가한다
 
