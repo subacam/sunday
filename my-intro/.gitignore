@@ -1,0 +1,2 @@
+# 머신마다 다른 로컬 설정. 로컬 경로가 담기므로 공개 저장소에 두지 않는다.
+.claude/settings.local.json

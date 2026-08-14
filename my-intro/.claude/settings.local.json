@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(//c/Users/223/.claude/skills/landing-page/**)",
-      "Bash(node -e ' *)"
-    ]
-  }
-}
