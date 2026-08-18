@@ -508,6 +508,11 @@ a {
 .marker {
   cursor: pointer;
   transition: opacity 200ms ease;
+  outline: none; /* 마우스 클릭으로 포커스될 때 브라우저 기본 사각 아웃라인이 뜨는 것을 막음 */
+}
+.marker:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 .marker-dot {
   fill: var(--accent);

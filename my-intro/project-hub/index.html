@@ -896,6 +896,29 @@
         ],
         result: '만들 것보다 만들지 않을 것을 문서에 못박는 일이 실제 작업 범위를 지켜줬다. 전환 유도(CTA)를 넣지 않은 것도 같은 판단이라, 이 페이지의 성공 기준을 정량 전환율이 아니라 정성적 반응으로 PRD에 적어두었다.'
       }
+    },
+    {
+      id: 'landmark-weather',
+      no: '06',
+      title: '랜드마크 날씨',
+      subtitle: 'World Weather Landmarks',
+      tagline: '세계 랜드마크를 골라 현재 날씨·현지 시간을 보고, 그 장소의 날씨와 시간대에 따라 배경이 실시간으로 바뀌는 지도 사이트',
+      period: '2026.08',
+      role: '기획(PRD 반영) · 디자인 · 개발 전체',
+      stack: ['HTML', 'CSS', 'JavaScript', 'd3-geo', 'Open-Meteo API'],
+      thumb: 'thumbs/06.jpg',
+      liveUrl: '../day5/weather/index.html',
+      sourceUrl: null,
+      study: {
+        problem: 'PRD가 React·Vite 같은 프레임워크 스택을 전제로 작성돼 있었지만, 이 저장소는 빌드 도구 없는 순수 HTML/CSS/JS만 허용한다. 세계지도, 실시간 배경 연출, 24개 랜드마크 날씨 조회까지 요구사항은 그대로 두고 구현 수단만 바꿔야 했다.',
+        approach: '지도만 d3-geo·topojson을 CDN 스크립트로 얹고, 나머지(상태 관리·배경 연출·검색·필터)는 전부 바닐라 JS로 직접 짰다. 상태는 중앙 객체 하나와 pub/sub 이벤트 버스로 관리해 각 모듈이 자기 DOM만 최소한으로 다시 그리게 했다.',
+        highlights: [
+          'd3-geo를 CDN에서 단독으로 불러오면 "Adder is not a constructor"가 났다. d3-geo의 UMD 번들이 d3-array를 전역에서 이미 로드돼 있다고 가정하는 숨은 의존성이라, d3-array를 먼저 불러오는 것으로 해결했다.',
+          'HTML `hidden` 속성과 직접 지정한 `display: flex`가 우선순위 동률로 충돌해, 에러 화면이 날씨 데이터를 이미 정상적으로 받아온 뒤에도 항상 최상단에 떠 있는 버그가 있었다. `[hidden] { display: none !important; }` 한 줄로 고쳤다.',
+          '지도 팬(드래그) 구현에 쓴 setPointerCapture 이후로는 pointerup의 e.target이 원래 누른 요소가 아니라 캡처를 건 svg 자신으로 재지정된다는 스펙 때문에, 마커를 클릭해도 좌표 클릭으로 오작동했다. elementFromPoint로 실제 렌더된 요소를 다시 조회해 해결했다.'
+        ],
+        result: 'PRD를 글자 그대로 구현하기보다, 주어진 제약(빌드 도구 없음) 안에서 무엇을 직접 짜고 무엇을 CDN에 위임할지 가르는 판단이 이 프로젝트의 핵심이었다. 랜드마크 이모지를 위키미디어 커먼즈 실제 사진으로 바꾸면서도 원본을 잘라내지 않는 레터박스 블러 처리까지 다듬은 게 최종 완성도를 결정했다.'
+      }
     }
   ];
 
