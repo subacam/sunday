@@ -27,12 +27,14 @@ No extra runtime dependencies beyond what `create-next-app` installed (`next`, `
 
 - `day5/news/.env.local` (gitignored, not committed) holds two keys:
   ```
-  X-NCP-APIGW-API-KEY-ID=...
-  X-NCP-APIGW-API-KEY=...
+  NCP_APIGW_API_KEY_ID=...
+  NCP_APIGW_API_KEY=...
   ```
   As of 2026-07-31 these come from **NAVER API HUB / NCP** (developers.naver.com stopped issuing new Search Open API keys), see https://api.ncloud-docs.com/docs/naver-api-hub-search-news for the current spec if this ever needs re-verifying. There's no committed template file in this folder — the old placeholder-only example was removed since it added nothing beyond what's written here; these two variables are all the app reads.
+  
+  **The env var names are not the same as the HTTP header names.** The header names Naver actually requires (`X-NCP-APIGW-API-KEY-ID` / `X-NCP-APIGW-API-KEY`) contain hyphens, but env var names can't — Vercel's dashboard (and most platforms) rejects anything outside `[A-Za-z0-9_]`, and hyphenated `process.env['...']` keys are also just needless friction locally. `route.ts` reads `NCP_APIGW_API_KEY_ID`/`NCP_APIGW_API_KEY` from `process.env` and sends them under the correct hyphenated header names in the outbound `fetch` — don't confuse the two when setting values in the Vercel dashboard.
 - `.env.local` is already gitignored. Before any commit in this folder, run `git status` and confirm `.env.local` is not listed.
-- **Never** prefix these with `NEXT_PUBLIC_`. That prefix bundles a variable into client JS — the entire point of this folder's architecture is that `X-NCP-APIGW-API-KEY-ID`/`X-NCP-APIGW-API-KEY` are read only inside `src/app/api/news/route.ts`, server-side, via `process.env['X-NCP-APIGW-API-KEY-ID']` (bracket notation — the hyphens make dot access a syntax error).
+- **Never** prefix these with `NEXT_PUBLIC_`. That prefix bundles a variable into client JS — the entire point of this folder's architecture is that `NCP_APIGW_API_KEY_ID`/`NCP_APIGW_API_KEY` are read only inside `src/app/api/news/route.ts`, server-side, via `process.env`.
 - `.env.local` (gitignored, local-only) currently holds a real NAVER API HUB key pair — live search was verified end-to-end against `naverapihub.apigw.ntruss.com` on 2026-08-18. If `.env.local` ever gets emptied or reset to placeholder text, search results/empty-state/429/60s-cache all go back to being unobservable locally — see "Checking your work" below for what still works without a real key.
 
 ## Architecture
@@ -45,7 +47,7 @@ No extra runtime dependencies beyond what `create-next-app` installed (`next`, `
 
 ## project-hub / deployment — not done yet
 
-- **Deployment**: the repo's single Vercel project serves everything else as zero-config static passthrough and can't also run `next build` for this subfolder. This needs a **second Vercel project** with Root Directory set to `day5/news` in the Vercel dashboard, plus `X-NCP-APIGW-API-KEY-ID`/`X-NCP-APIGW-API-KEY` registered there as real environment variables. That's a manual dashboard step, not something to script.
+- **Deployment**: the repo's single Vercel project serves everything else as zero-config static passthrough and can't also run `next build` for this subfolder. This needs a **second Vercel project** with Root Directory set to `day5/news` in the Vercel dashboard, plus `NCP_APIGW_API_KEY_ID`/`NCP_APIGW_API_KEY` registered there as real environment variables (underscore names — see "Environment variables" above for why they differ from the HTTP header names). That's a manual dashboard step, not something to script.
 - **project-hub registration**: `project-hub/index.html`'s `PROJECTS` array normally gets a new card once a project ships, but its `liveUrl` needs a real deployed URL — there isn't one yet since this app has no static `index.html` to link to directly. Don't add a placeholder/fake entry; do this after the deploy above.
 
 ## Checking your work

@@ -72,9 +72,10 @@
    - 프로젝트 루트에 `.env.local` 파일 생성
    - 아래와 같이 키 저장:
      ```
-     X-NCP-APIGW-API-KEY-ID=발급받은_ID
-     X-NCP-APIGW-API-KEY=발급받은_SECRET
+     NCP_APIGW_API_KEY_ID=발급받은_ID
+     NCP_APIGW_API_KEY=발급받은_SECRET
      ```
+   - 환경변수 이름은 하이픈을 쓸 수 없어(Vercel 등 대부분 플랫폼이 letters/digits/underscore만 허용) 언더스코어로 표기하지만, 실제로 네이버에 보내는 HTTP 헤더 이름은 `X-NCP-APIGW-API-KEY-ID` / `X-NCP-APIGW-API-KEY` 그대로다 — 서버 코드에서 값만 읽어 이 헤더에 담아 보낸다.
    - **`NEXT_PUBLIC_` 접두사를 붙이지 않는다.** (붙이면 브라우저에 번들되어 노출됨)
 
 2. **`.gitignore` 등록**
@@ -217,7 +218,7 @@ UI:
 |---|---|
 | Method | GET |
 | Query Params | `query` (검색어, 필수), `sort` (`sim`\|`date`, 기본값 `sim`), `page` 또는 `start` (페이지네이션) |
-| 내부 동작 | 서버에서 `process.env['X-NCP-APIGW-API-KEY-ID']`/`process.env['X-NCP-APIGW-API-KEY']`를 헤더에 담아 네이버 API 호출 → 응답 가공 후 클라이언트에 반환 |
+| 내부 동작 | 서버에서 `process.env.NCP_APIGW_API_KEY_ID`/`process.env.NCP_APIGW_API_KEY` 값을 `X-NCP-APIGW-API-KEY-ID`/`X-NCP-APIGW-API-KEY` 헤더에 담아 네이버 API 호출 → 응답 가공 후 클라이언트에 반환 |
 | 응답 예시 | `{ items: [...], total, currentPage }` |
 
 ### 7.2 네이버 뉴스 API 매핑

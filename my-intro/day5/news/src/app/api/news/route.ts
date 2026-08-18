@@ -54,11 +54,11 @@ export async function GET(request: NextRequest) {
 
   const display = Math.min(page * PAGE_SIZE, MAX_DISPLAY);
 
-  const clientId = process.env['X-NCP-APIGW-API-KEY-ID'];
-  const clientSecret = process.env['X-NCP-APIGW-API-KEY'];
+  const clientId = process.env.NCP_APIGW_API_KEY_ID;
+  const clientSecret = process.env.NCP_APIGW_API_KEY;
 
   if (!clientId || !clientSecret) {
-    console.error('[api/news] X-NCP-APIGW-API-KEY-ID / X-NCP-APIGW-API-KEY is not set');
+    console.error('[api/news] NCP_APIGW_API_KEY_ID / NCP_APIGW_API_KEY is not set');
     return errorResponse(503, {
       error: 'UPSTREAM_ERROR',
       message: '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
