@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Weather Landmarks — 랜드마크 날씨</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%220.9em%22 font-size=%2290%22>🌍</text></svg>" />
+  <meta
+    name="description"
+    content="세계 랜드마크를 골라 현재 날씨와 현지 시간을 확인하고, 그 장소의 날씨와 시간대에 따라 배경이 실시간으로 바뀌는 사이트"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/d3-array@3/dist/d3-array.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-geo@3/dist/d3-geo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 전역 동적 배경 (F-03, §9.4 6레이어 스택) -->
+  <div id="bg-root" aria-hidden="true">
+    <div id="bg-gradient-a" class="bg-gradient bg-gradient--active"></div>
+    <div id="bg-gradient-b" class="bg-gradient"></div>
+    <div class="bg-clouds">
+      <div class="cloud-layer cloud-layer--1"></div>
+      <div class="cloud-layer cloud-layer--2"></div>
+    </div>
+    <div id="bg-fog-1" class="bg-fog bg-fog--1"></div>
+    <div id="bg-fog-2" class="bg-fog bg-fog--2"></div>
+    <canvas id="bg-particles"></canvas>
+    <div id="bg-silhouette" class="bg-silhouette"></div>
+    <div id="bg-lightning" class="bg-lightning"></div>
+  </div>
+  <div class="bg-scrim"></div>
+
+  <!-- 초기 진입 로딩 (F-07 ①) -->
+  <div id="boot-loading" class="boot-loading">
+    <div class="boot-loading__logo">🌍 World Weather Landmarks</div>
+    <p class="boot-loading__status" role="status" aria-live="polite">랜드마크 날씨를 불러오는 중…</p>
+  </div>
+
+  <!-- 전체화면 에러 (F-08, §10 E-01~E-05·E-08·E-10) -->
+  <div id="boot-error" class="fullscreen-error" hidden>
+    <p id="boot-error-message" class="fullscreen-error__message"></p>
+    <div class="fullscreen-error__actions">
+      <button id="boot-error-retry" class="btn btn--primary">다시 시도</button>
+      <button id="boot-error-home" class="btn" hidden>홈으로</button>
+    </div>
+    <details class="fullscreen-error__detail">
+      <summary>기술 정보</summary>
+      <pre id="boot-error-code"></pre>
+    </details>
+  </div>
+
+  <div id="app-shell" class="app-shell" hidden>
+    <header class="app-header">
+      <div class="app-header__brand">🌍 <span>World Weather Landmarks</span></div>
+
+      <div class="app-header__search">
+        <label for="search-input" class="sr-only">도시 검색</label>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="도시 검색 (예: 레이캬비크)"
+          role="combobox"
+          aria-expanded="false"
+          aria-controls="search-results"
+          aria-autocomplete="list"
+          autocomplete="off"
+        />
+        <span id="search-spinner" class="search-spinner" hidden aria-hidden="true"></span>
+        <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+        <p id="search-empty" class="search-empty" hidden></p>
+      </div>
+
+      <div class="app-header__actions">
+        <div class="view-toggle" role="group" aria-label="뷰 전환">
+          <button id="view-toggle-map" class="view-toggle-btn" aria-pressed="true">지도</button>
+          <button id="view-toggle-list" class="view-toggle-btn" aria-pressed="false">리스트</button>
+        </div>
+        <button id="units-toggle-temp" class="unit-btn" aria-label="온도 단위 전환">°C</button>
+        <button id="units-toggle-wind" class="unit-btn" aria-label="풍속 단위 전환">km/h</button>
+        <button id="bg-effects-toggle" class="bg-effects-btn" aria-pressed="false">배경 효과 끄기</button>
+      </div>
+    </header>
+
+    <div id="filter-bar" class="filter-bar" role="group" aria-label="대륙 필터"></div>
+
+    <main class="app-main">
+      <section id="map-section" class="map-section">
+        <div id="map-container" class="map-container"></div>
+        <div id="map-tooltip" class="map-tooltip" hidden></div>
+        <div class="map-controls">
+          <button id="map-zoom-in" aria-label="지도 확대">+</button>
+          <button id="map-zoom-out" aria-label="지도 축소">−</button>
+          <button id="map-reset" aria-label="전체 보기">전체 보기</button>
+        </div>
+        <p id="map-load-error" class="map-load-error" hidden>지도를 불러오지 못했어요. 마커는 계속 이용할 수 있어요.</p>
+      </section>
+
+      <section id="list-section" class="list-section" hidden>
+        <div class="list-toolbar">
+          <label for="sort-select">정렬</label>
+          <select id="sort-select">
+            <option value="name">이름순</option>
+            <option value="temp-desc">기온 높은순</option>
+            <option value="temp-asc">기온 낮은순</option>
+            <option value="local-time">현지 시간순</option>
+          </select>
+        </div>
+        <div id="list-grid" class="list-grid"></div>
+        <div id="list-empty" class="list-empty" hidden>
+          <p>조건에 맞는 랜드마크가 없어요</p>
+          <button id="list-empty-reset" class="btn">필터 초기화</button>
+        </div>
+      </section>
+    </main>
+
+    <aside id="detail-panel" class="detail-panel" hidden aria-live="polite">
+      <button id="detail-close" class="detail-close" aria-label="상세 정보 닫기">×</button>
+      <div id="detail-content" class="detail-content"></div>
+    </aside>
+
+    <footer class="app-footer">
+      <p>
+        Weather data by
+        <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="landmarks.js"></script>
+  <script src="weather-codes.js"></script>
+  <script src="state.js"></script>
+  <script src="weather-api.js"></script>
+  <script src="daytime.js"></script>
+  <script src="background-engine.js"></script>
+  <script src="map-view.js"></script>
+  <script src="search.js"></script>
+  <script src="filters-list.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
