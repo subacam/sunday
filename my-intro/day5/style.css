@@ -202,19 +202,6 @@ a {
   opacity: 1;
 }
 
-.bg-silhouette {
-  position: absolute;
-  left: 50%;
-  bottom: -2%;
-  transform: translateX(-50%);
-  font-size: clamp(120px, 28vw, 340px);
-  line-height: 1;
-  opacity: 0.16;
-  filter: drop-shadow(0 0 40px rgba(0, 0, 0, 0.4));
-  transition: opacity 600ms ease;
-  user-select: none;
-}
-
 .bg-lightning {
   position: absolute;
   inset: 0;
@@ -661,8 +648,51 @@ a {
 .landmark-card.is-selected {
   border-color: var(--accent);
 }
+/* 사진 원본 비율을 그대로 보존하면서(object-fit: contain, 잘림 없음) 박스를 채우도록
+   같은 이미지를 흐리게 확대한 배경(::before)을 깔아주는 "레터박스 블러" 패턴.
+   위/아래(또는 좌/우) 여백이 생기는 대신 사진의 중요한 부분이 잘려나가지 않는다. */
+.photo-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.06);
+  background-size: cover;
+  background-position: center;
+}
+.photo-frame::before {
+  content: "";
+  position: absolute;
+  inset: -15%;
+  background-image: inherit;
+  background-size: cover;
+  background-position: center;
+  filter: blur(20px) brightness(0.55);
+}
+.photo-frame--card {
+  aspect-ratio: 4 / 3;
+}
+.photo-frame--detail {
+  aspect-ratio: 16 / 9;
+  margin-bottom: var(--space-3);
+}
+.photo-frame__img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .landmark-card__emoji {
-  font-size: 2.4rem;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.8rem;
   line-height: 1;
 }
 .landmark-card__name {
@@ -746,6 +776,7 @@ a {
   z-index: var(--z-panel);
   overflow-y: auto;
   padding: var(--space-5);
+  padding-top: 56px; /* 오른쪽 위 닫기(×) 버튼과 겹치지 않도록 상단 여백을 더 확보 */
   transform: translateX(100%);
   transition: transform 300ms ease;
 }
@@ -771,7 +802,14 @@ a {
   gap: var(--space-4);
 }
 .detail-title__emoji {
-  font-size: 2.6rem;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.4rem;
 }
 .detail-title__name {
   font-size: 1.3rem;

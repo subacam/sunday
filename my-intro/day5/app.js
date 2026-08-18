@@ -226,9 +226,22 @@ window.WW = window.WW || {};
     const windText = window.WW.units.formatWindSpeed(detail.windSpeed, units.wind);
     const clock = window.WW.daytime.formatLocalClock(detail.utcOffsetSeconds);
 
+    const photoHtml = landmark
+      ? `<div class="photo-frame photo-frame--detail" style="background-image:url('${landmark.image}')">
+          <img
+            class="photo-frame__img"
+            src="${landmark.image}"
+            alt="${landmark.name}"
+            data-fallback-emoji="${landmark.emoji}"
+            data-fallback-class="detail-title__emoji"
+            onerror="window.WW.filtersList.handleThumbError(this)"
+          />
+        </div>`
+      : `<div class="photo-frame photo-frame--detail"><div class="detail-title__emoji">${emoji}</div></div>`;
+
     detailContentEl.innerHTML = `
       <div class="detail-title">
-        <div class="detail-title__emoji">${emoji}</div>
+        ${photoHtml}
         <p class="detail-title__name">${name}</p>
         <p class="detail-title__place">${place}</p>
       </div>

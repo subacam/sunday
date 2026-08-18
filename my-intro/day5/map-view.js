@@ -16,7 +16,9 @@ window.WW = window.WW || {};
   let pathGen = null;
   let transform = { tx: 0, ty: 0, scale: 1 };
   let dragging = false;
+  let dragMoved = false;
   let dragStart = null;
+  const DRAG_THRESHOLD_PX = 5;
   const markerEls = new Map(); // id -> { g, dot, emoji, badge }
 
   function clamp(v, min, max) {
@@ -72,6 +74,47 @@ window.WW = window.WW || {};
     tooltipEl = document.getElementById("map-tooltip");
   }
 
+  // svg에 setPointerCapture가 걸린 뒤에는 pointerup의 e.target이 캡처한 svg 자신으로
+  // 재지정되어(스펙상 정상 동작) 실제로 어떤 요소 위에서 손을 뗐는지 알 수 없다.
+  // 화면 좌표 기준으로 실제 렌더된 요소를 다시 조회해야 마커/국가 판별이 정확하다.
+  function hitTestAt(clientX, clientY) {
+    return document.elementFromPoint(clientX, clientY);
+  }
+
+  // 마커가 아닌 지도(국가 영역/바다) 클릭 시, 클릭한 좌표를 검색 결과 선택과 동일하게 취급한다.
+  function handleMapClick(e, hitEl) {
+    if (!projection) return;
+
+    const targetEl = hitEl || hitTestAt(e.clientX, e.clientY);
+    const countryPath = targetEl && targetEl.closest && targetEl.closest(".map-country");
+    const countryName = countryPath ? countryPath.getAttribute("data-country-name") : null;
+
+    // <svg viewBox> 기본값(preserveAspectRatio: xMidYMid meet)은 컨테이너 비율이 달라도
+    // 종횡비를 유지한 채 가운데 정렬되므로, 레터박스 여백을 감안해 화면 좌표 -> viewBox 좌표로 변환한다.
+    const rect = svg.getBoundingClientRect();
+    const fitScale = Math.min(rect.width / VIEW_W, rect.height / VIEW_H);
+    const offsetX = (rect.width - VIEW_W * fitScale) / 2;
+    const offsetY = (rect.height - VIEW_H * fitScale) / 2;
+    const svgX = (e.clientX - rect.left - offsetX) / fitScale;
+    const svgY = (e.clientY - rect.top - offsetY) / fitScale;
+
+    // 팬/줌(map-viewport의 transform) 역변환으로 투영 좌표계(raw projection space)로 되돌린다.
+    const worldX = (svgX - transform.tx) / transform.scale;
+    const worldY = (svgY - transform.ty) / transform.scale;
+
+    const lonLat = projection.invert([worldX, worldY]);
+    if (!lonLat || Number.isNaN(lonLat[0]) || Number.isNaN(lonLat[1])) return;
+    const [lon, lat] = lonLat;
+
+    window.WW.actions.selectAdHoc({
+      lat,
+      lon,
+      label: countryName || `위도 ${lat.toFixed(1)}, 경도 ${lon.toFixed(1)}`,
+      admin1: "",
+      country: countryName || "",
+    });
+  }
+
   function attachInteractions() {
     svg.addEventListener(
       "wheel",
@@ -85,6 +128,7 @@ window.WW = window.WW || {};
 
     svg.addEventListener("pointerdown", (e) => {
       dragging = true;
+      dragMoved = false;
       dragStart = { x: e.clientX, y: e.clientY, tx: transform.tx, ty: transform.ty };
       svg.setPointerCapture(e.pointerId);
     });
@@ -92,10 +136,21 @@ window.WW = window.WW || {};
       if (!dragging) return;
       const dx = e.clientX - dragStart.x;
       const dy = e.clientY - dragStart.y;
+      if (Math.abs(dx) > DRAG_THRESHOLD_PX || Math.abs(dy) > DRAG_THRESHOLD_PX) dragMoved = true;
       setTransformImmediate(dragStart.tx + dx, dragStart.ty + dy, transform.scale);
     });
-    svg.addEventListener("pointerup", () => {
+    svg.addEventListener("pointerup", (e) => {
       dragging = false;
+      if (dragMoved) return; // 드래그(팬)였다면 클릭으로 취급하지 않음
+      // setPointerCapture 이후 e.target은 캡처한 svg로 재지정되므로 믿을 수 없다.
+      // 실제 화면 좌표에서 무엇이 렌더되어 있는지 다시 조회해서 마커 여부를 판별한다.
+      const hitEl = hitTestAt(e.clientX, e.clientY);
+      const markerEl = hitEl && hitEl.closest && hitEl.closest(".marker");
+      if (markerEl) {
+        window.WW.actions.selectLandmark(markerEl.getAttribute("data-id"));
+      } else {
+        handleMapClick(e, hitEl);
+      }
     });
     svg.addEventListener("pointercancel", () => {
       dragging = false;
@@ -140,6 +195,8 @@ window.WW = window.WW || {};
       if (!d) return;
       path.setAttribute("d", d);
       path.setAttribute("class", "map-country");
+      const countryName = feature.properties && feature.properties.name;
+      if (countryName) path.setAttribute("data-country-name", countryName);
       countriesG.appendChild(path);
     });
   }
@@ -183,7 +240,6 @@ window.WW = window.WW || {};
       badge.setAttribute("text-anchor", "middle");
       g.appendChild(badge);
 
-      g.addEventListener("click", () => window.WW.actions.selectLandmark(landmark.id));
       g.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();

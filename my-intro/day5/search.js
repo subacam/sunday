@@ -30,10 +30,25 @@ window.WW = window.WW || {};
   }
 
   function formatResultLabel(r) {
+    if (r.type === "landmark") {
+      return `${r.emoji} ${r.name} · ${r.city} · ${r.country}`;
+    }
     const parts = [r.name];
     if (r.admin1) parts.push(r.admin1);
     if (r.country) parts.push(r.country);
     return parts.join(" · ");
+  }
+
+  // 지도/리스트뷰의 랜드마크 이름·도시도 검색창에서 함께 찾히도록 로컬 매칭 (도시 검색과 별개)
+  function matchLandmarks(query) {
+    const trimmed = query.trim();
+    const lower = trimmed.toLowerCase();
+    return window.WW.landmarks
+      .filter(
+        (l) => l.name.includes(trimmed) || l.city.includes(trimmed) || l.nameEn.toLowerCase().includes(lower)
+      )
+      .slice(0, 5)
+      .map((l) => ({ type: "landmark", id: l.id, name: l.name, city: l.city, country: l.country, emoji: l.emoji }));
   }
 
   function renderResults(list) {
@@ -72,19 +87,25 @@ window.WW = window.WW || {};
   }
 
   function selectResult(r) {
-    window.WW.actions.selectAdHoc({
-      lat: r.latitude,
-      lon: r.longitude,
-      label: r.name,
-      admin1: r.admin1 || "",
-      country: r.country || "",
-    });
+    if (r.type === "landmark") {
+      window.WW.actions.selectLandmark(r.id);
+    } else {
+      window.WW.actions.selectAdHoc({
+        lat: r.lat,
+        lon: r.lon,
+        label: r.name,
+        admin1: r.admin1 || "",
+        country: r.country || "",
+      });
+    }
     inputEl.value = formatResultLabel(r);
     clearResults();
     hideEmpty();
   }
 
   function runSearch(query) {
+    const landmarkMatches = matchLandmarks(query);
+
     if (abortController) abortController.abort();
     abortController = new AbortController();
     spinnerEl.hidden = false;
@@ -92,19 +113,33 @@ window.WW = window.WW || {};
 
     window.WW.weatherApi
       .searchCities(query, { signal: abortController.signal })
-      .then((list) => {
+      .then((cityList) => {
         spinnerEl.hidden = true;
-        if (list.length === 0) {
+        const cityMatches = cityList.map((r) => ({
+          type: "city",
+          lat: r.latitude,
+          lon: r.longitude,
+          name: r.name,
+          admin1: r.admin1 || "",
+          country: r.country || "",
+        }));
+        const combined = landmarkMatches.concat(cityMatches);
+        if (combined.length === 0) {
           clearResults();
           showEmpty(query);
         } else {
-          renderResults(list);
+          renderResults(combined);
         }
       })
       .catch((err) => {
         if (err && err.kind === "cancelled") return;
         spinnerEl.hidden = true;
-        clearResults();
+        // 도시 검색이 실패해도 랜드마크 매치가 있으면 그것만이라도 보여준다
+        if (landmarkMatches.length > 0) {
+          renderResults(landmarkMatches);
+        } else {
+          clearResults();
+        }
       });
   }
 

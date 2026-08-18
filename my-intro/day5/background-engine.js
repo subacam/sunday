@@ -8,7 +8,7 @@ window.WW = window.WW || {};
   const MAX_FLASH_OPACITY = 0.35;
 
   let gradA, gradB, activeGrad;
-  let cloud1, cloud2, fog1, fog2, silhouetteEl, lightningEl;
+  let cloud1, cloud2, fog1, fog2, lightningEl;
   let canvas, ctx;
 
   let particles = [];
@@ -32,7 +32,6 @@ window.WW = window.WW || {};
   let currentWeatherCode = 0;
 
   let lastDetail = null;
-  let lastEmoji = "";
 
   const reducedMotionMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -386,15 +385,10 @@ window.WW = window.WW || {};
     fog2.classList.toggle("is-visible", show);
   }
 
-  function applySilhouette(emoji) {
-    silhouetteEl.textContent = emoji || "";
-  }
-
-  function applyTheme(theme, emoji, weatherCode, weatherGroup, windSpeed, windDirection) {
+  function applyTheme(theme, weatherCode, weatherGroup, windSpeed, windDirection) {
     applyGradient(theme.bgKey);
     applyClouds(theme.clouds);
     applyFog(theme.fog);
-    applySilhouette(emoji);
     setParticleWeather(theme.particle, weatherCode, weatherGroup, windSpeed, windDirection);
 
     if (theme.lightning) {
@@ -405,10 +399,10 @@ window.WW = window.WW || {};
     }
   }
 
-  function applyForDetail(detail, emoji) {
+  function applyForDetail(detail) {
     const timeBucket = window.WW.daytime.computeTimeBucket(detail.utcOffsetSeconds, detail.sunrise, detail.sunset);
     const theme = pickTheme(timeBucket, detail.weatherGroup);
-    applyTheme(theme, emoji, detail.weatherCode, detail.weatherGroup, detail.windSpeed, detail.windDirection);
+    applyTheme(theme, detail.weatherCode, detail.weatherGroup, detail.windSpeed, detail.windDirection);
   }
 
   // 선택 전 기본 배경: 브라우저 로컬 시각 기준 대략적인 시간대 + 맑음으로 근사 (§4)
@@ -419,19 +413,17 @@ window.WW = window.WW || {};
     else if (hour >= 7 && hour < 18) timeBucket = "day";
     else if (hour >= 18 && hour < 20) timeBucket = "dusk";
     else timeBucket = "night";
-    applyTheme(pickTheme(timeBucket, "clear"), "", 0, "clear", 0, 0);
+    applyTheme(pickTheme(timeBucket, "clear"), 0, "clear", 0, 0);
   }
 
   function reapplyLast() {
-    if (lastDetail) applyForDetail(lastDetail, lastEmoji);
+    if (lastDetail) applyForDetail(lastDetail);
     else applyDefaultBackground();
   }
 
   function handleDetailUpdated(detail) {
     lastDetail = detail;
-    const landmark = detail.landmarkId ? window.WW.getLandmarkById(detail.landmarkId) : null;
-    lastEmoji = landmark ? landmark.emoji : "📍";
-    applyForDetail(detail, lastEmoji);
+    applyForDetail(detail);
   }
 
   function handleVisibilityChange() {
@@ -474,7 +466,6 @@ window.WW = window.WW || {};
     cloud2 = document.querySelector(".cloud-layer--2");
     fog1 = document.getElementById("bg-fog-1");
     fog2 = document.getElementById("bg-fog-2");
-    silhouetteEl = document.getElementById("bg-silhouette");
     lightningEl = document.getElementById("bg-lightning");
     canvas = document.getElementById("bg-particles");
     ctx = canvas.getContext("2d");
@@ -499,7 +490,7 @@ window.WW = window.WW || {};
 
     // §9.1 시간대는 분 단위 경계이므로 60초마다 재평가
     setInterval(() => {
-      if (lastDetail) applyForDetail(lastDetail, lastEmoji);
+      if (lastDetail) applyForDetail(lastDetail);
     }, 60000);
   }
 

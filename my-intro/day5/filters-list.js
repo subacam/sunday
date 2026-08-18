@@ -60,9 +60,28 @@ window.WW = window.WW || {};
     return paired.map((x) => x.l);
   }
 
+  // imgEl: 로딩 실패한 <img>. data-fallback-emoji/-class로 어떤 이모지·클래스로 대체할지 지정.
+  function handleThumbError(imgEl) {
+    const emoji = imgEl.getAttribute("data-fallback-emoji") || "🏞️";
+    const fallbackClass = imgEl.getAttribute("data-fallback-class") || "landmark-card__emoji";
+    const fallback = document.createElement("div");
+    fallback.className = fallbackClass;
+    fallback.textContent = emoji;
+    imgEl.replaceWith(fallback);
+  }
+
   function cardBodyHtml(landmark, entry) {
     const head = `
-      <div class="landmark-card__emoji">${landmark.emoji}</div>
+      <div class="photo-frame photo-frame--card" style="background-image:url('${landmark.image}')">
+        <img
+          class="photo-frame__img"
+          src="${landmark.image}"
+          alt="${landmark.name}"
+          loading="lazy"
+          data-fallback-emoji="${landmark.emoji}"
+          onerror="window.WW.filtersList.handleThumbError(this)"
+        />
+      </div>
       <div class="landmark-card__name">${landmark.name}</div>
       <div class="landmark-card__place">${landmark.city} · ${landmark.country}</div>`;
 
@@ -201,5 +220,5 @@ window.WW = window.WW || {};
     });
   }
 
-  window.WW.filtersList = { init, renderList };
+  window.WW.filtersList = { init, renderList, handleThumbError };
 })();
