@@ -919,6 +919,29 @@
         ],
         result: 'PRD를 글자 그대로 구현하기보다, 주어진 제약(빌드 도구 없음) 안에서 무엇을 직접 짜고 무엇을 CDN에 위임할지 가르는 판단이 이 프로젝트의 핵심이었다. 랜드마크 이모지를 위키미디어 커먼즈 실제 사진으로 바꾸면서도 원본을 잘라내지 않는 레터박스 블러 처리까지 다듬은 게 최종 완성도를 결정했다.'
       }
+    },
+    {
+      id: 'news-search',
+      no: '07',
+      title: '뉴스 검색',
+      subtitle: 'News Search',
+      tagline: '키워드로 뉴스를 검색하고 정확도·최신순으로 훑어보는 검색 사이트. API 키를 숨기려고 이 저장소에서 처음으로 서버를 둔 프로젝트',
+      period: '2026.08',
+      role: '기획(PRD 반영) · 디자인 · 개발 전체',
+      stack: ['Next.js', 'TypeScript', 'Tailwind CSS', 'NAVER API HUB'],
+      thumb: null,
+      liveUrl: 'https://sunday-gvn3.vercel.app',
+      sourceUrl: null,
+      study: {
+        problem: '뉴스 검색 API 키를 브라우저에 그대로 두면 안 된다는 요구 하나가, 빌드 도구 없는 순수 HTML/CSS/JS만 써온 이 저장소에 처음으로 "서버가 필요한 프로젝트"를 만들었다. day5/weather처럼 프레임워크를 바닐라로 우회할 수 없는 요구사항이었다.',
+        approach: 'PRD가 제안한 Next.js 스택을 그대로 받아들이고, day5/news 폴더 하나만 저장소 관례의 명시적 예외로 문서화했다. API Route 하나가 서버에서만 키를 쥐고 네이버 API를 대신 호출하고, 응답에 섞여 오는 `<b>` 강조 태그는 dangerouslySetInnerHTML 없이 직접 파싱해 안전하게 렌더링했다.',
+        highlights: [
+          '작업 도중 네이버가 2026년 7월 31일부로 검색 오픈API 신규 발급을 종료하고 NCP API Gateway로 옮긴 걸 실시간으로 마주쳤다. 알고 있던 X-Naver-Client-Id 헤더와 openapi.naver.com 엔드포인트가 전부 X-NCP-APIGW-API-KEY* 헤더와 naverapihub.apigw.ntruss.com로 바뀌어 있어, 실제 요청을 넣어 에러 메시지로 원인을 추적해야 했다.',
+          '환경변수 이름엔 하이픈을 못 쓴다는 Vercel의 제약 때문에, 네이버가 요구하는 헤더 이름(X-NCP-APIGW-API-KEY-ID)과 서버가 읽는 환경변수 이름(NCP_APIGW_API_KEY_ID)을 분리해야 했다 — 값은 같아도 이름 두 개를 따로 관리하는 구조.',
+          '레포 전체를 서빙하던 기존 Vercel 프로젝트는 빌드 스텝 없는 정적 배포라 이 폴더를 얹을 수 없었다. Root Directory를 day5/news로 지정한 별도 Vercel 프로젝트를 새로 만들어야 했다.'
+        ],
+        result: 'PRD를 우회하지 않고 그대로 구현하는 선택이 이 저장소의 무의존성 관례와 충돌하는 것처럼 보였지만, 예외를 코드가 아니라 문서(CLAUDE.md)에 명시적으로 못박는 편이 조용히 우회하는 것보다 나았다. 외부 API 스펙은 작업 중에도 바뀔 수 있는 살아있는 문서라는 것도 이번에 새로 배웠다.'
+      }
     }
   ];
 
