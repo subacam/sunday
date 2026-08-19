@@ -13,11 +13,11 @@ Do not refactor toward shared assets across the two folders; the separation is i
 
 ## Tooling
 
-Most of this repo is plain HTML/CSS/JS with no build step, package manager, test suite, or linter, and no `package.json` — day1, day2, and day5/weather all work this way. Don't assume npm/node tooling exists **for a given folder** unless that folder's own `CLAUDE.md` says otherwise; `day5/news` is a real Next.js + TypeScript app with its own `package.json`, `node_modules/`, and build step (see `day5/news/CLAUDE.md`) precisely because it needs a server to keep an API key off the client. Treat each folder's own `CLAUDE.md` as authoritative for its tooling — this file doesn't try to make one claim that covers all of them.
+Most of this repo is plain HTML/CSS/JS with no build step, package manager, test suite, or linter, and no `package.json` — day1, day2, and day5/weather all work this way. Don't assume npm/node tooling exists **for a given folder** unless that folder's own `CLAUDE.md` says otherwise; `day5/news` and `day6/dust` are real Next.js + TypeScript apps with their own `package.json`, `node_modules/`, and build step (see `day5/news/CLAUDE.md` and `day6/dust/CLAUDE.md`) precisely because each needs a server to keep an API key off the client. Treat each folder's own `CLAUDE.md` as authoritative for its tooling — this file doesn't try to make one claim that covers all of them.
 
 This **is** a git repository, and it is deployed to Vercel from GitHub: pushing the default branch publishes the site. Treat pushes as outward-facing.
 
-`node` happens to be installed on this machine. Outside `day5/news` (which depends on it directly), its only use is ad-hoc syntax checking of inline scripts.
+`node` happens to be installed on this machine. Outside `day5/news` and `day6/dust` (which depend on it directly), its only use is ad-hoc syntax checking of inline scripts.
 
 ## Running
 
@@ -33,6 +33,6 @@ Read them as UTF-8 explicitly. PowerShell 5.1's `Get-Content` defaults to ANSI a
 
 ## Conventions
 
-- Plain HTML/CSS/JS, no dependencies. Keep new styling and scripting inline or in a sibling file; do not introduce a framework, bundler, or package manager — except inside a folder whose own `CLAUDE.md` explicitly says otherwise (currently only `day5/news`).
+- Plain HTML/CSS/JS, no dependencies. Keep new styling and scripting inline or in a sibling file; do not introduce a framework, bundler, or package manager — except inside a folder whose own `CLAUDE.md` explicitly says otherwise (currently `day5/news` and `day6/dust`).
 - Content is Korean. Keep `<meta charset="UTF-8">` and `lang="ko"` in place when editing.
 - `day1` uses a sibling stylesheet for the portfolio and inlines everything for `fortune.html`; `day2` is a single fully-inline file. Follow whichever pattern the file you are editing already uses.
