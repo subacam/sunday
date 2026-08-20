@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>가게 상세 | 가게 길찾기</title>
+<meta name="description" content="여러 사람이 남긴 사진·설명·정밀 핀을 한곳에서 확인하세요.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          base:  { DEFAULT: '#2F5D50', dark: '#1E4036', light: '#3E7A67', tint: '#EDF3EF' },
+          terra: { DEFAULT: '#B45F49', tint: '#FAF0EB' },
+          cta:   { DEFAULT: '#E8A33D', dark: '#C9871F' },
+          ink:   { DEFAULT: '#1F2A24', soft: '#3F4B45', mute: '#5C6B63' }
+        },
+        fontFamily: {
+          sans: ['Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', 'sans-serif']
+        }
+      }
+    }
+  };
+</script>
+<style>
+  /* 본문 18px 기준(DESIGN 3.2) — 캡션도 16px 아래로 내려가지 않는다 */
+  body { font-size: 18px; line-height: 1.75; }
+
+  /* 정밀 핀 지도 자리 표시자: 격자 무늬로 "지도 느낌"만 낸다 (실제 지도 아님) */
+  .map-grid {
+    background-image:
+      linear-gradient(#DCE6E0 1px, transparent 1px),
+      linear-gradient(90deg, #DCE6E0 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* 키보드 포커스를 항상 눈에 보이게 */
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 3px solid #1E4036;
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body class="bg-white font-sans text-ink antialiased">
+
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-lg focus:bg-base focus:px-5 focus:py-3 focus:font-bold focus:text-white">본문 바로가기</a>
+
+<header class="sticky top-0 z-30 border-b border-base-tint/70 bg-white/95 shadow-sm backdrop-blur">
+  <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+    <a href="index.html" class="flex items-center gap-2 text-[1.25rem] font-extrabold text-base-dark">
+      <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-2xl bg-base text-white shadow-sm">길</span>
+      가게 길찾기
+    </a>
+    <span class="rounded-full bg-base-tint px-3 py-1 text-[1rem] font-bold text-base-dark">데모 페이지</span>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- 뒤로가기 -->
+  <div class="mx-auto max-w-5xl px-5 pt-6">
+    <a href="index.html" class="inline-flex items-center gap-1.5 text-[1.0625rem] font-bold text-base-dark hover:text-cta-dark">
+      <span aria-hidden="true">←</span> 목록으로 돌아가기
+    </a>
+  </div>
+
+  <!-- 가게를 찾을 수 없을 때 (id가 없는 채로 이 페이지에 바로 들어온 경우) -->
+  <section id="not-found-section" class="mx-auto hidden max-w-5xl px-5 py-16 text-center">
+    <p class="text-[1.5rem] font-extrabold text-base-dark">가게 정보를 찾을 수 없습니다</p>
+    <p class="mt-3 text-[1.125rem] text-ink-soft">검색 결과나 길찾기 카드의 "가게 상세 보기"를 통해 들어와 주세요.</p>
+    <a href="index.html" class="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-cta px-6 text-[1.0625rem] font-extrabold text-ink shadow-sm hover:bg-cta-dark">
+      검색하러 가기
+    </a>
+  </section>
+
+  <div id="place-content">
+
+    <!-- 1. 가게 헤더 -->
+    <section aria-labelledby="place-title" class="mx-auto max-w-5xl px-5 pb-8 pt-6 sm:pt-8">
+      <p id="place-category-line" class="text-[1rem] font-bold text-terra"></p>
+      <h1 id="place-title" class="mt-1 text-[2rem] font-extrabold leading-[1.35] text-base-dark sm:text-[2.5rem]"></h1>
+      <p id="place-address" class="mt-3 max-w-2xl text-[1.125rem] leading-[1.8] text-ink-soft"></p>
+      <p class="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-4 py-1.5 text-[1rem] font-extrabold text-ink shadow-sm">
+        <span aria-hidden="true">✓</span> 카카오 로컬 API로 확인된 실제 가게 정보
+      </p>
+
+      <dl class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl bg-base-tint p-5 shadow-sm">
+          <dt class="text-[1rem] font-bold text-ink-mute">등록된 위치 정보</dt>
+          <dd id="stat-entry-count" class="mt-1 text-[1.5rem] font-extrabold text-base-dark">0건</dd>
+        </div>
+        <div class="rounded-2xl bg-base-tint p-5 shadow-sm">
+          <dt class="text-[1rem] font-bold text-ink-mute">입구 사진</dt>
+          <dd id="stat-photo-count" class="mt-1 text-[1.5rem] font-extrabold text-base-dark">0장</dd>
+        </div>
+        <div class="rounded-2xl bg-base-tint p-5 shadow-sm">
+          <dt class="text-[1rem] font-bold text-ink-mute">"도움이 됐어요" 합계</dt>
+          <dd id="stat-helpful-total" class="mt-1 text-[1.5rem] font-extrabold text-base-dark">0번</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- 2. 정밀 핀 -->
+    <section aria-labelledby="pin-title" class="mx-auto max-w-5xl px-5 py-10 sm:py-14">
+      <h2 id="pin-title" class="text-[1.5rem] font-extrabold text-base-dark sm:text-[1.75rem]">정확한 입구 핀</h2>
+      <p class="mt-3 text-[1.125rem] text-ink-soft">
+        일반 지도 앱의 핀은 <strong class="font-bold text-ink">건물 한가운데</strong>를 가리킵니다.
+        아래는 사용자들이 직접 표시한 <strong class="font-bold text-ink">실제 문 앞</strong> 위치입니다.
+      </p>
+
+      <div class="mt-6 overflow-hidden rounded-3xl border border-base-tint/60 bg-white shadow-md">
+        <div id="pin-map" class="map-grid relative flex h-64 items-center justify-center bg-base-tint sm:h-80">
+          <p id="pin-empty-message" class="rounded-lg bg-white/95 px-3 py-1.5 text-[1rem] font-bold text-base-dark shadow-sm">
+            아직 등록된 핀이 없습니다. 아래에서 첫 핀을 남겨보세요.
+          </p>
+        </div>
+        <div class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <p id="pin-description" class="text-[1.0625rem] leading-[1.75] text-ink-soft">
+            가장 최근에 등록된 입구 설명이 여기에 표시됩니다.
+          </p>
+          <a id="pin-navigate-link" href="#" target="_blank" rel="noopener"
+             class="hidden h-[52px] shrink-0 items-center justify-center rounded-2xl bg-cta px-6 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
+            카카오맵에서 길찾기
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 사용자 제보 목록 -->
+    <section aria-labelledby="reports-title" class="bg-base-tint py-10 sm:py-14">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 id="reports-title" class="text-[1.5rem] font-extrabold text-base-dark sm:text-[1.75rem]">사람들이 남긴 입구 설명</h2>
+        <p class="mt-3 text-[1.125rem] text-ink-soft">
+          한 가게에도 여러 사람이 각자 정보를 남길 수 있어요. 기존 설명은 지워지지 않고 모두 쌓입니다.
+        </p>
+
+        <p id="reports-status" class="mt-6 text-[1.0625rem] text-ink-soft" role="status" aria-live="polite"></p>
+        <ul id="reports-list" class="mt-6 flex flex-col gap-5" role="list"></ul>
+      </div>
+    </section>
+
+    <!-- 4. 내 정보 남기기 -->
+    <section aria-labelledby="contribute-title" class="bg-base text-white">
+      <div class="mx-auto max-w-5xl px-5 py-12 sm:py-16">
+        <h2 id="contribute-title" class="text-[1.5rem] font-extrabold sm:text-[1.75rem]">당신도 도움을 줄 수 있어요</h2>
+        <p class="mt-3 max-w-2xl text-[1.125rem] text-[#D6E2DB]">
+          다녀오신 뒤에 사진 URL, 설명, 정확한 핀 중 하나만 남겨도 다음 사람에게 큰 도움이 됩니다.
+          로그인 없이 <strong class="font-bold">익명</strong>으로도 남길 수 있어요.
+        </p>
+
+        <form id="contribute-form" class="mt-8 rounded-3xl bg-white p-6 text-ink shadow-lg sm:p-8">
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label for="contribute-author" class="mb-2 block text-[1.0625rem] font-bold text-ink-soft">닉네임 (선택)</label>
+              <input id="contribute-author" type="text" maxlength="30" placeholder="익명"
+                     class="h-[52px] w-full rounded-xl border-2 border-base-tint bg-white px-4 text-[1.0625rem] text-ink placeholder:text-ink-mute">
+            </div>
+            <div>
+              <label for="contribute-photo" class="mb-2 block text-[1.0625rem] font-bold text-ink-soft">사진 URL (선택)</label>
+              <input id="contribute-photo" type="url" placeholder="https://..."
+                     class="h-[52px] w-full rounded-xl border-2 border-base-tint bg-white px-4 text-[1.0625rem] text-ink placeholder:text-ink-mute">
+              <div id="contribute-photo-preview-wrap" class="mt-3 hidden">
+                <p class="mb-1.5 text-[1rem] font-bold text-ink-mute">미리보기</p>
+                <img id="contribute-photo-preview" alt="입력한 사진 URL 미리보기" class="h-32 w-full rounded-xl object-cover">
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <label for="contribute-text" class="mb-2 block text-[1.0625rem] font-bold text-ink-soft">입구 설명 (필수)</label>
+            <textarea id="contribute-text" required maxlength="500" rows="3" placeholder="예: 1층 세탁소 오른쪽 파란 철문으로 들어가 2층입니다."
+                      class="w-full rounded-xl border-2 border-base-tint bg-white p-4 text-[1.0625rem] text-ink placeholder:text-ink-mute"></textarea>
+          </div>
+
+          <div class="mt-5">
+            <p class="mb-2 text-[1.0625rem] font-bold text-ink-soft">정확한 핀 표시 (선택)</p>
+            <p class="mb-3 text-[1rem] text-ink-mute">
+              마우스로는 아래 칸을 클릭해서, 키보드로는 그 아래 가로/세로 위치 입력란을 방향키로 움직여서
+              실제 입구가 있는 위치를 표시해 주세요.
+            </p>
+            <div id="pin-picker" aria-hidden="true" class="map-grid relative h-40 w-full cursor-crosshair overflow-hidden rounded-2xl border-2 border-base-tint bg-white sm:h-48">
+              <p id="pin-picker-hint" class="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[1rem] font-bold text-ink-mute">여기를 클릭해서 핀을 표시하세요 (선택 사항)</p>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label for="pin-picker-x" class="mb-2 block text-[1rem] font-bold text-ink-soft">가로 위치 % (0=왼쪽, 100=오른쪽)</label>
+                <input type="range" id="pin-picker-x" min="0" max="100" step="1" value="50" class="h-11 w-full">
+              </div>
+              <div>
+                <label for="pin-picker-y" class="mb-2 block text-[1rem] font-bold text-ink-soft">세로 위치 % (0=위쪽, 100=아래쪽)</label>
+                <input type="range" id="pin-picker-y" min="0" max="100" step="1" value="50" class="h-11 w-full">
+              </div>
+            </div>
+
+            <p id="pin-picker-status" role="status" aria-live="polite" class="mt-3 text-[1rem] font-bold text-ink-soft">아직 핀을 표시하지 않았습니다.</p>
+
+            <button type="button" id="pin-picker-clear" class="mt-2 hidden inline-flex h-11 items-center rounded-lg px-3 text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:bg-base-tint hover:text-cta-dark">
+              핀 지우기
+            </button>
+          </div>
+
+          <button type="submit"
+                  class="mt-6 h-[56px] w-full rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-md transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-lg sm:w-auto sm:px-10">
+            정보 남기기
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </div>
+
+</main>
+
+<!-- 5. 푸터 -->
+<footer class="bg-base-dark text-white">
+  <div class="mx-auto max-w-5xl px-5 py-12">
+    <p class="text-[1.25rem] font-extrabold">가게 길찾기</p>
+    <p class="mt-3 max-w-xl text-[1.0625rem] leading-[1.75] text-[#D6E2DB]">
+      주소는 아는데 입구를 못 찾는 문제를 해결합니다. 이 페이지의 위치 정보는 서버에 저장되는 실제 데이터입니다.
+    </p>
+
+    <ul class="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-[1.0625rem]" role="list">
+      <li>만든 사람 <span class="font-bold">JYS</span></li>
+      <li><a class="font-bold underline underline-offset-4 hover:text-cta" href="https://github.com/subacam" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a class="font-bold underline underline-offset-4 hover:text-cta" href="index.html">가게 길찾기 메인으로</a></li>
+    </ul>
+
+    <p class="mt-8 text-[1rem] text-[#B7C8BE]">© 2026 JYS · my-intro / day4</p>
+  </div>
+</footer>
+
+<!-- 데모 안내 토스트 -->
+<div id="place-toast" role="status" aria-live="polite"
+     class="pointer-events-none fixed inset-x-0 bottom-6 z-50 mx-auto hidden w-[min(90%,32rem)] rounded-xl bg-ink px-5 py-4 text-center text-[1.0625rem] font-bold text-white"></div>
+
+<script>
+  var placeToast = document.getElementById('place-toast');
+  var placeToastTimer;
+  function placeNotice(message) {
+    placeToast.textContent = message;
+    placeToast.classList.remove('hidden');
+    clearTimeout(placeToastTimer);
+    placeToastTimer = setTimeout(function () { placeToast.classList.add('hidden'); }, 2600);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function timeAgo(isoString) {
+    var then = new Date(isoString).getTime();
+    if (!then || isNaN(then)) return '';
+    var diffMs = Date.now() - then;
+    var minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return '방금 전';
+    if (minutes < 60) return minutes + '분 전';
+    var hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + '시간 전';
+    var days = Math.floor(hours / 24);
+    if (days < 30) return days + '일 전';
+    var months = Math.floor(days / 30);
+    if (months < 12) return months + '개월 전';
+    return Math.floor(months / 12) + '년 전';
+  }
+
+  // ---- 쿼리스트링에서 가게 정보 읽기 ----
+  var params = new URLSearchParams(location.search);
+  var place = {
+    id: params.get('id') || '',
+    name: params.get('name') || '',
+    category: params.get('category') || '',
+    address: params.get('address') || '',
+    lat: params.get('lat') || '',
+    lng: params.get('lng') || '',
+    mapUrl: params.get('mapUrl') || ''
+  };
+
+  var notFoundSection = document.getElementById('not-found-section');
+  var placeContent = document.getElementById('place-content');
+
+  if (!place.id) {
+    notFoundSection.classList.remove('hidden');
+    placeContent.classList.add('hidden');
+  } else {
+    notFoundSection.classList.add('hidden');
+    placeContent.classList.remove('hidden');
+    initPlacePage();
+  }
+
+  function initPlacePage() {
+    document.title = (place.name || '가게 상세') + ' — 가게 상세 | 가게 길찾기';
+    document.getElementById('place-title').textContent = place.name || '이름 정보 없음';
+    document.getElementById('place-category-line').textContent =
+      [place.address ? place.address.split(' ').slice(0, 2).join(' ') : '', place.category].filter(Boolean).join(' · ');
+    document.getElementById('place-address').textContent = place.address || '주소 정보 없음';
+
+    var navLink = document.getElementById('pin-navigate-link');
+    if (place.mapUrl) {
+      navLink.href = place.mapUrl;
+      navLink.classList.remove('hidden');
+      navLink.classList.add('flex');
+    }
+
+    // ---- 위치 정보(entries) 불러오기 ----
+    var reportsStatus = document.getElementById('reports-status');
+    var reportsList = document.getElementById('reports-list');
+
+    function loadEntries() {
+      reportsStatus.textContent = '불러오는 중입니다…';
+      reportsList.innerHTML = '';
+      fetch('/api/place-info?id=' + encodeURIComponent(place.id))
+        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (result) {
+          if (!result.ok) {
+            reportsStatus.textContent = (result.body && result.body.message) || '위치 정보를 불러오지 못했습니다.';
+            return;
+          }
+          var entries = (result.body && result.body.entries) || [];
+          renderEntries(entries);
+          renderStats(entries);
+          renderPin(entries);
+        })
+        .catch(function () {
+          reportsStatus.textContent = '위치 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+        });
+    }
+
+    function renderStats(entries) {
+      document.getElementById('stat-entry-count').textContent = entries.length + '건';
+      var photoCount = entries.filter(function (e) { return !!e.photoUrl; }).length;
+      document.getElementById('stat-photo-count').textContent = photoCount + '장';
+      var helpfulTotal = entries.reduce(function (sum, e) { return sum + (e.helpfulCount || 0); }, 0);
+      document.getElementById('stat-helpful-total').textContent = helpfulTotal + '번';
+    }
+
+    function renderPin(entries) {
+      var pinMap = document.getElementById('pin-map');
+      var emptyMessage = document.getElementById('pin-empty-message');
+      var pinDescription = document.getElementById('pin-description');
+
+      var existingMarker = pinMap.querySelector('.pin-marker');
+      if (existingMarker) existingMarker.remove();
+
+      var pinned = entries.filter(function (e) { return e.pinX !== null && e.pinX !== undefined && e.pinY !== null && e.pinY !== undefined; });
+      if (pinned.length === 0) {
+        emptyMessage.classList.remove('hidden');
+        pinDescription.textContent = entries.length > 0
+          ? '가장 최근 설명 (핀 없음): ' + entries[0].text
+          : '가장 최근에 등록된 입구 설명이 여기에 표시됩니다.';
+        return;
+      }
+
+      emptyMessage.classList.add('hidden');
+      var latest = pinned[0];
+      var marker = document.createElement('div');
+      marker.className = 'pin-marker absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-terra text-white shadow-lg';
+      marker.style.left = latest.pinX + '%';
+      marker.style.top = latest.pinY + '%';
+      marker.setAttribute('aria-hidden', 'true');
+      marker.innerHTML = '<span class="text-[1.25rem]">📍</span>';
+      pinMap.appendChild(marker);
+      pinDescription.textContent = latest.text;
+    }
+
+    function renderEntries(entries) {
+      if (entries.length === 0) {
+        reportsStatus.textContent = '아직 등록된 입구 정보가 없습니다. 첫 정보를 남겨보세요!';
+        reportsList.innerHTML = '';
+        return;
+      }
+      reportsStatus.textContent = entries.length + '개의 입구 설명이 등록되어 있습니다.';
+      reportsList.innerHTML = '';
+      entries.forEach(function (entry) {
+        reportsList.appendChild(renderEntryCard(entry));
+      });
+    }
+
+    // 사진 로드 실패 시 조용히 사라지지 않도록, 이 페이지의 아이콘+텍스트 병기 관례를 따르는
+    // 대체 표시로 바꾸고 "입구 사진" 통계도 함께 보정한다 (통계는 photoUrl 존재 여부로 낙관적으로
+    // 집계되므로, 로드 실패가 확인되는 시점에 1건 차감한다).
+    function handleEntryPhotoError(img) {
+      var placeholder = document.createElement('div');
+      placeholder.className = 'mt-4 flex h-56 w-full flex-col items-center justify-center gap-2 rounded-2xl bg-base-tint text-ink-mute';
+      placeholder.innerHTML =
+        '<span aria-hidden="true" class="text-[1.75rem]">🖼️</span>' +
+        '<span class="text-[1rem] font-bold">사진을 불러올 수 없어요</span>';
+      img.replaceWith(placeholder);
+
+      var statPhotoEl = document.getElementById('stat-photo-count');
+      var current = parseInt(statPhotoEl.textContent, 10);
+      if (!isNaN(current) && current > 0) {
+        statPhotoEl.textContent = (current - 1) + '장';
+      }
+    }
+    window.handleEntryPhotoError = handleEntryPhotoError;
+
+    function helpfulStorageKey(entryId) {
+      return 'place-info-helpful:' + entryId;
+    }
+
+    function isHelpfulAlreadyMarked(entryId) {
+      try {
+        return localStorage.getItem(helpfulStorageKey(entryId)) === 'true';
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function markHelpfulDone(entryId) {
+      try {
+        localStorage.setItem(helpfulStorageKey(entryId), 'true');
+      } catch (err) {
+        // localStorage를 쓸 수 없는 환경(프라이빗 모드 등)이면 이번 방문 내 중복 클릭 방지만 유지한다.
+      }
+    }
+
+    function renderEntryCard(entry) {
+      var li = document.createElement('li');
+      var photoHtml = entry.photoUrl
+        ? '<img src="' + escapeHtml(entry.photoUrl) + '" alt="' + escapeHtml(entry.author) + '가 남긴 사진" ' +
+          'class="mt-4 h-56 w-full rounded-2xl object-cover" loading="lazy" onerror="handleEntryPhotoError(this)">'
+        : '';
+      var pinBadgeHtml = (entry.pinX !== null && entry.pinX !== undefined)
+        ? '<span class="inline-flex items-center gap-1 rounded-full bg-base-tint px-3 py-1 text-[1rem] font-bold text-base-dark">📍 핀 위치 포함</span>'
+        : '';
+      var isAnonymous = entry.author === '익명';
+      var anonymousBadgeHtml = isAnonymous
+        ? '<span class="inline-flex items-center rounded-full bg-[#E9EDEA] px-3 py-1 text-[1rem] font-bold text-ink-soft">익명</span>'
+        : '';
+      var alreadyMarked = isHelpfulAlreadyMarked(entry.id);
+
+      li.className = 'rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-shadow hover:shadow-lg sm:p-7';
+      li.innerHTML =
+        '<div class="flex flex-wrap items-center justify-between gap-3">' +
+          '<p class="flex items-center gap-2 text-[1.0625rem] font-extrabold ' + (isAnonymous ? 'text-ink-mute' : 'text-ink') + '">' +
+            escapeHtml(entry.author) + anonymousBadgeHtml +
+          '</p>' +
+          '<p class="text-[1rem] font-bold text-ink-mute">' + escapeHtml(timeAgo(entry.createdAt)) + ' 등록</p>' +
+        '</div>' +
+        '<p class="mt-3 text-[1.0625rem] leading-[1.8] text-ink-soft">' + escapeHtml(entry.text) + '</p>' +
+        photoHtml +
+        '<div class="mt-4 flex flex-wrap items-center gap-3">' +
+          '<button type="button" class="helpful-btn inline-flex items-center gap-2 rounded-full border-2 px-4 py-2 text-[1rem] font-extrabold shadow-sm transition-colors ' +
+            (alreadyMarked ? 'border-base-tint bg-base-tint text-base-dark' : 'border-base bg-white text-base-dark hover:bg-base-tint') + '" ' +
+            (alreadyMarked ? 'data-clicked="true" aria-pressed="true"' : 'aria-pressed="false"') + '>' +
+            '<span aria-hidden="true">👍</span> ' +
+            '<span class="helpful-label">' + (alreadyMarked ? '도움을 주셨어요' : '도움이 됐어요') + '</span>' +
+            ' <span class="helpful-count">' + entry.helpfulCount + '</span>' +
+          '</button>' +
+          pinBadgeHtml +
+        '</div>';
+
+      var helpfulBtn = li.querySelector('.helpful-btn');
+      helpfulBtn.addEventListener('click', function () {
+        if (helpfulBtn.dataset.clicked === 'true') return;
+        helpfulBtn.dataset.clicked = 'true';
+        fetch('/api/place-info/helpful', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ placeId: place.id, entryId: entry.id })
+        })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+          .then(function (result) {
+            if (!result.ok) {
+              helpfulBtn.dataset.clicked = 'false';
+              placeNotice((result.body && result.body.message) || '처리하지 못했습니다.');
+              return;
+            }
+            helpfulBtn.querySelector('.helpful-count').textContent = result.body.helpfulCount;
+            helpfulBtn.setAttribute('aria-pressed', 'true');
+            helpfulBtn.classList.remove('border-base', 'bg-white', 'hover:bg-base-tint');
+            helpfulBtn.classList.add('border-base-tint', 'bg-base-tint');
+            helpfulBtn.querySelector('.helpful-label').textContent = '도움을 주셨어요';
+            var totalEl = document.getElementById('stat-helpful-total');
+            totalEl.textContent = (parseInt(totalEl.textContent, 10) + 1) + '번';
+            markHelpfulDone(entry.id);
+          })
+          .catch(function () {
+            helpfulBtn.dataset.clicked = 'false';
+            placeNotice('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+          });
+      });
+
+      return li;
+    }
+
+    // ---- 핀 찍기(제보 폼) ----
+    // 시각적 지도 상자(#pin-picker)는 클릭만 가능한 보조 수단이라 aria-hidden 처리했고,
+    // 실제 키보드 접근 수단은 아래 가로/세로 range 입력란이다 — 둘 다 같은 pickedPinX/Y
+    // 상태를 읽고 쓰므로 클릭이든 방향키든 임의의 위치를 정확히 지정할 수 있다.
+    var pinPicker = document.getElementById('pin-picker');
+    var pinPickerHint = document.getElementById('pin-picker-hint');
+    var pinPickerClear = document.getElementById('pin-picker-clear');
+    var pinPickerXInput = document.getElementById('pin-picker-x');
+    var pinPickerYInput = document.getElementById('pin-picker-y');
+    var pinPickerStatus = document.getElementById('pin-picker-status');
+    var pickedPinX = null;
+    var pickedPinY = null;
+
+    function setPickedPin(xPercent, yPercent) {
+      pickedPinX = xPercent;
+      pickedPinY = yPercent;
+      var existing = pinPicker.querySelector('.pin-marker');
+      if (existing) existing.remove();
+      var marker = document.createElement('div');
+      marker.className = 'pin-marker pointer-events-none absolute grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-terra text-white shadow-lg';
+      marker.style.left = xPercent + '%';
+      marker.style.top = yPercent + '%';
+      marker.setAttribute('aria-hidden', 'true');
+      marker.innerHTML = '<span class="text-[1rem]">📍</span>';
+      pinPicker.appendChild(marker);
+      pinPickerHint.classList.add('hidden');
+      pinPickerClear.classList.remove('hidden');
+      pinPickerXInput.value = xPercent;
+      pinPickerYInput.value = yPercent;
+      pinPickerStatus.textContent = '핀이 가로 ' + xPercent + '%, 세로 ' + yPercent + '% 위치에 표시되었습니다.';
+    }
+
+    function clearPickedPin() {
+      pickedPinX = null;
+      pickedPinY = null;
+      var existing = pinPicker.querySelector('.pin-marker');
+      if (existing) existing.remove();
+      pinPickerHint.classList.remove('hidden');
+      pinPickerClear.classList.add('hidden');
+      pinPickerXInput.value = 50;
+      pinPickerYInput.value = 50;
+      pinPickerStatus.textContent = '핀을 지웠습니다.';
+    }
+
+    function handlePinPick(clientX, clientY) {
+      var rect = pinPicker.getBoundingClientRect();
+      var x = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+      var y = Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100));
+      setPickedPin(Math.round(x * 10) / 10, Math.round(y * 10) / 10);
+    }
+
+    pinPicker.addEventListener('click', function (event) {
+      handlePinPick(event.clientX, event.clientY);
+    });
+
+    function handlePinRangeInput() {
+      setPickedPin(Number(pinPickerXInput.value), Number(pinPickerYInput.value));
+    }
+    pinPickerXInput.addEventListener('input', handlePinRangeInput);
+    pinPickerYInput.addEventListener('input', handlePinRangeInput);
+
+    pinPickerClear.addEventListener('click', clearPickedPin);
+
+    // ---- 정보 남기기 폼 제출 ----
+    var form = document.getElementById('contribute-form');
+    var authorInput = document.getElementById('contribute-author');
+    var photoInput = document.getElementById('contribute-photo');
+    var textInput = document.getElementById('contribute-text');
+
+    // 사진 URL 미리보기: 입력할 때마다 실제로 열리는 이미지인지 바로 보여줘서,
+    // 저장되기 전에 깨진 링크를 사용자가 스스로 알아챌 수 있게 한다.
+    var photoPreviewWrap = document.getElementById('contribute-photo-preview-wrap');
+    var photoPreviewImg = document.getElementById('contribute-photo-preview');
+
+    function updatePhotoPreview() {
+      var url = photoInput.value.trim();
+      if (!url) {
+        photoPreviewWrap.classList.add('hidden');
+        photoPreviewImg.removeAttribute('src');
+        return;
+      }
+      photoPreviewImg.src = url;
+    }
+    function resetPhotoPreview() {
+      photoPreviewWrap.classList.add('hidden');
+      photoPreviewImg.removeAttribute('src');
+    }
+    photoPreviewImg.addEventListener('load', function () {
+      if (photoPreviewImg.getAttribute('src')) photoPreviewWrap.classList.remove('hidden');
+    });
+    photoPreviewImg.addEventListener('error', function () {
+      photoPreviewWrap.classList.add('hidden');
+    });
+    photoInput.addEventListener('input', updatePhotoPreview);
+    photoInput.addEventListener('change', updatePhotoPreview);
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var text = textInput.value.trim();
+      if (!text) {
+        placeNotice('입구 설명을 입력해 주세요.');
+        textInput.focus();
+        return;
+      }
+
+      var submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      fetch('/api/place-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          placeId: place.id,
+          author: authorInput.value.trim(),
+          text: text,
+          photoUrl: photoInput.value.trim(),
+          pinX: pickedPinX,
+          pinY: pickedPinY
+        })
+      })
+        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (result) {
+          submitBtn.disabled = false;
+          if (!result.ok) {
+            placeNotice((result.body && result.body.message) || '등록하지 못했습니다.');
+            return;
+          }
+          placeNotice('등록되었습니다! 다음 사람에게 큰 도움이 됩니다.');
+          form.reset();
+          clearPickedPin();
+          resetPhotoPreview();
+          loadEntries();
+        })
+        .catch(function () {
+          submitBtn.disabled = false;
+          placeNotice('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+        });
+    });
+
+    loadEntries();
+  }
+</script>
+
+</body>
+</html>

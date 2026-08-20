@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>쇼핑리뷰분석</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1 id="productName">쇼핑리뷰분석</h1>
+      <p id="subline" class="subline">쿠팡·네이버 상품 페이지에서 리뷰를 분석해보세요</p>
+    </header>
+
+    <main id="content" class="content">
+      <section id="idleView" class="view">
+        <p class="idleDesc">
+          쿠팡 또는 네이버 스마트스토어 상품 페이지를 연 상태에서 아래 버튼을 눌러주세요.
+        </p>
+        <button id="startButton" class="primaryButton" type="button">리뷰 분석하기</button>
+      </section>
+
+      <section id="progressView" class="view hidden">
+        <p id="progressLabel" class="progressLabel">리뷰를 읽는 중...</p>
+        <div class="progressBarTrack">
+          <div id="progressBarFill" class="progressBarFill"></div>
+        </div>
+        <p id="progressCount" class="progressCount"></p>
+      </section>
+
+      <section id="errorView" class="view hidden">
+        <p id="errorMessage" class="errorMessage"></p>
+        <button id="retryButton" class="secondaryButton" type="button">다시 시도</button>
+      </section>
+
+      <section id="resultView" class="view hidden">
+        <section class="card">
+          <h2 class="cardTitle">감성 비율</h2>
+          <div id="sentimentChart" class="sentimentChart"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">📌 핵심 인사이트</h2>
+          <div id="insights" class="insights"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">🧠 키워드 마인드맵</h2>
+          <div id="mindmap" class="mindmap"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="cardTitle">📝 리뷰 원문</h2>
+          <div id="reviewList" class="reviewList"></div>
+        </section>
+
+        <button id="downloadButton" class="primaryButton" type="button">엑셀로 다운로드</button>
+        <button id="resetButton" class="secondaryButton" type="button">다른 상품 분석하기</button>
+      </section>
+    </main>
+
+    <script src="../vendor/xlsx.full.min.js"></script>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

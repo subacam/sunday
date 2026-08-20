@@ -55,10 +55,10 @@
 
 <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-lg focus:bg-base focus:px-5 focus:py-3 focus:font-bold focus:text-white">본문 바로가기</a>
 
-<header class="border-b border-base-tint bg-white">
+<header class="sticky top-0 z-30 border-b border-base-tint/70 bg-white/95 shadow-sm backdrop-blur">
   <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
     <span class="flex items-center gap-2 text-[1.25rem] font-extrabold text-base-dark">
-      <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-xl bg-base text-white">길</span>
+      <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-2xl bg-base text-white shadow-sm">길</span>
       가게 길찾기
     </span>
     <span class="rounded-full bg-base-tint px-3 py-1 text-[1rem] font-bold text-base-dark">데모 페이지</span>
@@ -82,34 +82,41 @@
         헤매지 않고 바로 도착하세요.
       </p>
 
-      <form class="mt-8 max-w-2xl" role="search" onsubmit="return demoNotice(event, '검색은 아직 준비 중입니다. 아래 예시를 둘러보세요.');">
+      <form id="search-form" class="mt-8 max-w-2xl" role="search" onsubmit="return handleSearchSubmit(event);">
         <label for="search" class="mb-2 block text-[1.0625rem] font-bold text-ink-soft">가게 또는 동네 검색</label>
         <div class="flex flex-col gap-3 sm:flex-row">
           <input id="search" type="search" name="q" autocomplete="off"
                  placeholder="가게 이름이나 동네를 검색해보세요"
-                 class="h-[60px] w-full rounded-xl border-2 border-base bg-white px-5 text-[1.125rem] text-ink placeholder:text-ink-mute">
+                 class="h-[60px] w-full rounded-2xl border-2 border-base bg-white px-5 text-[1.125rem] text-ink shadow-sm placeholder:text-ink-mute">
           <button type="submit"
-                  class="h-[60px] shrink-0 rounded-xl bg-cta px-8 text-[1.125rem] font-extrabold text-ink transition-colors hover:bg-cta-dark sm:w-auto">
+                  class="h-[60px] shrink-0 rounded-2xl bg-cta px-8 text-[1.125rem] font-extrabold text-ink shadow-md transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-lg sm:w-auto">
             검색
           </button>
         </div>
       </form>
 
-      <dl class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="rounded-xl bg-white p-5">
+      <dl class="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <div class="rounded-2xl bg-white p-6 shadow-md">
           <dt class="text-[1rem] font-bold text-ink-mute">등록된 가게</dt>
-          <dd class="mt-1 text-[1.5rem] font-extrabold text-base-dark">1,284곳</dd>
+          <dd class="mt-1 text-[1.5rem] font-extrabold text-base-dark">962곳</dd>
         </div>
-        <div class="rounded-xl bg-white p-5">
+        <div class="rounded-2xl bg-white p-6 shadow-md">
           <dt class="text-[1rem] font-bold text-ink-mute">입구 사진</dt>
-          <dd class="mt-1 text-[1.5rem] font-extrabold text-base-dark">3,907장</dd>
+          <dd class="mt-1 text-[1.5rem] font-extrabold text-base-dark">2,850장</dd>
         </div>
-        <div class="rounded-xl bg-white p-5">
+        <div class="rounded-2xl bg-white p-6 shadow-md">
           <dt class="text-[1rem] font-bold text-ink-mute">"도움이 됐어요"</dt>
-          <dd class="mt-1 text-[1.5rem] font-extrabold text-base-dark">12,450번</dd>
+          <dd class="mt-1 text-[1.5rem] font-extrabold text-base-dark">9,830번</dd>
         </div>
       </dl>
     </div>
+  </section>
+
+  <!-- 1.5 검색 결과 -->
+  <section id="search-results-section" aria-labelledby="search-results-title" class="mx-auto hidden max-w-5xl px-5 py-10 sm:py-14">
+    <h2 id="search-results-title" class="text-[1.5rem] font-extrabold text-base-dark sm:text-[1.75rem]">검색 결과</h2>
+    <p id="search-results-status" class="mt-3 text-[1.125rem] text-ink-soft" role="status" aria-live="polite"></p>
+    <ul id="search-results-list" class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list"></ul>
   </section>
 
   <!-- 2. 문제 공감 -->
@@ -118,15 +125,15 @@
     <p class="mt-3 text-[1.125rem] text-ink-soft">주소는 분명히 맞는데, 문을 못 찾아 헤맸던 순간들입니다.</p>
 
     <ul class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3" role="list">
-      <li class="rounded-2xl bg-terra-tint p-6">
+      <li class="rounded-3xl bg-terra-tint p-7 shadow-sm">
         <p class="text-[1rem] font-extrabold text-terra">건물은 찾았는데</p>
         <p class="mt-3 text-[1.125rem] font-bold leading-[1.75] text-ink">"도착했다고 뜨는데 문이 안 보여서 건물을 두 바퀴 돌았어요."</p>
       </li>
-      <li class="rounded-2xl bg-terra-tint p-6">
+      <li class="rounded-3xl bg-terra-tint p-7 shadow-sm">
         <p class="text-[1rem] font-extrabold text-terra">약속 시간에 늦어서</p>
         <p class="mt-3 text-[1.125rem] font-bold leading-[1.75] text-ink">"1층인 줄 알았는데 3층이었어요. 결국 10분 늦었습니다."</p>
       </li>
-      <li class="rounded-2xl bg-terra-tint p-6">
+      <li class="rounded-3xl bg-terra-tint p-7 shadow-sm">
         <p class="text-[1rem] font-extrabold text-terra">핀이 가리키는 곳은</p>
         <p class="mt-3 text-[1.125rem] font-bold leading-[1.75] text-ink">"지도 핀은 건물 한가운데. 정작 입구는 반대편 골목이었어요."</p>
       </li>
@@ -150,116 +157,131 @@
     <ul class="snap-x-list mt-8 flex gap-5 overflow-x-auto pb-4" role="list">
 
       <li class="w-[86%] shrink-0 sm:w-[360px]">
-        <article class="flex h-full flex-col rounded-2xl border-2 border-base-tint bg-white">
-          <div class="flex h-40 items-end rounded-t-2xl bg-gradient-to-br from-base-light to-base p-4">
+        <article class="flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+          <div class="flex h-40 items-end rounded-t-3xl bg-gradient-to-br from-base-light to-base p-4">
             <p class="rounded-lg bg-white/95 px-3 py-1 text-[1rem] font-bold text-base-dark">입구 사진 3장</p>
           </div>
-          <div class="flex flex-1 flex-col p-5">
+          <div class="flex flex-1 flex-col p-6">
             <p class="text-[1rem] font-bold text-terra">연남동 · 카페</p>
-            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">카페 모레</h3>
-            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink">
+            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">네시사분</h3>
+            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm">
               <span aria-hidden="true">✓</span> 정확한 위치 정보 있음
             </p>
             <p class="mt-4 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">
               1층 세탁소 오른쪽 파란 철문으로 들어가 2층입니다. 큰길 쪽 유리문은 사무실이라 들어가면 다시 나와야 해요.
             </p>
             <p class="mt-4 text-[1rem] font-bold text-ink-mute">도움이 됐어요 128</p>
-            <button type="button" onclick="demoNotice(event, '데모 페이지라 지도 앱 연결은 동작하지 않습니다.')"
-                    class="mt-4 h-[52px] w-full rounded-xl bg-cta text-[1.125rem] font-extrabold text-ink transition-colors hover:bg-cta-dark">
+            <a href="http://place.map.kakao.com/1925445486" target="_blank" rel="noopener"
+               class="mt-4 flex h-[52px] w-full items-center justify-center rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
               길찾기
-            </button>
+            </a>
+            <a href="place.html?id=1925445486&amp;name=%EB%84%A4%EC%8B%9C%EC%82%AC%EB%B6%84&amp;category=%EC%B9%B4%ED%8E%98&amp;address=%EC%84%9C%EC%9A%B8+%EB%A7%88%ED%8F%AC%EA%B5%AC+%EC%84%B1%EB%AF%B8%EC%82%B0%EB%A1%9C+190-8&amp;lat=37.56273937814482&amp;lng=126.92588686768113&amp;mapUrl=http%3A%2F%2Fplace.map.kakao.com%2F1925445486" class="mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark">
+              가게 상세 보기
+            </a>
           </div>
         </article>
       </li>
 
       <li class="w-[86%] shrink-0 sm:w-[360px]">
-        <article class="flex h-full flex-col rounded-2xl border-2 border-base-tint bg-white">
-          <div class="flex h-40 items-end rounded-t-2xl bg-gradient-to-br from-terra to-[#8E4632] p-4">
+        <article class="flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+          <div class="flex h-40 items-end rounded-t-3xl bg-gradient-to-br from-terra to-[#8E4632] p-4">
             <p class="rounded-lg bg-white/95 px-3 py-1 text-[1rem] font-bold text-base-dark">입구 사진 5장</p>
           </div>
-          <div class="flex flex-1 flex-col p-5">
+          <div class="flex flex-1 flex-col p-6">
             <p class="text-[1rem] font-bold text-terra">을지로3가 · 호프</p>
-            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">은성호프</h3>
-            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink">
+            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">원조만선호프 노가리체인본점</h3>
+            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm">
               <span aria-hidden="true">✓</span> 정확한 위치 정보 있음
             </p>
             <p class="mt-4 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">
               간판이 없습니다. 노가리 골목 참기름집을 지나 왼쪽 좁은 통로로 10m 들어가면 빨간 차양이 보여요.
             </p>
             <p class="mt-4 text-[1rem] font-bold text-ink-mute">도움이 됐어요 214</p>
-            <button type="button" onclick="demoNotice(event, '데모 페이지라 지도 앱 연결은 동작하지 않습니다.')"
-                    class="mt-4 h-[52px] w-full rounded-xl bg-cta text-[1.125rem] font-extrabold text-ink transition-colors hover:bg-cta-dark">
+            <a href="http://place.map.kakao.com/8332362" target="_blank" rel="noopener"
+               class="mt-4 flex h-[52px] w-full items-center justify-center rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
               길찾기
-            </button>
+            </a>
+            <a href="place.html?id=8332362&amp;name=%EC%9B%90%EC%A1%B0%EB%A7%8C%EC%84%A0%ED%98%B8%ED%94%84+%EB%85%B8%EA%B0%80%EB%A6%AC%EC%B2%B4%EC%9D%B8%EB%B3%B8%EC%A0%90&amp;category=%ED%98%B8%ED%94%84%2C%EC%9A%94%EB%A6%AC%EC%A3%BC%EC%A0%90&amp;address=%EC%84%9C%EC%9A%B8+%EC%A4%91%EA%B5%AC+%EC%9D%84%EC%A7%80%EB%A1%9C13%EA%B8%B8+19&amp;lat=37.56724931479237&amp;lng=126.99178231800013&amp;mapUrl=http%3A%2F%2Fplace.map.kakao.com%2F8332362" class="mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark">
+              가게 상세 보기
+            </a>
           </div>
         </article>
       </li>
 
       <li class="w-[86%] shrink-0 sm:w-[360px]">
-        <article class="flex h-full flex-col rounded-2xl border-2 border-base-tint bg-white">
-          <div class="flex h-40 items-end rounded-t-2xl bg-gradient-to-br from-base to-base-dark p-4">
+        <article class="flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+          <div class="flex h-40 items-end rounded-t-3xl bg-gradient-to-br from-base to-base-dark p-4">
             <p class="rounded-lg bg-white/95 px-3 py-1 text-[1rem] font-bold text-base-dark">입구 사진 2장</p>
           </div>
-          <div class="flex flex-1 flex-col p-5">
+          <div class="flex flex-1 flex-col p-6">
             <p class="text-[1rem] font-bold text-terra">성수동 · 베이커리</p>
-            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">밀과 오븐</h3>
-            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink">
+            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">밀도 성수본점</h3>
+            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm">
               <span aria-hidden="true">✓</span> 정확한 위치 정보 있음
             </p>
             <p class="mt-4 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">
               정문으로는 들어갈 수 없습니다. 후문 주차장 쪽 회색 계단을 반 층 올라가면 나무문이 있어요.
             </p>
             <p class="mt-4 text-[1rem] font-bold text-ink-mute">도움이 됐어요 96</p>
-            <button type="button" onclick="demoNotice(event, '데모 페이지라 지도 앱 연결은 동작하지 않습니다.')"
-                    class="mt-4 h-[52px] w-full rounded-xl bg-cta text-[1.125rem] font-extrabold text-ink transition-colors hover:bg-cta-dark">
+            <a href="http://place.map.kakao.com/27300932" target="_blank" rel="noopener"
+               class="mt-4 flex h-[52px] w-full items-center justify-center rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
               길찾기
-            </button>
+            </a>
+            <a href="place.html?id=27300932&amp;name=%EB%B0%80%EB%8F%84+%EC%84%B1%EC%88%98%EB%B3%B8%EC%A0%90&amp;category=%EC%A0%9C%EA%B3%BC%2C%EB%B2%A0%EC%9D%B4%EC%BB%A4%EB%A6%AC&amp;address=%EC%84%9C%EC%9A%B8+%EC%84%B1%EB%8F%99%EA%B5%AC+%EC%99%95%EC%8B%AD%EB%A6%AC%EB%A1%9C+96&amp;lat=37.54623882183776&amp;lng=127.04487903117139&amp;mapUrl=http%3A%2F%2Fplace.map.kakao.com%2F27300932" class="mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark">
+              가게 상세 보기
+            </a>
           </div>
         </article>
       </li>
 
       <li class="w-[86%] shrink-0 sm:w-[360px]">
-        <article class="flex h-full flex-col rounded-2xl border-2 border-base-tint bg-white">
-          <div class="flex h-40 items-end rounded-t-2xl bg-gradient-to-br from-[#6E8F80] to-base p-4">
+        <article class="flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+          <div class="flex h-40 items-end rounded-t-3xl bg-gradient-to-br from-[#6E8F80] to-base p-4">
             <p class="rounded-lg bg-white/95 px-3 py-1 text-[1rem] font-bold text-base-dark">입구 사진 4장</p>
           </div>
-          <div class="flex flex-1 flex-col p-5">
+          <div class="flex flex-1 flex-col p-6">
             <p class="text-[1rem] font-bold text-terra">강남역 · 돈까스</p>
-            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">정식당 돈까스</h3>
-            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink">
+            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">정돈 강남점</h3>
+            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm">
               <span aria-hidden="true">✓</span> 정확한 위치 정보 있음
             </p>
             <p class="mt-4 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">
               지하상가 11번 출구 방향으로 걷다가 약국에서 왼쪽. 지상으로 올라가면 반대편이라 다시 내려와야 합니다.
             </p>
             <p class="mt-4 text-[1rem] font-bold text-ink-mute">도움이 됐어요 175</p>
-            <button type="button" onclick="demoNotice(event, '데모 페이지라 지도 앱 연결은 동작하지 않습니다.')"
-                    class="mt-4 h-[52px] w-full rounded-xl bg-cta text-[1.125rem] font-extrabold text-ink transition-colors hover:bg-cta-dark">
+            <a href="http://place.map.kakao.com/850873071" target="_blank" rel="noopener"
+               class="mt-4 flex h-[52px] w-full items-center justify-center rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
               길찾기
-            </button>
+            </a>
+            <a href="place.html?id=850873071&amp;name=%EC%A0%95%EB%8F%88+%EA%B0%95%EB%82%A8%EC%A0%90&amp;category=%EB%8F%88%EA%B9%8C%EC%8A%A4%2C%EC%9A%B0%EB%8F%99&amp;address=%EC%84%9C%EC%9A%B8+%EA%B0%95%EB%82%A8%EA%B5%AC+%EA%B0%95%EB%82%A8%EB%8C%80%EB%A1%9C110%EA%B8%B8+19-1&amp;lat=37.503909008238786&amp;lng=127.02638857680932&amp;mapUrl=http%3A%2F%2Fplace.map.kakao.com%2F850873071" class="mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark">
+              가게 상세 보기
+            </a>
           </div>
         </article>
       </li>
 
       <li class="w-[86%] shrink-0 sm:w-[360px]">
-        <article class="flex h-full flex-col rounded-2xl border-2 border-base-tint bg-white">
-          <div class="flex h-40 items-end rounded-t-2xl bg-gradient-to-br from-[#C98B6B] to-terra p-4">
+        <article class="flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+          <div class="flex h-40 items-end rounded-t-3xl bg-gradient-to-br from-[#C98B6B] to-terra p-4">
             <p class="rounded-lg bg-white/95 px-3 py-1 text-[1rem] font-bold text-base-dark">입구 사진 3장</p>
           </div>
-          <div class="flex flex-1 flex-col p-5">
+          <div class="flex flex-1 flex-col p-6">
             <p class="text-[1rem] font-bold text-terra">망원동 · 라멘</p>
-            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">라멘 오도리</h3>
-            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink">
+            <h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">희옥</h3>
+            <p class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm">
               <span aria-hidden="true">✓</span> 정확한 위치 정보 있음
             </p>
             <p class="mt-4 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">
               망원시장 안쪽이라 지도 핀이 30m쯤 어긋납니다. 생선가게 맞은편 미닫이문이 입구예요.
             </p>
             <p class="mt-4 text-[1rem] font-bold text-ink-mute">도움이 됐어요 63</p>
-            <button type="button" onclick="demoNotice(event, '데모 페이지라 지도 앱 연결은 동작하지 않습니다.')"
-                    class="mt-4 h-[52px] w-full rounded-xl bg-cta text-[1.125rem] font-extrabold text-ink transition-colors hover:bg-cta-dark">
+            <a href="http://place.map.kakao.com/291532086" target="_blank" rel="noopener"
+               class="mt-4 flex h-[52px] w-full items-center justify-center rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
               길찾기
-            </button>
+            </a>
+            <a href="place.html?id=291532086&amp;name=%ED%9D%AC%EC%98%A5&amp;category=%EC%9D%BC%EB%B3%B8%EC%8B%9D%EB%9D%BC%EB%A9%B4&amp;address=%EC%84%9C%EC%9A%B8+%EB%A7%88%ED%8F%AC%EA%B5%AC+%EC%9B%94%EB%93%9C%EC%BB%B5%EB%A1%9C19%EA%B8%B8+74&amp;lat=37.55433769867013&amp;lng=126.9069593083376&amp;mapUrl=http%3A%2F%2Fplace.map.kakao.com%2F291532086" class="mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark">
+              가게 상세 보기
+            </a>
           </div>
         </article>
       </li>
@@ -267,18 +289,18 @@
     </ul>
 
     <!-- 길찾기 정보가 어떻게 구성되는지 -->
-    <div class="mt-10 rounded-2xl bg-base-tint p-6 sm:p-8">
+    <div class="mt-10 rounded-3xl bg-base-tint p-7 sm:p-9">
       <h3 class="text-[1.25rem] font-extrabold text-base-dark">길찾기 정보는 이렇게 만들어집니다</h3>
       <ol class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3" role="list">
-        <li class="rounded-xl bg-white p-5">
+        <li class="rounded-2xl bg-white p-6 shadow-sm">
           <p class="text-[1rem] font-extrabold text-terra">1단계 · 사진</p>
           <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">건물 외관, 간판, 실제 문 앞을 찍은 사진을 남깁니다.</p>
         </li>
-        <li class="rounded-xl bg-white p-5">
+        <li class="rounded-2xl bg-white p-6 shadow-sm">
           <p class="text-[1rem] font-extrabold text-terra">2단계 · 설명</p>
           <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">"편의점 옆 계단으로" 처럼 사람 말로 적습니다.</p>
         </li>
-        <li class="rounded-xl bg-white p-5">
+        <li class="rounded-2xl bg-white p-6 shadow-sm">
           <p class="text-[1rem] font-extrabold text-terra">3단계 · 정확한 핀</p>
           <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">건물 중앙이 아니라 실제 입구에 핀을 찍습니다.</p>
         </li>
@@ -293,18 +315,18 @@
       <p class="mt-3 text-[1.125rem] text-[#D6E2DB]">가입도, 앱 설치도 필요 없습니다.</p>
 
       <ol class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3" role="list">
-        <li class="rounded-2xl bg-white p-6">
-          <p class="grid h-12 w-12 place-items-center rounded-xl bg-cta text-[1.5rem] font-extrabold text-ink">1</p>
+        <li class="rounded-3xl bg-white p-7 shadow-lg">
+          <p class="grid h-12 w-12 place-items-center rounded-2xl bg-cta text-[1.5rem] font-extrabold text-ink">1</p>
           <h3 class="mt-4 text-[1.25rem] font-extrabold text-ink">가게를 검색합니다</h3>
           <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">가게 이름이나 동네 이름을 넣으면 됩니다.</p>
         </li>
-        <li class="rounded-2xl bg-white p-6">
-          <p class="grid h-12 w-12 place-items-center rounded-xl bg-cta text-[1.5rem] font-extrabold text-ink">2</p>
+        <li class="rounded-3xl bg-white p-7 shadow-lg">
+          <p class="grid h-12 w-12 place-items-center rounded-2xl bg-cta text-[1.5rem] font-extrabold text-ink">2</p>
           <h3 class="mt-4 text-[1.25rem] font-extrabold text-ink">입구를 확인합니다</h3>
           <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">먼저 다녀온 사람이 남긴 사진과 설명을 봅니다.</p>
         </li>
-        <li class="rounded-2xl bg-white p-6">
-          <p class="grid h-12 w-12 place-items-center rounded-xl bg-cta text-[1.5rem] font-extrabold text-ink">3</p>
+        <li class="rounded-3xl bg-white p-7 shadow-lg">
+          <p class="grid h-12 w-12 place-items-center rounded-2xl bg-cta text-[1.5rem] font-extrabold text-ink">3</p>
           <h3 class="mt-4 text-[1.25rem] font-extrabold text-ink">바로 출발합니다</h3>
           <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">길찾기 버튼을 누르면 쓰던 지도 앱이 열립니다.</p>
         </li>
@@ -321,7 +343,7 @@
           <p class="mt-3 text-[1.125rem] text-ink-soft">방금 도착한 사람들이 남긴 한 줄입니다.</p>
         </div>
         <button type="button" id="ticker-toggle" aria-pressed="false"
-                class="h-[52px] rounded-xl border-2 border-base bg-white px-6 text-[1.0625rem] font-extrabold text-base-dark">
+                class="h-[52px] rounded-2xl border-2 border-base bg-white px-6 text-[1.0625rem] font-extrabold text-base-dark shadow-sm transition-shadow hover:shadow-md">
           리뷰 흐름 멈추기
         </button>
       </div>
@@ -330,66 +352,66 @@
     <div id="ticker" class="ticker mt-8 overflow-hidden" data-paused="false">
       <ul class="ticker-track flex w-max gap-5 px-5" role="list">
         <!-- 원본 6개 -->
-        <li class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span aria-hidden="true" class="text-cta-dark">★★★★★</span> 별점 5.0</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"뒷골목 설명 그대로였어요. 처음인데 한 번에 찾았습니다."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 카페 모레 · 초행길러</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 네시사분 · 초행길러</p>
         </li>
-        <li class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span aria-hidden="true" class="text-cta-dark">★★★★☆</span> 별점 4.5</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"간판 없다는 말이 없었으면 또 지나칠 뻔했어요."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">을지로 은성호프 · 퇴근길삼각형</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">을지로 원조만선호프 · 퇴근길삼각형</p>
         </li>
-        <li class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span aria-hidden="true" class="text-cta-dark">★★★★★</span> 별점 5.0</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"어머니 모시고 갔는데 계단 위치를 미리 알아서 좋았습니다."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">성수동 밀과 오븐 · 주말산책</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">성수동 밀도 성수본점 · 주말산책</p>
         </li>
-        <li class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span aria-hidden="true" class="text-cta-dark">★★★★☆</span> 별점 4.0</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"지하상가 설명 덕분에 약속 시간 5분 전에 도착했어요."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">강남역 정식당 · 점심러너</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">강남역 정돈 강남점 · 점심러너</p>
         </li>
-        <li class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span aria-hidden="true" class="text-cta-dark">★★★★★</span> 별점 4.8</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"핀이 어긋난다는 안내가 정확했습니다. 시장 안이라 헤맬 뻔."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">망원동 라멘 오도리 · 국물파</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">망원동 희옥 · 국물파</p>
         </li>
-        <li class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span aria-hidden="true" class="text-cta-dark">★★★★☆</span> 별점 4.3</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"사진이 밤에 찍힌 거라 낮 사진도 한 장 올려뒀어요."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 카페 모레 · 동네주민</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 네시사분 · 동네주민</p>
         </li>
         <!-- 끊김 없이 이어지도록 같은 목록을 한 벌 더 둔다 (읽어줄 필요 없음) -->
-        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span class="text-cta-dark">★★★★★</span> 별점 5.0</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"뒷골목 설명 그대로였어요. 처음인데 한 번에 찾았습니다."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 카페 모레 · 초행길러</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 네시사분 · 초행길러</p>
         </li>
-        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span class="text-cta-dark">★★★★☆</span> 별점 4.5</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"간판 없다는 말이 없었으면 또 지나칠 뻔했어요."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">을지로 은성호프 · 퇴근길삼각형</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">을지로 원조만선호프 · 퇴근길삼각형</p>
         </li>
-        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span class="text-cta-dark">★★★★★</span> 별점 5.0</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"어머니 모시고 갔는데 계단 위치를 미리 알아서 좋았습니다."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">성수동 밀과 오븐 · 주말산책</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">성수동 밀도 성수본점 · 주말산책</p>
         </li>
-        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span class="text-cta-dark">★★★★☆</span> 별점 4.0</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"지하상가 설명 덕분에 약속 시간 5분 전에 도착했어요."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">강남역 정식당 · 점심러너</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">강남역 정돈 강남점 · 점심러너</p>
         </li>
-        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span class="text-cta-dark">★★★★★</span> 별점 4.8</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"핀이 어긋난다는 안내가 정확했습니다. 시장 안이라 헤맬 뻔."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">망원동 라멘 오도리 · 국물파</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">망원동 희옥 · 국물파</p>
         </li>
-        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-2xl bg-white p-5 sm:w-[340px]">
+        <li aria-hidden="true" class="w-[300px] shrink-0 rounded-3xl bg-white p-6 shadow-md sm:w-[340px]">
           <p class="text-[1.0625rem] font-extrabold text-ink"><span class="text-cta-dark">★★★★☆</span> 별점 4.3</p>
           <p class="mt-3 text-[1.0625rem] leading-[1.75] text-ink-soft">"사진이 밤에 찍힌 거라 낮 사진도 한 장 올려뒀어요."</p>
-          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 카페 모레 · 동네주민</p>
+          <p class="mt-3 text-[1rem] font-bold text-ink-mute">연남동 네시사분 · 동네주민</p>
         </li>
       </ul>
     </div>
@@ -403,7 +425,7 @@
     <p class="mt-3 text-[1.125rem] text-ink-soft">지도 앱은 <strong class="font-bold text-ink">건물까지</strong> 데려다줍니다. 가게 길찾기는 <strong class="font-bold text-ink">문 앞까지</strong> 데려다줍니다.</p>
 
     <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <div class="rounded-2xl border-2 border-base-tint bg-white p-6">
+      <div class="rounded-3xl border border-base-tint bg-white p-7 shadow-sm">
         <h3 class="text-[1.25rem] font-extrabold text-ink-mute">일반 지도 앱에서 알 수 있는 것</h3>
         <ul class="mt-4 space-y-3 text-[1.0625rem] leading-[1.75] text-ink-soft" role="list">
           <li>도로명 주소와 건물 이름</li>
@@ -413,7 +435,7 @@
         </ul>
       </div>
 
-      <div class="rounded-2xl border-2 border-base bg-base-tint p-6">
+      <div class="rounded-3xl border-2 border-base bg-base-tint p-7 shadow-md">
         <h3 class="text-[1.25rem] font-extrabold text-base-dark">가게 길찾기에서만 알 수 있는 것</h3>
         <ul class="mt-4 space-y-3 text-[1.0625rem] leading-[1.75] text-ink" role="list">
           <li><strong class="font-extrabold">실제 문이 어느 쪽인지</strong> — 앞인지 뒤인지, 골목 안인지</li>
@@ -436,19 +458,19 @@
     <p class="mt-3 text-[1.125rem] text-ink-soft">아직 만들지 않은 기능입니다. 지금은 위의 길찾기 정보만 이용할 수 있어요.</p>
 
     <ul class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3" role="list">
-      <li class="rounded-2xl border-2 border-base-tint p-6">
+      <li class="rounded-3xl border border-base-tint bg-white p-7 shadow-sm transition-shadow hover:shadow-md">
         <p aria-hidden="true" class="text-[1.75rem]">📝</p>
         <p class="mt-3 inline-block rounded-full bg-[#E9EDEA] px-3 py-1 text-[1rem] font-bold text-ink-soft">준비 중</p>
         <h3 class="mt-3 text-[1.25rem] font-extrabold text-ink">AI 요약</h3>
         <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">여러 사람이 남긴 설명을 한 문단으로 정리해 보여줍니다.</p>
       </li>
-      <li class="rounded-2xl border-2 border-base-tint p-6">
+      <li class="rounded-3xl border border-base-tint bg-white p-7 shadow-sm transition-shadow hover:shadow-md">
         <p aria-hidden="true" class="text-[1.75rem]">💬</p>
         <p class="mt-3 inline-block rounded-full bg-[#E9EDEA] px-3 py-1 text-[1rem] font-bold text-ink-soft">준비 중</p>
         <h3 class="mt-3 text-[1.25rem] font-extrabold text-ink">챗봇</h3>
         <p class="mt-2 text-[1.0625rem] leading-[1.75] text-ink-soft">"3번 출구에서 어떻게 가요?"라고 물으면 대답합니다.</p>
       </li>
-      <li class="rounded-2xl border-2 border-base-tint p-6">
+      <li class="rounded-3xl border border-base-tint bg-white p-7 shadow-sm transition-shadow hover:shadow-md">
         <p aria-hidden="true" class="text-[1.75rem]">📊</p>
         <p class="mt-3 inline-block rounded-full bg-[#E9EDEA] px-3 py-1 text-[1rem] font-bold text-ink-soft">준비 중</p>
         <h3 class="mt-3 text-[1.25rem] font-extrabold text-ink">대시보드</h3>
@@ -491,6 +513,104 @@
     toast.classList.remove('hidden');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toast.classList.add('hidden'); }, 2600);
+    return false;
+  }
+
+  // 가게 검색: /api/places(day4/server.js가 카카오 로컬 API를 대신 호출)를 불러 실제
+  // 검색 결과를 보여준다. 카드는 DESIGN.md 6.11절의 재사용 카드 패턴을 그대로 따른다.
+  var searchInput = document.getElementById('search');
+  var resultsSection = document.getElementById('search-results-section');
+  var resultsStatus = document.getElementById('search-results-status');
+  var resultsList = document.getElementById('search-results-list');
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  // 검색 결과 카드에서 "가게 상세 보기"로 넘어갈 때, 이미 가진 정보(이름·주소·좌표 등)를
+  // place.html에 쿼리스트링으로 함께 넘긴다 — place.html이 카카오를 다시 조회할 필요 없이
+  // 바로 헤더를 채우고, id는 그 가게의 위치 정보(place-info)를 저장/조회하는 키로 쓰인다.
+  function buildPlaceHref(place) {
+    var params = new URLSearchParams();
+    if (place.id) params.set('id', place.id);
+    if (place.name) params.set('name', place.name);
+    if (place.category) params.set('category', place.category);
+    if (place.address) params.set('address', place.address);
+    if (place.lat) params.set('lat', place.lat);
+    if (place.lng) params.set('lng', place.lng);
+    if (place.url) params.set('mapUrl', place.url);
+    return 'place.html?' + params.toString();
+  }
+
+  function renderPlaceCard(place) {
+    var li = document.createElement('li');
+    var name = place.name || '이름 정보 없음';
+    var category = place.category || '정보 없음';
+    var address = place.address || '주소 정보 없음';
+    var phone = place.phone || '전화번호 정보 없음';
+    var linkHtml = place.url
+      ? '<a href="' + escapeHtml(place.url) + '" target="_blank" rel="noopener" ' +
+        'class="mt-4 flex h-[52px] items-center justify-center rounded-2xl bg-cta px-4 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">' +
+        '카카오맵에서 보기</a>'
+      : '';
+    var detailHtml = place.id
+      ? '<a href="' + escapeHtml(buildPlaceHref(place)) + '" ' +
+        'class="mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark">' +
+        '가게 상세 보기</a>'
+      : '';
+    li.innerHTML =
+      '<article class="flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">' +
+        '<p class="text-[1rem] font-bold text-terra">' + escapeHtml(category) + '</p>' +
+        '<h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">' + escapeHtml(name) + '</h3>' +
+        '<p class="mt-3 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">' + escapeHtml(address) + '</p>' +
+        '<p class="mt-2 text-[1rem] font-bold text-ink-mute">' + escapeHtml(phone) + '</p>' +
+        linkHtml +
+        detailHtml +
+      '</article>';
+    return li;
+  }
+
+  function handleSearchSubmit(event) {
+    if (event) { event.preventDefault(); }
+    var q = (searchInput.value || '').trim();
+    if (!q) {
+      demoNotice(null, '검색어를 입력해 주세요.');
+      return false;
+    }
+
+    resultsSection.classList.remove('hidden');
+    resultsList.innerHTML = '';
+    resultsStatus.textContent = '검색 중입니다…';
+
+    fetch('/api/places?query=' + encodeURIComponent(q))
+      .then(function (res) {
+        return res.json().then(function (body) { return { ok: res.ok, body: body }; });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          resultsSection.classList.add('hidden');
+          resultsStatus.textContent = '';
+          demoNotice(null, (result.body && result.body.message) || '검색 중 문제가 발생했습니다.');
+          return;
+        }
+        var places = (result.body && result.body.places) || [];
+        if (places.length === 0) {
+          resultsStatus.textContent = '검색 결과가 없습니다.';
+          return;
+        }
+        resultsStatus.textContent = '"' + q + '" 검색 결과 ' + places.length + '건';
+        places.forEach(function (place) {
+          resultsList.appendChild(renderPlaceCard(place));
+        });
+      })
+      .catch(function () {
+        resultsSection.classList.add('hidden');
+        resultsStatus.textContent = '';
+        demoNotice(null, '검색 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+      });
+
     return false;
   }
 

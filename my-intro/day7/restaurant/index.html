@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CityBite Tour — 시티투어 주변 맛집 찾기</title>
+<meta name="description" content="시티투어 코스 주변 맛집을 지역과 음식 종류로 검색합니다.">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<!-- 디자인 토큰은 theme.js 전용. 색/폰트/라운드를 바꿀 땐 그 파일만 고치면 된다. -->
+<script src="theme.js"></script>
+<script id="tailwind-config">
+  tailwind.config = { darkMode: "class", theme: { extend: window.CITYBITE_THEME } };
+</script>
+<style>
+  body { min-height: max(884px, 100dvh); }
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  /* theme.js의 surface-container-low/surface-container 색과 맞춰둔 값. 팔레트를 바꾸면 같이 맞출 것. */
+  .skeleton { background: linear-gradient(90deg, #f9fafb 25%, #e5e8eb 37%, #f9fafb 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body class="bg-surface text-on-surface antialiased font-body-md min-h-screen flex flex-col pt-16 pb-20">
+
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface shadow-sm">
+  <div class="flex justify-between items-center px-md h-16 w-full max-w-container-max mx-auto">
+    <button id="headerLeftBtn" type="button" class="p-2 hover:bg-surface-container-low transition-colors rounded-full text-on-surface-variant active:scale-95 transition-transform duration-150">
+      <span class="material-symbols-outlined" id="headerLeftIcon" style="font-variation-settings: 'FILL' 0;">directions_bus</span>
+    </button>
+    <h1 class="font-headline-lg-mobile text-headline-lg-mobile text-travel-orange tracking-tight">CityBite Tour</h1>
+    <button type="button" class="p-2 hover:bg-surface-container-low transition-colors rounded-full text-on-surface-variant active:scale-95 transition-transform duration-150">
+      <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+    </button>
+  </div>
+</header>
+
+<main class="flex-grow px-gutter py-lg max-w-md mx-auto w-full flex flex-col gap-xl">
+
+  <!-- ===== 화면 1: 메인 검색 (Stitch: 메인 검색 (모바일)) ===== -->
+  <section id="screen-search" class="flex-grow flex flex-col gap-xl">
+    <section class="text-center space-y-sm">
+      <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface leading-snug">
+        시티투어와 함께하는<br>즐거운 맛집 탐방
+      </h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">어디로 떠나볼까요?</p>
+    </section>
+
+    <form id="searchForm" class="space-y-lg flex-grow flex flex-col">
+      <div class="space-y-xs" id="regionField"></div>
+
+      <div class="space-y-xs flex-grow">
+        <label class="font-label-md text-label-md text-on-surface block">음식 종류</label>
+        <div class="grid grid-cols-2 gap-md" id="categoryGrid"></div>
+      </div>
+
+      <div class="mt-auto pt-lg">
+        <button id="submitBtn" type="submit" disabled
+          class="w-full bg-travel-orange text-white font-headline-md text-headline-md py-4 rounded-lg shadow-lg hover:bg-surface-tint transition-colors active:scale-95 duration-150 flex items-center justify-center gap-sm disabled:bg-outline-variant disabled:shadow-none disabled:cursor-not-allowed">
+          <span class="material-symbols-outlined">search</span>
+          맛집 검색하기
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ===== 화면 2: 검색 결과 (Stitch: 검색 결과 (모바일)) ===== -->
+  <section id="screen-results" hidden class="flex flex-col gap-lg">
+    <button id="backBtn" type="button" class="self-start flex items-center gap-1 text-primary font-label-md text-label-md">
+      <span class="material-symbols-outlined text-[18px]">arrow_back</span> 검색 조건 다시 선택
+    </button>
+
+    <section class="flex flex-col gap-sm">
+      <h2 id="resultTitle" class="font-headline-md text-headline-md text-on-surface">검색 결과</h2>
+      <div class="flex gap-sm overflow-x-auto pb-2 scrollbar-hide cursor-grab active:cursor-grabbing" id="chipRow"></div>
+    </section>
+
+    <div id="resultBody"></div>
+  </section>
+
+</main>
+
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-md bg-surface border-t border-outline-variant shadow-[0_-2px_10px_rgba(0,0,0,0.05)] rounded-t-xl z-50 md:hidden">
+  <button type="button" class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-all active:scale-90 duration-200">
+    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">home</span>
+    <span class="font-label-sm text-label-sm mt-1">Home</span>
+  </button>
+  <button type="button" class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 hover:bg-surface-container-high transition-all active:scale-90 duration-200">
+    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">search</span>
+    <span class="font-label-sm text-label-sm mt-1">Search</span>
+  </button>
+  <button type="button" class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-all active:scale-90 duration-200">
+    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">map</span>
+    <span class="font-label-sm text-label-sm mt-1">My Tours</span>
+  </button>
+  <button type="button" class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-high transition-all active:scale-90 duration-200">
+    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+    <span class="font-label-sm text-label-sm mt-1">Profile</span>
+  </button>
+</nav>
+
+<script src="app.js"></script>
+
+</body>
+</html>
