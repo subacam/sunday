@@ -15,7 +15,8 @@
           base:  { DEFAULT: '#2F5D50', dark: '#1E4036', light: '#3E7A67', tint: '#EDF3EF' },
           terra: { DEFAULT: '#B45F49', tint: '#FAF0EB' },
           cta:   { DEFAULT: '#E8A33D', dark: '#C9871F' },
-          ink:   { DEFAULT: '#1F2A24', soft: '#3F4B45', mute: '#5C6B63' }
+          ink:   { DEFAULT: '#1F2A24', soft: '#3F4B45', mute: '#5C6B63' },
+          analysis: { good: '#2F8F5B', neutral: '#F2B705', bad: '#DC5B4A' }
         },
         fontFamily: {
           sans: ['Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', 'sans-serif']
@@ -147,6 +148,30 @@
           <p id="reviews-place-name" class="text-[1.25rem] font-extrabold text-base-dark"></p>
           <p id="reviews-summary" class="text-[1.0625rem] font-bold text-ink-soft"></p>
         </div>
+
+        <p id="analysis-status" class="mt-5 text-[1.0625rem] text-ink-soft" role="status" aria-live="polite"></p>
+
+        <div id="analysis-content" class="mt-5 hidden">
+          <div id="analysis-summary-bubble" class="relative rounded-2xl bg-base-tint p-5 text-[1.0625rem] font-bold text-ink shadow-sm before:absolute before:-top-2 before:left-8 before:h-4 before:w-4 before:rotate-45 before:bg-base-tint before:content-['']">
+            <span aria-hidden="true">💬</span> <span id="analysis-summary-text"></span>
+          </div>
+
+          <div class="mt-5">
+            <div id="analysis-ratio-bar" aria-hidden="true" class="flex h-4 w-full overflow-hidden rounded-full bg-base-tint">
+              <div id="analysis-ratio-positive" class="bg-analysis-good"></div>
+              <div id="analysis-ratio-neutral" class="bg-analysis-neutral"></div>
+              <div id="analysis-ratio-negative" class="bg-analysis-bad"></div>
+            </div>
+            <p id="analysis-ratio-legend" class="mt-2 text-[1rem] font-bold text-ink-mute"></p>
+          </div>
+
+          <div class="mt-5">
+            <canvas id="analysis-wordcloud-canvas" class="w-full" height="260"></canvas>
+            <ul id="analysis-wordcloud-fallback" class="hidden flex-wrap gap-2" role="list"></ul>
+            <p class="mt-2 text-[0.9375rem] text-ink-mute">초록 글자 = 좋은 맥락 · 빨간 글자 = 아쉬운 맥락</p>
+          </div>
+        </div>
+
         <ul id="reviews-list" class="mt-5 flex flex-col gap-4" role="list"></ul>
         <a id="reviews-map-link" href="#" target="_blank" rel="noopener"
            class="mt-5 hidden h-[52px] items-center justify-center rounded-2xl bg-cta px-6 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
@@ -263,6 +288,7 @@
 <div id="place-toast" role="status" aria-live="polite"
      class="pointer-events-none fixed inset-x-0 bottom-6 z-50 mx-auto hidden w-[min(90%,32rem)] rounded-xl bg-ink px-5 py-4 text-center text-[1.0625rem] font-bold text-white"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.3/src/wordcloud2.js"></script>
 <script>
   var placeToast = document.getElementById('place-toast');
   var placeToastTimer;
@@ -398,11 +424,146 @@
       reviewsContent.classList.remove('hidden');
     }
 
+    // ---- 구글 리뷰 AI 분석: 로컬스토리지 캐시(만료 없음, 리뷰 캐시와 별개 키) ----
+    var analysisStatus = document.getElementById('analysis-status');
+    var analysisContent = document.getElementById('analysis-content');
+
+    function analysisStorageKey(placeId) {
+      return 'place-google-review-analysis:' + placeId;
+    }
+
+    function getCachedAnalysis(placeId) {
+      try {
+        var raw = localStorage.getItem(analysisStorageKey(placeId));
+        return raw ? JSON.parse(raw) : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function cacheAnalysis(placeId, payload) {
+      try {
+        localStorage.setItem(analysisStorageKey(placeId), JSON.stringify(payload));
+      } catch (err) {
+        // 저장 실패(프라이빗 모드, 용량 초과 등)는 조용히 무시.
+      }
+    }
+
+    function renderAnalysisResult(analysis) {
+      document.getElementById('analysis-summary-text').textContent = analysis.summary || '';
+
+      var positive = analysis.sentiment.positive || 0;
+      var neutral = analysis.sentiment.neutral || 0;
+      var negative = analysis.sentiment.negative || 0;
+      var total = positive + neutral + negative || 1;
+      document.getElementById('analysis-ratio-positive').style.width = (positive / total * 100) + '%';
+      document.getElementById('analysis-ratio-neutral').style.width = (neutral / total * 100) + '%';
+      document.getElementById('analysis-ratio-negative').style.width = (negative / total * 100) + '%';
+      document.getElementById('analysis-ratio-legend').textContent =
+        '긍정 ' + positive + ' · 보통 ' + neutral + ' · 부정 ' + negative;
+
+      // hidden을 먼저 제거해야 캔버스가 화면에 실제로 보이는 상태에서 clientWidth를 잴 수
+      // 있다 — display:none인 채로 재면 0이 나와 워드클라우드가 그려지지 않는다.
+      analysisContent.classList.remove('hidden');
+
+      var keywords = Array.isArray(analysis.keywords) ? analysis.keywords : [];
+      var canvas = document.getElementById('analysis-wordcloud-canvas');
+      var fallbackList = document.getElementById('analysis-wordcloud-fallback');
+
+      if (keywords.length === 0) {
+        canvas.classList.add('hidden');
+        fallbackList.classList.add('hidden');
+        return;
+      }
+
+      var sentimentByWord = {};
+      keywords.forEach(function (k) { sentimentByWord[k.word] = k.sentiment; });
+
+      var drewCloud = false;
+      if (typeof WordCloud === 'function' && WordCloud.isSupported) {
+        try {
+          canvas.width = canvas.clientWidth || 600;
+          canvas.height = 260;
+          WordCloud(canvas, {
+            list: keywords.map(function (k) { return [k.word, k.score]; }),
+            weightFactor: function (score) { return 14 + (score - 1) * (46 / 9); },
+            color: function (word) { return sentimentByWord[word] === 'bad' ? '#DC5B4A' : '#2F8F5B'; },
+            backgroundColor: 'transparent',
+            fontFamily: 'Pretendard Variable, Pretendard, sans-serif',
+          });
+          drewCloud = true;
+        } catch (err) {
+          drewCloud = false;
+        }
+      }
+
+      if (drewCloud) {
+        canvas.classList.remove('hidden');
+        fallbackList.classList.add('hidden');
+      } else {
+        // 워드클라우드 라이브러리가 로드되지 않았거나 캔버스를 지원하지 않는 환경 — 칩 목록으로
+        // 대체한다(초록/빨강 색상, 점수에 비례한 글자 크기는 인라인 스타일로 흉내낸다).
+        canvas.classList.add('hidden');
+        fallbackList.innerHTML = '';
+        keywords.forEach(function (k) {
+          var chip = document.createElement('li');
+          var color = k.sentiment === 'bad' ? '#DC5B4A' : '#2F8F5B';
+          var fontSize = 14 + (k.score - 1) * (28 / 9);
+          chip.className = 'rounded-full border border-base-tint/60 bg-white px-3 py-1 font-bold';
+          chip.style.color = color;
+          chip.style.fontSize = fontSize + 'px';
+          chip.textContent = k.word;
+          fallbackList.appendChild(chip);
+        });
+        fallbackList.classList.remove('hidden');
+      }
+    }
+
+    function loadAnalysis(googlePlace) {
+      // 리뷰가 하나도 없으면 분석 시도 자체를 하지 않는다 — 섹션도 계속 숨김 상태로 둔다.
+      if (!googlePlace.reviews || googlePlace.reviews.length === 0) {
+        return;
+      }
+
+      var cached = getCachedAnalysis(place.id);
+      if (cached) {
+        analysisStatus.textContent = '';
+        renderAnalysisResult(cached);
+        return;
+      }
+
+      analysisStatus.textContent = 'AI가 리뷰를 분석 하는 중...';
+      analysisContent.classList.add('hidden');
+
+      fetch('/api/place-review-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: googlePlace.name,
+          reviews: googlePlace.reviews.map(function (r) { return { rating: r.rating, text: r.text }; }),
+        }),
+      })
+        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (result) {
+          if (!result.ok) {
+            analysisStatus.textContent = (result.body && result.body.message) || 'AI 분석에 실패했습니다.';
+            return;
+          }
+          analysisStatus.textContent = '';
+          cacheAnalysis(place.id, result.body);
+          renderAnalysisResult(result.body);
+        })
+        .catch(function () {
+          analysisStatus.textContent = 'AI 분석에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+        });
+    }
+
     function loadGoogleReviews() {
       var cached = getCachedReviews(place.id);
       if (cached) {
         reviewsStatus.textContent = '';
         renderReviews(cached);
+        loadAnalysis(cached);
         return;
       }
 
@@ -426,6 +587,7 @@
           reviewsStatus.textContent = '';
           cacheReviews(place.id, result.body.place);
           renderReviews(result.body.place);
+          loadAnalysis(result.body.place);
         })
         .catch(function () {
           reviewsStatus.textContent = '리뷰를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';

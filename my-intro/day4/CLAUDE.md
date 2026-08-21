@@ -26,18 +26,23 @@
 
 ## 서비스키
 
-- `.env.local`에 `KAKAO_REST_API_KEY=...`와 `GOOGLE_PLACES_API_KEY=...` (둘 다 gitignore
-  처리됨, 커밋 금지). `.env.example`이 형식과 발급처(카카오는 카카오 디벨로퍼스 콘솔,
-  https://developers.kakao.com > 내 애플리케이션 > 앱 키 > REST API 키; 구글은 구글 클라우드
-  콘솔, https://console.cloud.google.com > API 및 서비스 > 사용자 인증 정보 — 반드시
-  **"Places API (New)"**를 사용 설정해야 하며, 레거시 Places API만 켜져 있으면
-  `places:searchText` 호출이 403으로 실패한다)를 보여준다.
+- `.env.local`에 `KAKAO_REST_API_KEY=...`, `GOOGLE_PLACES_API_KEY=...`, `GEMINI_API_KEY=...`
+  (셋 다 gitignore 처리됨, 커밋 금지). `.env.example`이 형식과 발급처(카카오는 카카오
+  디벨로퍼스 콘솔, https://developers.kakao.com > 내 애플리케이션 > 앱 키 > REST API 키;
+  구글 Places는 구글 클라우드 콘솔, https://console.cloud.google.com > API 및 서비스 >
+  사용자 인증 정보 — 반드시 **"Places API (New)"**를 사용 설정해야 하며, 레거시 Places
+  API만 켜져 있으면 `places:searchText` 호출이 403으로 실패한다; 제미나이는 구글 AI
+  Studio, https://aistudio.google.com/apikey)를 보여준다.
+- `GEMINI_MODEL`도 `.env.local`/`.env.example`에 있지만 **비밀값이 아니다** — 기본값
+  `gemini-3.6-flash`가 `.env.example`에 실제로 채워져 있고, 구글이 모델 라인업을 자주
+  바꾸므로 AI Studio에서 현재 모델명을 확인해 다르면 `.env.local`에서 한 줄로 덮어쓰면
+  된다(코드 수정 불필요).
 - `server.js`가 시작 시 `process.loadEnvFile('.env.local')`로 읽는다(Node 20.6+ 내장 API, 별도
   dotenv 불필요).
-- **키가 없거나 `TODO_...` placeholder면 "키 없음"과 동일하게 취급한다.** 두 키 모두 이 규칙을
-  따른다 — 업스트림 호출을 아예 시도하지 않고, 각각 `/api/places`·`/api/place-reviews`가
-  `{ error: "SERVER_NOT_CONFIGURED", message: "..." }`를 500으로 반환한다. 실제 키를
-  발급받으면 `.env.local`의 값만 교체하면 된다.
+- **키가 없거나 `TODO_...` placeholder면 "키 없음"과 동일하게 취급한다.** 세 키 모두 이 규칙을
+  따른다 — 업스트림 호출을 아예 시도하지 않고, 각각 `/api/places`·`/api/place-reviews`·
+  `/api/place-review-analysis`가 `{ error: "SERVER_NOT_CONFIGURED", message: "..." }`를
+  500으로 반환한다. 실제 키를 발급받으면 `.env.local`의 값만 교체하면 된다.
 
 ## `/api/places` 계약
 
@@ -81,6 +86,46 @@ API 아님).
   (매 요청마다 구글을 호출) — 클라이언트가 `localStorage`에 만료 없이 캐싱해 같은 가게를
   다시 조회할 때 네트워크 호출 없이 즉시 보여준다.
 
+## `/api/place-review-analysis` 계약
+
+`/api/place-reviews`가 이미 가져온 리뷰 텍스트를 받아 제미나이(**`generateContent`**,
+`POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`)로
+감정 분류·핵심 키워드·한 줄 요약을 만든다. 구글 Places를 다시 호출하지 않는다. 서버 쪽
+영속 저장은 없다(캐싱은 `place.html`의 `localStorage`에서만 한다).
+
+- 제미나이는 구글 Places와 달리 API 키를 헤더가 아니라 **쿼리 파라미터**(`?key=...`)로
+  받는다 — 다른 두 엔드포인트와 통일하겠다고 헤더로 바꾸면 인증이 깨진다.
+- 요청은 `responseMimeType: "application/json"` + `responseSchema`로 구조화 출력을
+  강제한다. `type` 필드는 대문자 열거형(`OBJECT`/`STRING`/`INTEGER`/`ARRAY`)을 쓴다. 생성된
+  JSON은 `candidates[0].content.parts[0].text`에 **문자열**로 들어있어 한 번 더
+  `JSON.parse`가 필요하다.
+- **`thinkingConfig.thinkingBudget: 512`를 반드시 유지할 것.** 이 값이 없으면(모델 기본
+  동작) 같은 요청도 9초~35초까지 편차가 크게 튀는 걸 실측으로 확인했다 — 이 작업은 정해진
+  스키마로 사실을 추출/집계하는 정도라 깊은 추론이 필요 없고, budget을 낮게 고정하면 응답
+  품질 저하 없이 2~5초로 안정된다. 이 상수를 지우거나 "더 똑똑하게 만들자"며 늘리면 다시
+  타임아웃이 잦아진다.
+- `POST /api/place-review-analysis` — 본문 `{ name, reviews: [{ rating, text }, ...] }`.
+  `name` 없으면 400 `MISSING_NAME`, `reviews`가 배열이 아니면 400 `INVALID_REVIEWS`, 빈
+  배열이면 400 `EMPTY_REVIEWS`(클라이언트는 리뷰 0개일 때 이 엔드포인트를 아예 호출하지
+  않지만, 외부에서 직접 호출될 수도 있어 서버도 막는다).
+- 서버는 클라이언트가 보낸 리뷰를 그대로 믿지 않고 방어적으로 자른다(최대 30개, 각
+  `text` 최대 1000자) — 이 엔드포인트는 임의 텍스트를 가장 비싼 업스트림(LLM)에 그대로
+  넘기는 유일한 엔드포인트라 다른 두 곳보다 남용 벡터가 크다. 이 서버는 인증도
+  레이트리밋도 없으므로, 근본적인 남용 방지는 안 되고 완화만 된다는 점을 알아둘 것.
+- 성공 시 `{ sentiment: { positive, neutral, negative }, keywords: [{ word, score, sentiment:
+  "good"|"bad" }, ...], summary }`를 200으로 반환한다. `keywords`는 8~15개를 요청하지만
+  강제는 아니다(구글 Places가 가게당 리뷰를 최대 5개까지만 주므로, 리뷰가 적으면 8개 미만도
+  정상 — UI는 온 만큼만 그린다). `sentiment`의 세 숫자 합이 `reviews.length`와 다를 수 있고,
+  검증 없이 그대로 신뢰해서 그린다.
+- 업스트림 오류는 `/api/place-reviews`와 같은 닫힌 오류 코드 집합을 쓴다
+  (`UPSTREAM_AUTH_ERROR`/`UPSTREAM_RATE_LIMITED`/`UPSTREAM_ERROR`/`UPSTREAM_UNAVAILABLE`).
+  **추가로 이 엔드포인트만의 `ANALYSIS_UNPARSEABLE`**(502)이 있다 — 업스트림 응답은 200인데
+  구조화 출력이 안전 필터에 걸렸거나 형태가 깨져 파싱에 실패한 경우로, 서버가 생성물을
+  직접 파싱해야 하는 이 엔드포인트만 가질 수 있는 실패 유형이라 다른 두 프록시에는 없는
+  코드를 새로 추가했다.
+- **로그인을 요구하지 않는다.** 서버 쪽 영속 저장이 없어 어차피 "누가 요청했는지"를 남길
+  이유도 없다.
+
 ## `/api/place-info` 계약
 
 가게 하나에 대해 여러 사용자가 각자 남긴 사진·설명·정밀 핀·"도움이 됐어요"를 누적 저장하는
@@ -116,3 +161,7 @@ API 아님).
 - `place.html`은 더 이상 정적 목업이 아니다 — `index.html`의 카드가 넘기는 `id` 쿼리
   파라미터를 키로 `/api/place-info` 계열 엔드포인트에서 실제 데이터를 읽고 쓰는 동적 페이지다.
   자세한 화면 구성은 `DESIGN.md` §6.12 참고.
+- 구글 리뷰가 성공적으로 뜨면(캐시 히트든 새로 불러왔든) `/api/place-review-analysis` 호출이
+  **버튼 없이 자동으로** 이어진다 — 리뷰 자체는 여전히 "리뷰 보기" 클릭이 트리거지만, 그
+  다음 AI 분석은 리뷰 로딩 완료가 트리거다. 리뷰가 0개면 이 자동 트리거 자체가 발동하지
+  않는다. 자세한 내용은 `DESIGN.md` §6.14 참고.
