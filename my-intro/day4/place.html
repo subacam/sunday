@@ -104,11 +104,7 @@
       </p>
 
       <div class="mt-6 overflow-hidden rounded-3xl border border-base-tint/60 bg-white shadow-md">
-        <div id="pin-map" class="relative h-64 bg-base-tint sm:h-80">
-          <p id="pin-empty-message" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 text-center">
-            <span class="rounded-lg bg-white/95 px-3 py-1.5 text-[1rem] font-bold text-base-dark shadow-sm">아직 등록된 핀이 없습니다. 아래에서 첫 핀을 남겨보세요.</span>
-          </p>
-        </div>
+        <div id="pin-map" class="relative h-64 bg-base-tint sm:h-80"></div>
         <div class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
           <p id="pin-description" class="text-[1.0625rem] leading-[1.75] text-ink-soft">
             가장 최근에 등록된 입구 설명이 여기에 표시됩니다.
@@ -679,7 +675,6 @@
 
     function renderPin(entries) {
       var pinMap = document.getElementById('pin-map');
-      var emptyMessage = document.getElementById('pin-empty-message');
       var pinDescription = document.getElementById('pin-description');
 
       var existingMarker = pinMap.querySelector('.pin-marker');
@@ -687,7 +682,6 @@
 
       var pinned = entries.filter(function (e) { return e.pinX !== null && e.pinX !== undefined && e.pinY !== null && e.pinY !== undefined; });
       if (pinned.length === 0) {
-        emptyMessage.classList.remove('hidden');
         pinDescription.textContent = entries.length > 0
           ? '가장 최근 설명 (핀 없음): ' + entries[0].text
           : '가장 최근에 등록된 입구 설명이 여기에 표시됩니다.';
@@ -695,7 +689,6 @@
         return;
       }
 
-      emptyMessage.classList.add('hidden');
       var latest = pinned[0];
       var marker = document.createElement('div');
       marker.className = 'pin-marker absolute z-10 grid h-11 w-11 -translate-x-1/2 -translate-y-full place-items-center rounded-full bg-terra shadow-lg';
