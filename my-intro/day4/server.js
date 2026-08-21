@@ -50,6 +50,16 @@ if (!GEMINI_API_KEY) {
   console.warn("[경고] GEMINI_API_KEY가 설정되지 않았습니다. .env.local을 확인하세요 (.env.example 참고).");
 }
 
+// place-info(위치 정보 제보) 저장소를 Supabase Postgres에 둔다. anon(publishable) 키만
+// 쓴다 — RLS의 public select/insert 정책이 지금 서버가 하는 것과 같은 권한이라 service
+// role 키가 필요 없다. 카카오/구글/제미나이 키와 달리 비밀값이 아니므로 TODO 가드도 없다.
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn("[경고] SUPABASE_URL/SUPABASE_ANON_KEY가 설정되지 않았습니다. .env.local을 확인하세요 (.env.example 참고).");
+}
+
 const UPSTREAM_TIMEOUT_MS = 8000;
 // LLM 생성은 검색류 API보다 느리고 편차가 크다 — 검색 프록시들과 같은 8초를 쓰면 "분석 중"
 // 상태가 너무 자주 타임아웃으로 끊길 수 있어 별도로 더 길게 잡는다. (실측: thinkingBudget을
@@ -443,28 +453,65 @@ function handlePlaceReviewAnalysisApi(req, res) {
     });
 }
 
-// ---- 위치 정보(place-info): 가게별 사진·설명·핀·"도움이 됐어요"를 저장하는 아주 작은
-// 파일 기반 저장소. 별도 DB 없이 day4/data/place-info.json 하나에 { placeId: [entry, ...] }
-// 형태로 저장한다 — day4 규모(데모 프로젝트)에서는 이 정도로 충분하고, 서버를 재시작해도
-// 데이터가 남는다. PRD 5.5는 등록을 위해 로그인을 요구하지만, 이번 구현은 익명 등록을
-// 허용한다(author가 비어 있으면 "익명"으로 저장).
-const DATA_DIR = path.join(__dirname, "data");
-const PLACE_INFO_FILE = path.join(DATA_DIR, "place-info.json");
+// ---- 위치 정보(place-info): 가게별 사진·설명·핀·"도움이 됐어요"를 Supabase Postgres
+// (place_info_entries 테이블)에 저장한다. anon 키로 PostgREST를 fetch()로 직접 호출한다 —
+// 카카오/구글/제미나이 프록시와 같은 패턴(전역 fetch, AbortSignal.timeout)이고 별도 SDK는
+// 설치하지 않는다. PRD 5.5는 등록을 위해 로그인을 요구하지만, 이번 구현은 익명 등록을
+// 허용한다(author가 비어 있으면 "익명"으로 저장) — DB의 RLS(select/insert를 anon에게도
+// 허용)도 이 규칙을 그대로 반영한다. helpful 증가는 원자적 RPC
+// (increment_place_info_helpful)로 처리해 예전 파일 기반 구현의 읽기→+1→쓰기 경쟁 조건을
+// 없앴다.
+const SUPABASE_REST_BASE = SUPABASE_URL + "/rest/v1";
 
-function readPlaceInfoStore() {
-  try {
-    return JSON.parse(fs.readFileSync(PLACE_INFO_FILE, "utf8"));
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.error("[data] place-info.json 읽기 실패, 빈 상태로 시작합니다:", err.message);
-    }
-    return {};
-  }
+function supabaseHeaders(extra) {
+  return Object.assign(
+    {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
+    },
+    extra || {}
+  );
 }
 
-function writePlaceInfoStore(store) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(PLACE_INFO_FILE, JSON.stringify(store, null, 2), "utf8");
+// DB row(snake_case) -> 기존 클라이언트 계약(camelCase) 형태로 재구성한다. 라우트/응답
+// 모양은 파일 기반 구현 때와 동일하게 유지해 place.html은 손댈 필요가 없다.
+function reshapePlaceInfoEntry(row) {
+  return {
+    id: row.id,
+    author: row.author,
+    text: row.text,
+    photoUrl: row.photo_url || "",
+    pinX: row.pin_x === null || row.pin_x === undefined ? null : Number(row.pin_x),
+    pinY: row.pin_y === null || row.pin_y === undefined ? null : Number(row.pin_y),
+    helpfulCount: row.helpful_count || 0,
+    createdAt: row.created_at,
+  };
+}
+
+function fetchPlaceInfoEntries(placeId) {
+  const params = new URLSearchParams({ place_id: "eq." + placeId, order: "created_at.desc" });
+  return fetch(SUPABASE_REST_BASE + "/place_info_entries?" + params.toString(), {
+    headers: supabaseHeaders(),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+}
+
+function insertPlaceInfoEntry(row) {
+  return fetch(SUPABASE_REST_BASE + "/place_info_entries", {
+    method: "POST",
+    headers: supabaseHeaders({ "Content-Type": "application/json", Prefer: "return=representation" }),
+    body: JSON.stringify(row),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+}
+
+function incrementPlaceInfoHelpful(entryId) {
+  return fetch(SUPABASE_REST_BASE + "/rpc/increment_place_info_helpful", {
+    method: "POST",
+    headers: supabaseHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ p_entry_id: entryId }),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
 }
 
 // 프레임워크가 없으니 요청 본문을 직접 모아 JSON으로 파싱한다.
@@ -499,11 +546,21 @@ function handleGetPlaceInfo(req, res, query) {
     sendJson(res, 400, { error: "MISSING_ID", message: "가게 id가 필요합니다." });
     return;
   }
-  const store = readPlaceInfoStore();
-  const entries = (store[placeId] || [])
-    .slice()
-    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-  sendJson(res, 200, { entries: entries });
+  fetchPlaceInfoEntries(placeId)
+    .then((upstreamRes) => {
+      if (!upstreamRes.ok) {
+        console.error("[data] place-info 조회 실패, 상태: " + upstreamRes.status);
+        sendJson(res, 502, { error: "UPSTREAM_ERROR", message: "위치 정보를 불러오지 못했습니다." });
+        return;
+      }
+      return upstreamRes.json().then((rows) => {
+        sendJson(res, 200, { entries: (Array.isArray(rows) ? rows : []).map(reshapePlaceInfoEntry) });
+      });
+    })
+    .catch((err) => {
+      console.error("[data] place-info 조회 호출 실패:", err.message);
+      sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "위치 정보 서비스에 연결할 수 없습니다." });
+    });
 }
 
 function handlePostPlaceInfo(req, res) {
@@ -539,23 +596,31 @@ function handlePostPlaceInfo(req, res) {
       if (!author) author = "익명";
       author = author.slice(0, 30);
 
-      const entry = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      const row = {
+        place_id: placeId,
         author: author,
         text: text,
-        photoUrl: photoUrl,
-        pinX: Number.isFinite(pinX) && pinX >= 0 && pinX <= 100 ? Math.round(pinX * 10) / 10 : null,
-        pinY: Number.isFinite(pinY) && pinY >= 0 && pinY <= 100 ? Math.round(pinY * 10) / 10 : null,
-        helpfulCount: 0,
-        createdAt: new Date().toISOString(),
+        photo_url: photoUrl,
+        pin_x: Number.isFinite(pinX) && pinX >= 0 && pinX <= 100 ? Math.round(pinX * 10) / 10 : null,
+        pin_y: Number.isFinite(pinY) && pinY >= 0 && pinY <= 100 ? Math.round(pinY * 10) / 10 : null,
       };
 
-      const store = readPlaceInfoStore();
-      if (!Array.isArray(store[placeId])) store[placeId] = [];
-      store[placeId].push(entry);
-      writePlaceInfoStore(store);
-
-      sendJson(res, 201, { entry: entry });
+      insertPlaceInfoEntry(row)
+        .then((upstreamRes) => {
+          if (!upstreamRes.ok) {
+            console.error("[data] place-info 등록 실패, 상태: " + upstreamRes.status);
+            sendJson(res, 502, { error: "UPSTREAM_ERROR", message: "위치 정보를 저장하지 못했습니다." });
+            return;
+          }
+          return upstreamRes.json().then((rows) => {
+            const created = Array.isArray(rows) ? rows[0] : rows;
+            sendJson(res, 201, { entry: reshapePlaceInfoEntry(created) });
+          });
+        })
+        .catch((err) => {
+          console.error("[data] place-info 등록 호출 실패:", err.message);
+          sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "위치 정보 서비스에 연결할 수 없습니다." });
+        });
     })
     .catch((err) => {
       if (err.code === "TOO_LARGE") {
@@ -575,29 +640,42 @@ function handlePostPlaceInfoHelpful(req, res) {
         sendJson(res, 400, { error: "MISSING_FIELDS", message: "placeId와 entryId가 필요합니다." });
         return;
       }
-      const store = readPlaceInfoStore();
-      const list = store[placeId] || [];
-      const entry = list.find((e) => e.id === entryId);
-      if (!entry) {
-        sendJson(res, 404, { error: "ENTRY_NOT_FOUND", message: "해당 정보를 찾을 수 없습니다." });
-        return;
-      }
-      entry.helpfulCount = (entry.helpfulCount || 0) + 1;
-      writePlaceInfoStore(store);
-      sendJson(res, 200, { helpfulCount: entry.helpfulCount });
+      incrementPlaceInfoHelpful(entryId)
+        .then((upstreamRes) => {
+          if (!upstreamRes.ok) {
+            console.error("[data] place-info helpful 증가 실패, 상태: " + upstreamRes.status);
+            sendJson(res, 502, { error: "UPSTREAM_ERROR", message: "처리에 실패했습니다." });
+            return;
+          }
+          return upstreamRes.json().then((result) => {
+            // RPC는 대상 row가 없으면(0건 업데이트) 예외 대신 null을 반환한다.
+            if (result === null || result === undefined) {
+              sendJson(res, 404, { error: "ENTRY_NOT_FOUND", message: "해당 정보를 찾을 수 없습니다." });
+              return;
+            }
+            sendJson(res, 200, { helpfulCount: result });
+          });
+        })
+        .catch((err) => {
+          console.error("[data] place-info helpful 호출 실패:", err.message);
+          sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "위치 정보 서비스에 연결할 수 없습니다." });
+        });
     })
     .catch(() => {
       sendJson(res, 400, { error: "INVALID_JSON", message: "요청 형식이 올바르지 않습니다." });
     });
 }
 
-// index.html / place.html 모두 자체 완결(Tailwind CDN + Google Fonts CDN, 로컬 자산 없음)
-// 이라 화이트리스트에는 두 HTML 파일만 있으면 된다. 디렉터리 밖 경로를 절대 열어주지 않기
-// 위해 임의 경로 대신 화이트리스트를 쓴다(day7/restaurant/server.js와 동일한 접근).
+// index.html / place.html은 자체 완결(Tailwind CDN + Google Fonts CDN, 로컬 자산 없음)이라
+// 화이트리스트에 원래 두 HTML 파일만 있었다. auth.js는 두 HTML이 공유하는 유일한 로컬
+// 자산이라 여기 추가했다(day4/CLAUDE.md "로그인(Supabase Auth)" 절 참고). 디렉터리 밖
+// 경로를 절대 열어주지 않기 위해 임의 경로 대신 화이트리스트를 쓴다(day7/restaurant/server.js와
+// 동일한 접근).
 const STATIC_FILES = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
   "/index.html": { file: "index.html", type: "text/html; charset=utf-8" },
   "/place.html": { file: "place.html", type: "text/html; charset=utf-8" },
+  "/auth.js": { file: "auth.js", type: "text/javascript; charset=utf-8" },
 };
 
 function serveStatic(req, res, pathname) {
@@ -617,10 +695,10 @@ function serveStatic(req, res, pathname) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
 
-  // /api/day4/ 접두사가 붙은 세 엔드포인트는 상태 없는 프록시라 api/day4/*.js에 Vercel
-  // 서버리스 함수로도 똑같이 존재한다(코드는 별도 복사본 — 로직을 고치면 두 곳 다 고칠 것,
-  // day4/CLAUDE.md "Vercel 배포" 절 참고). place-info는 파일 기반 저장소라 서버리스로
-  // 옮길 수 없어 접두사 없이 이 로컬 서버에만 남아있다.
+  // /api/day4/ 접두사가 붙은 다섯 엔드포인트는 모두 상태 없는 프록시(place-info류는
+  // Supabase가 실제 영속 저장소)라 api/day4/*.js에 Vercel 서버리스 함수로도 똑같이
+  // 존재한다(코드는 별도 복사본 — 로직을 고치면 두 곳 다 고칠 것, day4/CLAUDE.md
+  // "Vercel 배포" 절 참고).
   if (req.method === "GET" && url.pathname === "/api/day4/places") {
     handlePlacesApi(req, res, url.searchParams);
     return;
@@ -633,15 +711,15 @@ const server = http.createServer((req, res) => {
     handlePlaceReviewAnalysisApi(req, res);
     return;
   }
-  if (req.method === "GET" && url.pathname === "/api/place-info") {
+  if (req.method === "GET" && url.pathname === "/api/day4/place-info") {
     handleGetPlaceInfo(req, res, url.searchParams);
     return;
   }
-  if (req.method === "POST" && url.pathname === "/api/place-info") {
+  if (req.method === "POST" && url.pathname === "/api/day4/place-info") {
     handlePostPlaceInfo(req, res);
     return;
   }
-  if (req.method === "POST" && url.pathname === "/api/place-info/helpful") {
+  if (req.method === "POST" && url.pathname === "/api/day4/place-info-helpful") {
     handlePostPlaceInfoHelpful(req, res);
     return;
   }

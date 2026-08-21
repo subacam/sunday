@@ -61,7 +61,7 @@
       <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-2xl bg-base text-white shadow-sm">길</span>
       가게 길찾기
     </span>
-    <span class="rounded-full bg-base-tint px-3 py-1 text-[1rem] font-bold text-base-dark">데모 페이지</span>
+    <div id="auth-widget"></div>
   </div>
 </header>
 
@@ -623,6 +623,11 @@
     toggle.setAttribute('aria-pressed', paused ? 'false' : 'true');
     toggle.textContent = paused ? '리뷰 흐름 멈추기' : '리뷰 다시 흐르게 하기';
   });
+</script>
+
+<script type="module">
+  import './auth.js';
+  window.Day4Auth.mountHeaderWidget(document.getElementById('auth-widget'));
 </script>
 
 </body>

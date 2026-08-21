@@ -46,7 +46,7 @@
       <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-2xl bg-base text-white shadow-sm">길</span>
       가게 길찾기
     </a>
-    <span class="rounded-full bg-base-tint px-3 py-1 text-[1rem] font-bold text-base-dark">데모 페이지</span>
+    <div id="auth-widget"></div>
   </div>
 </header>
 
@@ -648,7 +648,7 @@
     function loadEntries() {
       reportsStatus.textContent = '불러오는 중입니다…';
       reportsList.innerHTML = '';
-      fetch('/api/place-info?id=' + encodeURIComponent(place.id))
+      fetch('/api/day4/place-info?id=' + encodeURIComponent(place.id))
         .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
         .then(function (result) {
           if (!result.ok) {
@@ -793,7 +793,7 @@
       helpfulBtn.addEventListener('click', function () {
         if (helpfulBtn.dataset.clicked === 'true') return;
         helpfulBtn.dataset.clicked = 'true';
-        fetch('/api/place-info/helpful', {
+        fetch('/api/day4/place-info-helpful', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ placeId: place.id, entryId: entry.id })
@@ -931,7 +931,7 @@
       var submitBtn = form.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
 
-      fetch('/api/place-info', {
+      fetch('/api/day4/place-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -964,6 +964,11 @@
 
     loadEntries();
   }
+</script>
+
+<script type="module">
+  import './auth.js';
+  window.Day4Auth.mountHeaderWidget(document.getElementById('auth-widget'));
 </script>
 
 </body>

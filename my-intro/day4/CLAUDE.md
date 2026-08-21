@@ -77,18 +77,22 @@ IncomingMessage/ServerResponse를 직접 다루고(`query.get(...)`, `readJsonBo
 
 - **로컬(`node server.js`)과 Vercel 배포본이 완전히 같은 경로(`/api/day4/places` 등)를
   쓴다** — `index.html`/`place.html`의 fetch 코드는 환경 분기 없이 그대로 양쪽에서 동작한다.
-- **`/api/place-info`, `/api/place-info/helpful`은 이 미러링에서 제외했다.** 파일 기반
-  저장소(`day4/data/place-info.json`)를 쓰는데, Vercel 서버리스 함수는 요청마다 다른
-  컨테이너에서 뜰 수 있고 재배포 시 파일시스템이 초기화돼서 그대로 옮겨도 배포본에서
-  동작하지 않는다 — 그래서 경로에 `/day4/` 접두사도 붙이지 않았다(접두사 없음 = "로컬
-  전용, 아직 Vercel로 안 옮겨짐"이라는 신호). 배포본에서도 쓰려면 Vercel KV·Blob·외부
-  DB 같은 진짜 영속 저장소로 갈아타는 별도 작업이 필요하다.
+- **`/api/day4/place-info`, `/api/day4/place-info-helpful`도 다른 세 엔드포인트와 같은
+  방식으로 미러링된다.** 예전에는 파일 기반 저장소(`day4/data/place-info.json`)를 써서
+  Vercel 서버리스(요청마다 다른 컨테이너, 재배포 시 파일시스템 초기화)에서 동작할 수 없어
+  이 미러링에서 제외돼 있었지만, Supabase Postgres로 옮기면서 그 제약이 사라졌다 — 자세한
+  내용은 "`/api/day4/place-info` 계약" 절 참고. 파일에 저장하지 않으므로
+  `day4/data/place-info.json`은 더 이상 쓰이지 않는다.
 - **Vercel 프로젝트의 Environment Variables**(대시보드 → Settings → Environment
-  Variables)에 `KAKAO_REST_API_KEY`·`GOOGLE_PLACES_API_KEY`·`GEMINI_API_KEY`·`GEMINI_MODEL`
-  네 개를 등록해야 배포본에서 실제로 동작한다 — `.env.local`은 로컬 전용이라 배포에
-  자동으로 반영되지 않는다. **카카오맵 JS 키는 여기 포함되지 않는다** — 비밀값이 아니라
-  `place.html`에 하드코딩돼 있어서 환경변수 등록이 필요 없다. 대신 카카오 디벨로퍼스
-  콘솔에 Vercel 배포 도메인을 등록해야 한다("카카오맵 JS SDK" 절 참고).
+  Variables)에 `KAKAO_REST_API_KEY`·`GOOGLE_PLACES_API_KEY`·`GEMINI_API_KEY`·`GEMINI_MODEL`·
+  `SUPABASE_URL`·`SUPABASE_ANON_KEY` 여섯 개를 등록해야 배포본에서 실제로 동작한다 —
+  `.env.local`은 로컬 전용이라 배포에 자동으로 반영되지 않는다. **카카오맵 JS 키와
+  `auth.js`에 박힌 Supabase URL/anon 키는 여기 포함되지 않는다** — 셋 다 비밀값이 아니라
+  각각 `place.html`/`auth.js`에 하드코딩돼 있어서 환경변수 등록이 필요 없다(다만
+  `server.js`와 `api/day4/place-info*.js`는 이 값들을 `process.env`로 읽으므로, 그
+  두 곳이 동작하려면 위 목록의 `SUPABASE_URL`/`SUPABASE_ANON_KEY` 등록은 여전히
+  필요하다). 카카오맵 JS 키는 대신 카카오 디벨로퍼스 콘솔에 Vercel 배포 도메인을
+  등록해야 한다("카카오맵 JS SDK" 절 참고).
 - `thinkingConfig: { thinkingBudget: 512 }`는 `api/day4/place-review-analysis.js`에도
   그대로 있어야 한다 — 이게 없으면 응답이 최대 35초까지 걸릴 수 있는데, Vercel 서버리스
   함수는 플랜에 따라 실행 시간 제한이 있어 더 위험하다.
@@ -109,6 +113,12 @@ IncomingMessage/ServerResponse를 직접 다루고(`query.get(...)`, `readJsonBo
   `gemini-3.6-flash`가 `.env.example`에 실제로 채워져 있고, 구글이 모델 라인업을 자주
   바꾸므로 AI Studio에서 현재 모델명을 확인해 다르면 `.env.local`에서 한 줄로 덮어쓰면
   된다(코드 수정 불필요).
+- `SUPABASE_URL`/`SUPABASE_ANON_KEY`(publishable 키)도 **비밀값이 아니다** — 카카오맵 JS
+  키와 같은 성격이라 `.env.example`에 실제 값이 채워져 있다. `server.js`와
+  `api/day4/place-info*.js`가 이 값들로 Supabase PostgREST를 호출해 `place_info_entries`
+  테이블을 읽고 쓴다(자세한 내용은 "`/api/day4/place-info` 계약" 절). 같은 URL/키가
+  `day4/auth.js`에도 상수로 박혀 있다(로그인용 Supabase 클라이언트) — 값이 바뀌면 두
+  곳(`.env.local`과 `auth.js`) 다 고쳐야 한다.
 - `server.js`가 시작 시 `process.loadEnvFile('.env.local')`로 읽는다(Node 20.6+ 내장 API, 별도
   dotenv 불필요).
 - **키가 없거나 `TODO_...` placeholder면 "키 없음"과 동일하게 취급한다.** 세 키 모두 이 규칙을
@@ -198,30 +208,89 @@ API 아님).
 - **로그인을 요구하지 않는다.** 서버 쪽 영속 저장이 없어 어차피 "누가 요청했는지"를 남길
   이유도 없다.
 
-## `/api/place-info` 계약
+## `/api/day4/place-info` 계약
 
 가게 하나에 대해 여러 사용자가 각자 남긴 사진·설명·정밀 핀·"도움이 됐어요"를 누적 저장하는
-아주 작은 파일 기반 저장소다. 별도 DB 없이 `day4/data/place-info.json`(gitignore 처리, 서버
-재시작에도 유지) 하나에 `{ placeId: [entry, ...] }` 형태로 저장한다. `place.html`이 이 API를
+저장소다. Supabase Postgres의 `place_info_entries` 테이블에 저장한다(전에는
+`day4/data/place-info.json` 파일 기반이었으나, Vercel 서버리스가 파일시스템을 유지하지
+않아 배포본에서 못 썼던 문제를 해결하려고 옮겼다 — 이제 다른 세 엔드포인트와 같은
+`/day4/` 접두사를 쓰고 Vercel에도 정상 배포된다). `server.js`와 `api/day4/place-info.js`/
+`api/day4/place-info-helpful.js`가 `fetch()`로 Supabase PostgREST(`{SUPABASE_URL}/rest/v1/...`)를
+직접 호출한다 — SDK 설치 없이 카카오/구글/제미나이 프록시와 같은 패턴이다. `server.js`/
+Vercel 함수 모두 **anon(publishable) 키만 쓴다** — service role 키는 쓰지 않는다(RLS의
+public select/insert 정책이 서버가 필요로 하는 권한과 정확히 같다). `place.html`이 이 API를
 호출하는 유일한 클라이언트다.
 
-- `GET /api/place-info?id=가게id` — `id`가 비어 있으면 400 `MISSING_ID`. 응답은
-  `{ entries: [...] }`이며 각 entry는 `createdAt` 내림차순(최신 먼저)으로 정렬되어 있다. entry
-  형태: `{ id, author, text, photoUrl, pinX, pinY, helpfulCount, createdAt }`. `pinX`/`pinY`는
-  핀을 남기지 않았으면 `null`이다.
-- `POST /api/place-info` — 본문 `{ placeId, author, text, photoUrl, pinX, pinY }`. `placeId`
-  누락 시 400 `MISSING_PLACE_ID`, `text` 누락 시 400 `MISSING_TEXT`, `text`가 500자 초과면 400
-  `TEXT_TOO_LONG`. `photoUrl`은 값이 있으면 `http(s)://`로 시작해야 하며(아니면 400
-  `INVALID_PHOTO_URL`), 500자를 넘으면 400 `PHOTO_URL_TOO_LONG`. `author`가 비어 있으면 서버가
-  "익명"으로 채우고, 30자로 잘린다. `pinX`/`pinY`는 0~100 범위의 유한수일 때만 저장되고, 그
-  외에는 `null`로 저장된다. 성공 시 201과 함께 생성된 `{ entry }`를 반환한다.
-- `POST /api/place-info/helpful` — 본문 `{ placeId, entryId }`. 둘 중 하나라도 없으면 400
-  `MISSING_FIELDS`, 해당 `entryId`를 찾지 못하면 404 `ENTRY_NOT_FOUND`. 성공 시 200과 함께
-  증가된 `{ helpfulCount }`를 반환한다.
-- **등록에 로그인을 요구하지 않는다(익명 허용).** PRD.md §5.2/§5.5는 위치 정보 추가와
-  "도움이 됐어요" 모두 로그인을 요구하지만, 이 구현은 로그인 게이트 없이 두 행위를 모두
-  허용하는 의도적인 MVP 이탈이다 — 자세한 설명은 `DESIGN.md` §6.12 참고. PRD.md 자체는
-  수정하지 않았다.
+- `GET /api/day4/place-info?id=가게id` — `id`가 비어 있으면 400 `MISSING_ID`. 응답은
+  `{ entries: [...] }`이며 각 entry는 `created_at` 내림차순(최신 먼저)으로 정렬되어 있다.
+  entry 형태(DB의 snake_case를 서버가 camelCase로 재구성): `{ id, author, text, photoUrl,
+  pinX, pinY, helpfulCount, createdAt }`. `id`는 이제 uuid 문자열이다(예전 base36 짧은
+  id 아님). `pinX`/`pinY`는 핀을 남기지 않았으면 `null`이다.
+- `POST /api/day4/place-info` — 본문 `{ placeId, author, text, photoUrl, pinX, pinY }`.
+  `placeId` 누락 시 400 `MISSING_PLACE_ID`, `text` 누락 시 400 `MISSING_TEXT`, `text`가
+  500자 초과면 400 `TEXT_TOO_LONG`. `photoUrl`은 값이 있으면 `http(s)://`로 시작해야
+  하며(아니면 400 `INVALID_PHOTO_URL`), 500자를 넘으면 400 `PHOTO_URL_TOO_LONG`.
+  `author`가 비어 있으면 서버가 "익명"으로 채우고, 30자로 잘린다. `pinX`/`pinY`는 0~100
+  범위의 유한수일 때만 저장되고, 그 외에는 `null`로 저장된다. 이 유효성 검증은 모두
+  애플리케이션 코드에만 있다(DB 제약으로 옮기지 않음). 성공 시 201과 함께 생성된
+  `{ entry }`를 반환한다.
+- `POST /api/day4/place-info-helpful` — 본문 `{ placeId, entryId }`. 둘 중 하나라도
+  없으면 400 `MISSING_FIELDS`(`placeId`는 검증에만 쓰이고 실제 조회는 `entryId`만으로
+  한다 — 요청 계약을 예전과 동일하게 유지하려고 남겨뒀다). Postgres 함수
+  `increment_place_info_helpful(p_entry_id uuid)`를 `POST .../rpc/increment_place_info_helpful`로
+  호출해 `helpful_count`를 원자적으로 1 증가시킨다(예전 파일 기반 구현의 읽기→+1→쓰기
+  경쟁 조건이 없어짐). 해당 `entryId`를 찾지 못하면(RPC가 `null` 반환) 404
+  `ENTRY_NOT_FOUND`. 성공 시 200과 함께 증가된 `{ helpfulCount }`를 반환한다.
+- **등록에 로그인을 요구하지 않는다(익명 허용) — DB 마이그레이션 이후에도 그대로다.**
+  PRD.md §5.2/§5.5는 위치 정보 추가와 "도움이 됐어요" 모두 로그인을 요구하지만, 이 구현은
+  로그인 게이트 없이 두 행위를 모두 허용하는 의도적인 MVP 이탈이다 — 자세한 설명은
+  `DESIGN.md` §6.12 참고. PRD.md 자체는 수정하지 않았다. `place_info_entries.user_id`
+  컬럼은 nullable로 미리 마련만 해뒀고(지금은 항상 `null`), 로그인 게이트를 실제로 걸 때
+  채우면 된다.
+- **테이블 스키마**: `place_info_entries(id uuid pk default gen_random_uuid(), place_id text,
+  author text default '익명', text text, photo_url text default '', pin_x numeric,
+  pin_y numeric, helpful_count integer default 0, created_at timestamptz default now(),
+  user_id uuid references auth.users)`. `place_id`에 인덱스. RLS 활성화, `select`/`insert`
+  정책은 `anon`/`authenticated` 모두 허용(`using (true)` / `with check (true)`) — 지금의
+  "로그인 없이 등록 가능" 규칙을 DB 레벨에서도 그대로 반영한다. `update`/`delete` 정책은
+  없음(막힘) — helpful 증가는 `SECURITY DEFINER` RPC로만 가능(Supabase 보안 어드바이저가
+  "anon이 SECURITY DEFINER 함수를 호출할 수 있다"고 경고하는데, 이건 의도된 설계다 —
+  RLS로는 막혀 있는 원자적 증가 한 가지 동작만 우회해서 허용하는 용도).
+
+## 로그인(Supabase Auth) — `day4/auth.js`가 유일한 공유 파일인 이유
+
+`index.html`/`place.html`은 원칙적으로 각자 자체 완결이라 작은 헬퍼(`escapeHtml()`, 토스트
+등)도 서로 복붙해서 중복해 둔다. 로그인만 예외를 둬서 `day4/auth.js` 하나를 두 페이지가
+`<script type="module" src="auth.js">`로 함께 로드한다 — 이유는 두 가지: (1) 인증/세션
+로직은 두 파일에 복붙하면 drift가 나는 안 되는 보안 민감 코드이고, (2) "지금 로그인한
+사람이 누구인지"를 즐겨찾기·핀 등록 로그인 게이트 같은 미래 기능이 그대로 가져다 쓸 수
+있어야 한다는 요구가 있었다. 이 파일 하나만 예외라는 걸 잊지 말 것 — 새 공유 파일을 더
+늘리는 핑계로 쓰지 말 것.
+
+- Supabase JS는 npm 설치 대신 `import { createClient } from
+  'https://esm.sh/@supabase/supabase-js@2'`로 CDN에서 ESM으로 가져온다 — 카카오맵 JS SDK를
+  `<script src="...">`로 CDN에서 가져오는 것과 같은 이유(day4는 `package.json`/
+  `node_modules` 없는 게 원칙).
+- `SUPABASE_URL`/`SUPABASE_ANON_KEY`(publishable 키)는 `auth.js` 안에 상수로 하드코딩돼
+  있다 — 카카오맵 JS 키와 같은 성격으로 비밀값이 아니라 브라우저에 노출되는 게 정상이다.
+  실제 접근 범위는 서버가 아니라 RLS가 통제한다. `server.js`/`api/day4/place-info*.js`가
+  쓰는 `.env.local`의 같은 값과 반드시 일치해야 한다 — 값이 바뀌면 세 곳 다 고칠 것.
+- `window.Day4Auth`가 유일한 공개 접점이다: `getUser()`(캐시된 세션 기준 동기 반환),
+  `onAuthChange(callback)`(구독 즉시 현재 상태로 1회 호출 + 이후 변경마다 호출),
+  `requireLogin()`(로그인 안 됐으면 모달 열고 `false` 반환 — 미래에 "로그인 필요" 액션의
+  클릭 핸들러 맨 앞에 한 줄로 꽂아 쓰라고 만든 헬퍼, 이번 범위에선 아무도 호출하지
+  않는다), `openLoginModal()`, `signOut()`, `mountHeaderWidget(containerEl)`(헤더의
+  로그인/로그아웃 표시를 그리고 상태 변화에 맞춰 자동 갱신).
+- 세션 유지는 `createClient` 기본 동작(`persistSession`/`autoRefreshToken`)에 그대로
+  맡긴다 — 별도로 손댄 게 없다. 새로고침해도 로그인 상태가 유지되는 이유.
+- 회원가입 흐름(`supabase.auth.signUp`)이 가입 즉시 로그인까지 되려면 **Supabase
+  대시보드 → Authentication → Sign In / Providers → Email의 "Confirm email"이 꺼져 있어야
+  한다.** 이 설정은 MCP 도구로 바꿀 수 없어 대시보드에서 직접 꺼야 한다 — 켜져 있으면
+  `signUp()`이 세션 없이 반환되고, `auth.js`는 이 경우를 감지해 "이메일 인증이
+  필요합니다" 안내만 하고 크래시 없이 끝낸다(즉시 로그인은 안 됨).
+- 로그인 여부와 무관하게 검색·리뷰 조회·AI 분석·핀 등록("도움이 됐어요" 포함)은 전부
+  그대로 동작한다 — 로그인은 지금은 순수 UI/세션 기능일 뿐, 어떤 기존 API도 게이트하지
+  않는다.
 
 ## 프론트 연동
 
@@ -231,8 +300,8 @@ API 아님).
 - 로딩/빈 결과/오류 세 가지 상태를 처리한다. 오류는 페이지에 이미 있는 `#toast` +
   `demoNotice()`를 그대로 재사용해 보여준다(정의는 건드리지 않음).
 - `place.html`은 더 이상 정적 목업이 아니다 — `index.html`의 카드가 넘기는 `id` 쿼리
-  파라미터를 키로 `/api/place-info` 계열 엔드포인트에서 실제 데이터를 읽고 쓰는 동적 페이지다.
-  자세한 화면 구성은 `DESIGN.md` §6.12 참고.
+  파라미터를 키로 `/api/day4/place-info` 계열 엔드포인트에서 실제 데이터를 읽고 쓰는 동적
+  페이지다. 자세한 화면 구성은 `DESIGN.md` §6.12 참고.
 - 구글 리뷰가 성공적으로 뜨면(캐시 히트든 새로 불러왔든) `/api/day4/place-review-analysis` 호출이
   **버튼 없이 자동으로** 이어진다 — 리뷰 자체는 여전히 "리뷰 보기" 클릭이 트리거지만, 그
   다음 AI 분석은 리뷰 로딩 완료가 트리거다. 리뷰가 0개면 이 자동 트리거 자체가 발동하지
