@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메모장</title>
+<meta name="description" content="노션 스타일의 미니멀한 메모장. 누구나 쓰고 수정하고 지울 수 있다.">
+<style>
+  /* :root는 DESIGN.md 프론트매터를 미러링한다. 토큰을 바꾸려면 DESIGN.md와 함께 고칠 것. */
+  :root {
+    --bg: #FFFFFF;
+    --bg-page: #F7F7F5;
+    --surface: #FFFFFF;
+    --surface-hover: #F1F1EF;
+    --text: #37352F;
+    --text-secondary: #787774;
+    --muted: #9B9A97;
+    --border: #E9E9E7;
+    --border-strong: #D3D1CB;
+    --accent: #2383E2;
+    --accent-hover: #0B6FCC;
+    --on-accent: #FFFFFF;
+    --danger: #EB5757;
+    --danger-bg: #FDECEC;
+
+    --font: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    --fs-title: 28px;
+    --fs-heading: 18px;
+    --fs-body: 15px;
+    --fs-caption: 13px;
+    --fs-label: 12px;
+
+    --rounded-sm: 4px;
+    --rounded-md: 6px;
+
+    --sp-xxs: 4px;
+    --sp-xs: 8px;
+    --sp-sm: 12px;
+    --sp-md: 16px;
+    --sp-lg: 24px;
+    --sp-xl: 32px;
+    --sp-xxl: 48px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg-page);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: var(--sp-xxl) var(--sp-lg);
+  }
+  @media (max-width: 640px) {
+    .page { padding: var(--sp-xl) var(--sp-md); }
+  }
+
+  .app-header { margin-bottom: var(--sp-xl); }
+  .app-title {
+    margin: 0;
+    font-size: var(--fs-title);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .app-sub {
+    margin: var(--sp-xxs) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--fs-caption);
+  }
+
+  .memo-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--rounded-md);
+    padding: var(--sp-md);
+    margin-bottom: var(--sp-lg);
+  }
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+    font-size: var(--fs-body);
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--rounded-sm);
+    padding: var(--sp-sm);
+  }
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .memo-form-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .btn-primary, .btn-secondary, .btn-danger-confirm {
+    min-height: 36px;
+    padding: var(--sp-xs) var(--sp-md);
+    border-radius: var(--rounded-sm);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: background-color 120ms linear, border-color 120ms linear;
+  }
+  .btn-primary {
+    background: var(--text);
+    color: var(--on-accent);
+  }
+  .btn-primary:hover { background: #26241F; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .btn-secondary:hover { background: var(--surface-hover); }
+
+  .btn-danger-confirm {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+  .btn-danger-confirm:hover { background: var(--danger); color: var(--on-accent); }
+
+  .error-banner {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: var(--rounded-sm);
+    padding: var(--sp-sm) var(--sp-md);
+    font-size: var(--fs-caption);
+    margin-bottom: var(--sp-md);
+  }
+
+  [hidden] { display: none !important; }
+
+  .memo-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+  }
+
+  .memo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--rounded-md);
+    padding: var(--sp-md);
+  }
+
+  .memo-content {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .memo-meta {
+    margin-top: var(--sp-xs);
+    color: var(--muted);
+    font-size: var(--fs-caption);
+  }
+
+  .memo-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-xs);
+    margin-top: var(--sp-sm);
+  }
+
+  .delete-confirm-label {
+    color: var(--danger);
+    font-size: var(--fs-caption);
+    margin-right: var(--sp-xs);
+  }
+
+  .memo-edit-input {
+    margin-bottom: var(--sp-sm);
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-size: var(--fs-caption);
+    padding: var(--sp-xxl) 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="app-header">
+    <h1 class="app-title">메모장</h1>
+    <p class="app-sub">노션 스타일 메모 · 누구나 쓰고 고치고 지울 수 있습니다</p>
+  </header>
+
+  <form id="memo-form" class="memo-form">
+    <textarea id="memo-input" rows="3" placeholder="메모를 입력하세요"></textarea>
+    <div class="memo-form-actions">
+      <button type="submit" class="btn-primary">추가</button>
+    </div>
+  </form>
+
+  <div id="error-banner" class="error-banner" hidden></div>
+
+  <ul id="memo-list" class="memo-list"></ul>
+  <p id="empty-state" class="empty-state" hidden>아직 메모가 없습니다.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* Supabase 프로젝트 "subacam's Project"의 URL과 publishable(anon) 키.
+     비밀값이 아니다 — Row Level Security 정책으로 접근을 제어하므로
+     day4의 카카오맵 JS 키처럼 클라이언트에 그대로 둔다. */
+  var SUPABASE_URL = 'https://srhnwzcnimadmoyfukwd.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_lszrxj-ZCq3itUfcrqatrg_HPefI61I';
+  var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  var form = document.getElementById('memo-form');
+  var input = document.getElementById('memo-input');
+  var list = document.getElementById('memo-list');
+  var emptyState = document.getElementById('empty-state');
+  var errorBanner = document.getElementById('error-banner');
+
+  var memos = [];
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function showError(message) {
+    errorBanner.textContent = message;
+    errorBanner.hidden = false;
+  }
+  function clearError() {
+    errorBanner.hidden = true;
+  }
+
+  function formatTime(iso) {
+    var d = new Date(iso);
+    function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+    return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) +
+      ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function render() {
+    list.innerHTML = '';
+    emptyState.hidden = memos.length > 0;
+    memos.forEach(function (m) {
+      var li = document.createElement('li');
+      li.className = 'memo-card';
+      li.dataset.id = m.id;
+      renderView(li, m);
+      list.appendChild(li);
+    });
+  }
+
+  function renderView(li, m) {
+    li.innerHTML =
+      '<p class="memo-content">' + esc(m.content) + '</p>' +
+      '<div class="memo-meta">' + esc(formatTime(m.created_at)) + '</div>' +
+      '<div class="memo-actions">' +
+        '<button type="button" class="btn-secondary" data-action="edit">수정</button>' +
+        '<button type="button" class="btn-secondary" data-action="delete">삭제</button>' +
+      '</div>';
+
+    li.querySelector('[data-action="edit"]').addEventListener('click', function () {
+      renderEdit(li, m);
+    });
+    li.querySelector('[data-action="delete"]').addEventListener('click', function () {
+      renderDeleteConfirm(li, m);
+    });
+  }
+
+  function renderEdit(li, m) {
+    li.innerHTML =
+      '<textarea class="memo-edit-input" rows="3">' + esc(m.content) + '</textarea>' +
+      '<div class="memo-actions">' +
+        '<button type="button" class="btn-primary" data-action="save">저장</button>' +
+        '<button type="button" class="btn-secondary" data-action="cancel">취소</button>' +
+      '</div>';
+
+    var textarea = li.querySelector('.memo-edit-input');
+    li.querySelector('[data-action="save"]').addEventListener('click', function () {
+      saveEdit(m, textarea.value);
+    });
+    li.querySelector('[data-action="cancel"]').addEventListener('click', function () {
+      renderView(li, m);
+    });
+  }
+
+  /* 삭제는 window.confirm을 쓰지 않는다 — day2/CLAUDE.md가 기록한 대로
+     샌드박스 환경에서 네이티브 다이얼로그가 막히면 화면이 멈춘 것처럼
+     보인다. 버튼 자체를 확인 상태로 바꾸는 2단계 확인으로 대체한다. */
+  function renderDeleteConfirm(li, m) {
+    li.innerHTML =
+      '<p class="memo-content">' + esc(m.content) + '</p>' +
+      '<div class="memo-actions">' +
+        '<span class="delete-confirm-label">정말 삭제할까요?</span>' +
+        '<button type="button" class="btn-danger-confirm" data-action="confirm-delete">확인</button>' +
+        '<button type="button" class="btn-secondary" data-action="cancel-delete">취소</button>' +
+      '</div>';
+
+    li.querySelector('[data-action="confirm-delete"]').addEventListener('click', function () {
+      doDelete(m.id);
+    });
+    li.querySelector('[data-action="cancel-delete"]').addEventListener('click', function () {
+      renderView(li, m);
+    });
+  }
+
+  function loadMemos() {
+    clearError();
+    supabase.from('memos').select('*').order('created_at', { ascending: false })
+      .then(function (res) {
+        if (res.error) {
+          showError('메모를 불러오지 못했습니다: ' + res.error.message);
+          return;
+        }
+        memos = res.data || [];
+        render();
+      });
+  }
+
+  function addMemo(content) {
+    clearError();
+    supabase.from('memos').insert({ content: content })
+      .then(function (res) {
+        if (res.error) {
+          showError('메모를 저장하지 못했습니다: ' + res.error.message);
+          return;
+        }
+        loadMemos();
+      });
+  }
+
+  function saveEdit(m, newContent) {
+    var trimmed = newContent.trim();
+    if (!trimmed) return;
+    clearError();
+    supabase.from('memos').update({ content: trimmed }).eq('id', m.id)
+      .then(function (res) {
+        if (res.error) {
+          showError('수정하지 못했습니다: ' + res.error.message);
+          return;
+        }
+        loadMemos();
+      });
+  }
+
+  function doDelete(id) {
+    clearError();
+    supabase.from('memos').delete().eq('id', id)
+      .then(function (res) {
+        if (res.error) {
+          showError('삭제하지 못했습니다: ' + res.error.message);
+          return;
+        }
+        loadMemos();
+      });
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var value = input.value.trim();
+    if (!value) return;
+    input.value = '';
+    addMemo(value);
+  });
+
+  loadMemos();
+})();
+</script>
+</body>
+</html>
