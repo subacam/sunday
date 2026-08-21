@@ -26,6 +26,19 @@ if (!KAKAO_REST_API_KEY) {
   console.warn("[경고] KAKAO_REST_API_KEY가 설정되지 않았습니다. .env.local을 확인하세요 (.env.example 참고).");
 }
 
+const RAW_GOOGLE_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
+const GOOGLE_PLACES_API_KEY = RAW_GOOGLE_KEY && !/^TODO/i.test(RAW_GOOGLE_KEY) ? RAW_GOOGLE_KEY : "";
+const GOOGLE_TEXTSEARCH_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
+// 요청 필드를 정확히 5개(이름·별점·리뷰개수·리뷰·지도 링크)로 제한한다 — Places API (New)는
+// 필드마스크에 넣은 필드 수/종류에 따라 과금 등급이 달라지므로, 여기 넣는 필드를 늘릴 땐
+// 신중해야 한다.
+const GOOGLE_FIELD_MASK = "places.displayName,places.rating,places.userRatingCount,places.reviews,places.googleMapsUri";
+const GOOGLE_MATCH_RADIUS_METERS = 150; // 도보 약 2분 — "같은 이름의 다른 지점"을 걸러내기 위한 강제 반경
+
+if (!GOOGLE_PLACES_API_KEY) {
+  console.warn("[경고] GOOGLE_PLACES_API_KEY가 설정되지 않았습니다. .env.local을 확인하세요 (.env.example 참고).");
+}
+
 const UPSTREAM_TIMEOUT_MS = 8000;
 
 function sendJson(res, statusCode, body) {
@@ -108,6 +121,121 @@ function handlePlacesApi(req, res, query) {
     .catch((err) => {
       console.error("[api] 카카오 호출 실패:", err.message);
       sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "검색 서비스에 연결할 수 없습니다." });
+    });
+}
+
+// ---- 구글 리뷰(place-reviews): Places API (New)로 가게의 평점·리뷰를 가져온다. 서버 쪽
+// 영속 저장은 하지 않는다(요청되지 않음) — 캐싱은 place.html의 localStorage에서만 한다.
+
+// locationRestriction(강제 필터)은 rectangle만 지원하고 circle은 지원하지 않는다
+// (circle은 locationBias, 즉 단순 "선호"에서만 쓸 수 있다). "150m 이내만 찾도록"은 강제
+// 필터가 필요하므로, 좌표를 중심으로 한 정사각형 바운딩 박스를 계산해 rectangle로 보낸다.
+// 대각선 방향으로는 최대 ~212m까지 포함되는 근사치이지만, 요구사항 자체가 "약 150m(도보
+// 2분)"이므로 허용 가능한 근사로 판단했다 — 원을 다시 쓰겠다고 되돌리지 말 것.
+function buildLocationRestrictionBox(lat, lng) {
+  const latDelta = GOOGLE_MATCH_RADIUS_METERS / 111320;
+  const lngDelta = GOOGLE_MATCH_RADIUS_METERS / (111320 * Math.cos((lat * Math.PI) / 180));
+  return {
+    rectangle: {
+      low: { latitude: lat - latDelta, longitude: lng - lngDelta },
+      high: { latitude: lat + latDelta, longitude: lng + lngDelta },
+    },
+  };
+}
+
+function fetchGooglePlaceReviews(name, lat, lng) {
+  const body = {
+    textQuery: name,
+    locationRestriction: buildLocationRestrictionBox(lat, lng),
+    languageCode: "ko",
+    regionCode: "KR",
+    pageSize: 1,
+  };
+  return fetch(GOOGLE_TEXTSEARCH_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+      "X-Goog-FieldMask": GOOGLE_FIELD_MASK,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+}
+
+// 구글 응답(Place) 하나를 프론트가 쓰기 편한 최소 형태로 재구성한다.
+// displayName은 문자열이 아니라 { text, languageCode } 객체다 — .text로 읽어야 한다.
+function reshapeGooglePlace(place) {
+  const reviews = Array.isArray(place.reviews) ? place.reviews : [];
+  return {
+    name: (place.displayName && place.displayName.text) || "",
+    rating: typeof place.rating === "number" ? place.rating : null,
+    reviewCount: typeof place.userRatingCount === "number" ? place.userRatingCount : 0,
+    mapUrl: place.googleMapsUri || "",
+    reviews: reviews.map((r) => ({
+      author: (r.authorAttribution && r.authorAttribution.displayName) || "익명",
+      rating: typeof r.rating === "number" ? r.rating : null,
+      relativeTime: r.relativePublishTimeDescription || "",
+      text: (r.text && r.text.text) || "",
+    })),
+  };
+}
+
+function handlePlaceReviewsApi(req, res, query) {
+  const name = (query.get("name") || "").trim();
+  const rawLat = (query.get("lat") || "").trim();
+  const rawLng = (query.get("lng") || "").trim();
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
+
+  if (!name) {
+    sendJson(res, 400, { error: "MISSING_NAME", message: "가게 이름이 필요합니다." });
+    return;
+  }
+  // 빈 문자열은 Number()가 0으로 변환해 Number.isFinite를 통과해버리므로, 원본 문자열이
+  // 비어 있는지부터 먼저 확인한다 (좌표 없음을 "적도/본초자오선"으로 오인하지 않도록).
+  if (!rawLat || !rawLng || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    sendJson(res, 400, { error: "MISSING_COORDS", message: "가게 좌표가 필요합니다." });
+    return;
+  }
+  if (!GOOGLE_PLACES_API_KEY) {
+    sendJson(res, 500, {
+      error: "SERVER_NOT_CONFIGURED",
+      message: "서버에 구글 API 키가 설정되지 않았습니다.",
+    });
+    return;
+  }
+
+  fetchGooglePlaceReviews(name, lat, lng)
+    .then((upstreamRes) => {
+      if (upstreamRes.ok) {
+        return upstreamRes.json().then((json) => {
+          const places = Array.isArray(json.places) ? json.places : [];
+          if (places.length === 0) {
+            sendJson(res, 200, { found: false });
+            return;
+          }
+          sendJson(res, 200, { found: true, place: reshapeGooglePlace(places[0]) });
+        });
+      }
+
+      // 업스트림 상태/본문을 그대로 클라이언트에 노출하지 않고, 닫힌 오류 코드 집합으로만
+      // 매핑한다. 구글은 401뿐 아니라 403(권한/API 미사용 설정)도 인증 오류로 쓴다.
+      if (upstreamRes.status === 401 || upstreamRes.status === 403) {
+        console.error("[api] 구글 인증 실패 (" + upstreamRes.status + ") — API 키와 'Places API (New)' 활성화 여부를 확인하세요.");
+        sendJson(res, 502, { error: "UPSTREAM_AUTH_ERROR", message: "리뷰 서비스 인증에 실패했습니다." });
+        return;
+      }
+      if (upstreamRes.status === 429) {
+        sendJson(res, 502, { error: "UPSTREAM_RATE_LIMITED", message: "요청이 많아 잠시 후 다시 시도해 주세요." });
+        return;
+      }
+      console.error("[api] 구글 Places API 오류 상태: " + upstreamRes.status);
+      sendJson(res, 502, { error: "UPSTREAM_ERROR", message: "리뷰 서비스에 일시적인 문제가 있습니다." });
+    })
+    .catch((err) => {
+      console.error("[api] 구글 Places API 호출 실패:", err.message);
+      sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "리뷰 서비스에 연결할 수 없습니다." });
     });
 }
 
@@ -287,6 +415,10 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/places") {
     handlePlacesApi(req, res, url.searchParams);
+    return;
+  }
+  if (req.method === "GET" && url.pathname === "/api/place-reviews") {
+    handlePlaceReviewsApi(req, res, url.searchParams);
     return;
   }
   if (req.method === "GET" && url.pathname === "/api/place-info") {

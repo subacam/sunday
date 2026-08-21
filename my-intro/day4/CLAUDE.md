@@ -26,15 +26,18 @@
 
 ## 서비스키
 
-- `.env.local`에 `KAKAO_REST_API_KEY=...` (gitignore 처리됨, 커밋 금지). `.env.example`이 형식과
-  발급처(카카오 디벨로퍼스 콘솔, https://developers.kakao.com > 내 애플리케이션 > 앱 키 > REST API 키)를
-  보여준다.
+- `.env.local`에 `KAKAO_REST_API_KEY=...`와 `GOOGLE_PLACES_API_KEY=...` (둘 다 gitignore
+  처리됨, 커밋 금지). `.env.example`이 형식과 발급처(카카오는 카카오 디벨로퍼스 콘솔,
+  https://developers.kakao.com > 내 애플리케이션 > 앱 키 > REST API 키; 구글은 구글 클라우드
+  콘솔, https://console.cloud.google.com > API 및 서비스 > 사용자 인증 정보 — 반드시
+  **"Places API (New)"**를 사용 설정해야 하며, 레거시 Places API만 켜져 있으면
+  `places:searchText` 호출이 403으로 실패한다)를 보여준다.
 - `server.js`가 시작 시 `process.loadEnvFile('.env.local')`로 읽는다(Node 20.6+ 내장 API, 별도
   dotenv 불필요).
-- **현재 `.env.local`에는 실제 키가 없고 `TODO_...` placeholder만 들어있다.** `server.js`는 이
-  placeholder를 "키 없음"과 동일하게 취급해 업스트림 호출을 아예 시도하지 않고, `/api/places`는
-  `{ error: "SERVER_NOT_CONFIGURED", message: "서버에 카카오 API 키가 설정되지 않았습니다." }`를
-  500으로 반환한다. 실제 키를 발급받으면 `.env.local`의 값만 교체하면 된다.
+- **키가 없거나 `TODO_...` placeholder면 "키 없음"과 동일하게 취급한다.** 두 키 모두 이 규칙을
+  따른다 — 업스트림 호출을 아예 시도하지 않고, 각각 `/api/places`·`/api/place-reviews`가
+  `{ error: "SERVER_NOT_CONFIGURED", message: "..." }`를 500으로 반환한다. 실제 키를
+  발급받으면 `.env.local`의 값만 교체하면 된다.
 
 ## `/api/places` 계약
 
@@ -47,6 +50,36 @@
   오류 코드 집합(`UPSTREAM_AUTH_ERROR`/`UPSTREAM_RATE_LIMITED`/`UPSTREAM_ERROR`/
   `UPSTREAM_UNAVAILABLE`)에 매핑한다 — 원본 응답 본문·상태 텍스트·키는 클라이언트나 로그에
   절대 노출하지 않는다.
+
+## `/api/place-reviews` 계약
+
+가게 이름·좌표로 구글 지도에서 그 가게를 찾아 평점·리뷰를 가져오는, 서버 쪽 영속 저장이
+없는 프록시다(캐싱은 `place.html`의 `localStorage`에서만 한다). 반드시 **Places API
+(New)**의 `POST https://places.googleapis.com/v1/places:searchText`를 쓴다(레거시 Places
+API 아님).
+
+- `GET /api/place-reviews?name=가게이름&lat=위도&lng=경도` — `name`이 비어 있으면 400
+  `MISSING_NAME`, `lat`/`lng`가 유한수가 아니면 400 `MISSING_COORDS`.
+- 요청 필드마스크(`X-Goog-FieldMask`)는 정확히 5개로 고정:
+  `places.displayName,places.rating,places.userRatingCount,places.reviews,places.googleMapsUri`.
+  과금 등급에 영향을 주므로 임의로 필드를 추가하지 않는다.
+- 좌표 기준 150m(도보 약 2분) **강제** 반경 필터를 건다. `locationRestriction`은
+  `rectangle`만 지원하고 `circle`은 지원하지 않으므로(circle은 단순 "선호"인
+  `locationBias`에서만 가능), 서버가 좌표를 중심으로 한 정사각형 바운딩 박스를 계산해
+  `locationRestriction.rectangle`로 보낸다 — `circle`로 "단순화"하면 요청 자체가 유효하지
+  않게 되니 되돌리지 말 것.
+- 구글에서 매칭되는 가게를 못 찾으면 오류가 아니라 200과 함께 `{ found: false }`를
+  반환한다. 찾으면 `{ found: true, place: { name, rating, reviewCount, mapUrl, reviews:
+  [{ author, rating, relativeTime, text }, ...] } }`을 반환한다 — 구글의 원본 응답 형태를
+  그대로 넘기지 않고 재구성한다.
+- 업스트림 오류(401/403/429/5xx/네트워크 실패)는 `/api/places`와 같은 원칙으로 닫힌 오류
+  코드 집합(`UPSTREAM_AUTH_ERROR`/`UPSTREAM_RATE_LIMITED`/`UPSTREAM_ERROR`/
+  `UPSTREAM_UNAVAILABLE`)에 매핑한다. 구글은 401뿐 아니라 403(권한 부족·API 미사용 설정)도
+  인증 오류로 쓰므로 둘 다 `UPSTREAM_AUTH_ERROR`로 매핑한다 — 원본 응답 본문·상태 텍스트·키는
+  클라이언트나 로그에 절대 노출하지 않는다.
+- **로그인을 요구하지 않는다.** 조회는 누구나 할 수 있고, 서버는 조회 결과를 저장하지 않는다
+  (매 요청마다 구글을 호출) — 클라이언트가 `localStorage`에 만료 없이 캐싱해 같은 가게를
+  다시 조회할 때 네트워크 호출 없이 즉시 보여준다.
 
 ## `/api/place-info` 계약
 
