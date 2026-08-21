@@ -29,14 +29,6 @@
   /* 본문 18px 기준(DESIGN 3.2) — 캡션도 16px 아래로 내려가지 않는다 */
   body { font-size: 18px; line-height: 1.75; }
 
-  /* 정밀 핀 지도 자리 표시자: 격자 무늬로 "지도 느낌"만 낸다 (실제 지도 아님) */
-  .map-grid {
-    background-image:
-      linear-gradient(#DCE6E0 1px, transparent 1px),
-      linear-gradient(90deg, #DCE6E0 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
-
   /* 키보드 포커스를 항상 눈에 보이게 */
   a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
     outline: 3px solid #1E4036;
@@ -112,9 +104,9 @@
       </p>
 
       <div class="mt-6 overflow-hidden rounded-3xl border border-base-tint/60 bg-white shadow-md">
-        <div id="pin-map" class="map-grid relative flex h-64 items-center justify-center bg-base-tint sm:h-80">
-          <p id="pin-empty-message" class="rounded-lg bg-white/95 px-3 py-1.5 text-[1rem] font-bold text-base-dark shadow-sm">
-            아직 등록된 핀이 없습니다. 아래에서 첫 핀을 남겨보세요.
+        <div id="pin-map" class="relative h-64 bg-base-tint sm:h-80">
+          <p id="pin-empty-message" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 text-center">
+            <span class="rounded-lg bg-white/95 px-3 py-1.5 text-[1rem] font-bold text-base-dark shadow-sm">아직 등록된 핀이 없습니다. 아래에서 첫 핀을 남겨보세요.</span>
           </p>
         </div>
         <div class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
@@ -229,11 +221,13 @@
           <div class="mt-5">
             <p class="mb-2 text-[1.0625rem] font-bold text-ink-soft">정확한 핀 표시 (선택)</p>
             <p class="mb-3 text-[1rem] text-ink-mute">
-              마우스로는 아래 칸을 클릭해서, 키보드로는 그 아래 가로/세로 위치 입력란을 방향키로 움직여서
+              마우스로는 아래 지도를 클릭해서, 키보드로는 그 아래 가로/세로 위치 입력란을 방향키로 움직여서
               실제 입구가 있는 위치를 표시해 주세요.
             </p>
-            <div id="pin-picker" aria-hidden="true" class="map-grid relative h-40 w-full cursor-crosshair overflow-hidden rounded-2xl border-2 border-base-tint bg-white sm:h-48">
-              <p id="pin-picker-hint" class="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[1rem] font-bold text-ink-mute">여기를 클릭해서 핀을 표시하세요 (선택 사항)</p>
+            <div id="pin-picker" aria-hidden="true" class="relative h-40 w-full cursor-crosshair overflow-hidden rounded-2xl border-2 border-base-tint bg-base-tint sm:h-48">
+              <p id="pin-picker-hint" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-4 text-center">
+                <span class="rounded-lg bg-white/95 px-3 py-1.5 text-[1rem] font-bold text-ink-mute shadow-sm">여기를 클릭해서 핀을 표시하세요 (선택 사항)</span>
+              </p>
             </div>
 
             <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -289,6 +283,11 @@
      class="pointer-events-none fixed inset-x-0 bottom-6 z-50 mx-auto hidden w-[min(90%,32rem)] rounded-xl bg-ink px-5 py-4 text-center text-[1.0625rem] font-bold text-white"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.3/src/wordcloud2.js"></script>
+<!-- 카카오맵 JS 키는 REST 키와 달리 비밀값이 아니다 — 카카오 개발자 콘솔에 등록한 도메인에서만
+     동작하도록 도메인 화이트리스트로 보안을 건다(키 자체를 숨길 필요가 없어 서버를 거치지
+     않고 브라우저에서 직접 부른다). 로컬(localhost)과 배포 도메인 모두 콘솔에 등록해야
+     지도가 뜬다 — day4/CLAUDE.md "카카오맵 JS SDK" 절 참고. -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0618112cbf64749c8752442d804f3e9a&autoload=false"></script>
 <script>
   var placeToast = document.getElementById('place-toast');
   var placeToastTimer;
@@ -357,6 +356,31 @@
       navLink.href = place.mapUrl;
       navLink.classList.remove('hidden');
       navLink.classList.add('flex');
+    }
+
+    // ---- 카카오맵: 정밀 핀 지도(읽기 전용)와 핀 찍기 지도(입력용) 둘 다 이 가게 좌표를
+    // 중심으로 고정해서 띄운다. draggable:false·zoomable:false로 뷰를 고정하는 게 핵심
+    // 전제다 — 핀 마커는 진짜 kakao.maps.Marker가 아니라 기존 방식 그대로 left/top %
+    // 기반 CSS 오버레이라서, 지도를 움직일 수 있게 하면 마커 위치가 실제 지도와 어긋나
+    // 보인다. 뷰를 고정해두는 대신 그 대가로 사용자가 지도를 둘러보며 확대·이동할 수는
+    // 없다 — 이 트레이드오프는 day4/DESIGN.md에 기록해 뒀다.
+    var placeLat = Number(place.lat);
+    var placeLng = Number(place.lng);
+    if (window.kakao && window.kakao.maps && Number.isFinite(placeLat) && Number.isFinite(placeLng)) {
+      kakao.maps.load(function () {
+        new kakao.maps.Map(document.getElementById('pin-map'), {
+          center: new kakao.maps.LatLng(placeLat, placeLng),
+          level: 3,
+          draggable: false,
+          zoomable: false
+        });
+        new kakao.maps.Map(document.getElementById('pin-picker'), {
+          center: new kakao.maps.LatLng(placeLat, placeLng),
+          level: 3,
+          draggable: false,
+          zoomable: false
+        });
+      });
     }
 
     // ---- 구글 리뷰: 로컬스토리지 캐시(만료 없음 — 한 번 불러온 가게는 계속 재사용) ----
@@ -648,11 +672,11 @@
       emptyMessage.classList.add('hidden');
       var latest = pinned[0];
       var marker = document.createElement('div');
-      marker.className = 'pin-marker absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-terra text-white shadow-lg';
+      marker.className = 'pin-marker absolute z-10 grid h-11 w-11 -translate-x-1/2 -translate-y-full place-items-center rounded-full bg-terra shadow-lg';
       marker.style.left = latest.pinX + '%';
       marker.style.top = latest.pinY + '%';
       marker.setAttribute('aria-hidden', 'true');
-      marker.innerHTML = '<span class="text-[1.25rem]">📍</span>';
+      marker.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5" fill="#B45F49"/></svg>';
       pinMap.appendChild(marker);
       pinDescription.textContent = latest.text;
     }
@@ -798,11 +822,11 @@
       var existing = pinPicker.querySelector('.pin-marker');
       if (existing) existing.remove();
       var marker = document.createElement('div');
-      marker.className = 'pin-marker pointer-events-none absolute grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-terra text-white shadow-lg';
+      marker.className = 'pin-marker pointer-events-none absolute z-10 grid h-9 w-9 -translate-x-1/2 -translate-y-full place-items-center rounded-full bg-terra shadow-lg';
       marker.style.left = xPercent + '%';
       marker.style.top = yPercent + '%';
       marker.setAttribute('aria-hidden', 'true');
-      marker.innerHTML = '<span class="text-[1rem]">📍</span>';
+      marker.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5" fill="#B45F49"/></svg>';
       pinPicker.appendChild(marker);
       pinPickerHint.classList.add('hidden');
       pinPickerClear.classList.remove('hidden');

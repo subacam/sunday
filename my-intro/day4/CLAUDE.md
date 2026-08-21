@@ -24,6 +24,34 @@
 지원하지 않는다. 키를 클라이언트에 노출하지 않으면서 호출하려면 서버를 거쳐야 한다 — day7/restaurant가
 `api.kcisa.kr`에 대해 쓴 것과 같은 이유다.
 
+## 카카오맵 JS SDK — REST 키와는 완전히 다른 보안 모델
+
+`place.html`의 "정확한 입구 핀" 지도(표시용·핀 찍기용 둘 다)는 카카오맵 **JS SDK**로 띄운다 —
+`KAKAO_REST_API_KEY`(카카오 로컬 검색용)와는 **다른 키**이고, 다루는 방식도 정반대다.
+
+- **JS 키는 비밀값이 아니다.** `place.html`에 `<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=...">`로
+  그대로 하드코딩돼 있다 — REST 키처럼 서버 뒤에 숨기지 않는다. 대신 카카오 디벨로퍼스
+  콘솔에 **등록된 도메인에서 온 요청만 허용**하는 방식으로 보안을 건다(요청 Referer/Origin을
+  검사). 등록 안 된 도메인에서 부르면 SDK 자체가 401
+  `{"errorType":"AccessDeniedError","message":"domain mismatched! ..."}`로 거부된다 —
+  콘솔에 도메인을 안 넣었을 때 실제로 이 오류를 확인했다.
+- **로컬·배포 도메인을 각각 등록해야 한다**: 카카오 디벨로퍼스 콘솔 → 해당 앱 → 앱 설정 →
+  플랫폼 → Web 플랫폼 등록에 로컬(`http://localhost:3400`, 포트를 바꿨으면 그 포트로)과
+  Vercel 배포 도메인을 모두 넣어야 두 환경 다 지도가 뜬다. 하나만 등록하면 등록 안 한
+  쪽에서만 실패한다.
+- **`autoload=false` + `kakao.maps.load(callback)` 패턴**을 쓴다 — SDK 스크립트가 로드되자마자
+  자동으로 지도 모듈을 초기화하지 않고, `initPlacePage()` 안에서 명시적으로
+  `kakao.maps.load(...)`를 호출한 뒤 그 콜백 안에서 지도를 만든다.
+- **지도 두 개(`#pin-map`, `#pin-picker`) 모두 `draggable: false, zoomable: false`로 뷰를
+  고정한다.** 핀 마커는 실제 `kakao.maps.Marker`가 아니라 예전부터 쓰던 방식 그대로
+  `left`/`top` % 기반 CSS 오버레이 `<div>`다 — 지도를 움직이거나 확대할 수 있게 하면 이
+  오버레이가 실제 지도 위치와 어긋나 보인다. 이 두 지도를 "진짜 인터랙티브 지도"로
+  업그레이드하려면(패닝·줌 가능) 핀 저장 방식 자체를 %좌표에서 실제 위도/경도로 바꾸고
+  진짜 마커를 쓰는 별도 작업이 필요하다 — 지금은 하지 않았다.
+- 이 기능은 순수 클라이언트 사이드라 서버 쪽 코드(`server.js`, `api/day4/*.js`)는 전혀
+  건드리지 않았다 — `/api/day4/place-reviews`의 "150m 강제 반경" 로직(구글 Places용)과는
+  무관한 완전히 별개 기능이다.
+
 ## Vercel 배포 — `api/day4/*.js`는 `server.js`의 별도 사본이다
 
 Vercel은 `server.js` 같은 상시 실행 Node 서버를 실행하지 않는다 — `/api` 디렉터리 밑의 파일
@@ -49,7 +77,9 @@ IncomingMessage/ServerResponse를 직접 다루고(`query.get(...)`, `readJsonBo
 - **Vercel 프로젝트의 Environment Variables**(대시보드 → Settings → Environment
   Variables)에 `KAKAO_REST_API_KEY`·`GOOGLE_PLACES_API_KEY`·`GEMINI_API_KEY`·`GEMINI_MODEL`
   네 개를 등록해야 배포본에서 실제로 동작한다 — `.env.local`은 로컬 전용이라 배포에
-  자동으로 반영되지 않는다.
+  자동으로 반영되지 않는다. **카카오맵 JS 키는 여기 포함되지 않는다** — 비밀값이 아니라
+  `place.html`에 하드코딩돼 있어서 환경변수 등록이 필요 없다. 대신 카카오 디벨로퍼스
+  콘솔에 Vercel 배포 도메인을 등록해야 한다("카카오맵 JS SDK" 절 참고).
 - `thinkingConfig: { thinkingBudget: 512 }`는 `api/day4/place-review-analysis.js`에도
   그대로 있어야 한다 — 이게 없으면 응답이 최대 35초까지 걸릴 수 있는데, Vercel 서버리스
   함수는 플랜에 따라 실행 시간 제한이 있어 더 위험하다.
