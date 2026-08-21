@@ -1,5 +1,5 @@
 // 순수 Node.js(프레임워크 없음). 카카오 로컬 API REST 키를 서버 쪽에만 두고,
-// 프론트(index.html)는 이 서버의 /api/places만 호출한다. day7/restaurant/server.js와
+// 프론트(index.html)는 이 서버의 /api/day4/places만 호출한다. day7/restaurant/server.js와
 // 같은 패턴 — package.json도 node_modules도 없이 내장 http 모듈만 쓴다.
 //
 // 카카오 로컬 검색(키워드) API는 Authorization: KakaoAK {REST_API_KEY} 헤더가 필요하고
@@ -617,15 +617,19 @@ function serveStatic(req, res, pathname) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
 
-  if (req.method === "GET" && url.pathname === "/api/places") {
+  // /api/day4/ 접두사가 붙은 세 엔드포인트는 상태 없는 프록시라 api/day4/*.js에 Vercel
+  // 서버리스 함수로도 똑같이 존재한다(코드는 별도 복사본 — 로직을 고치면 두 곳 다 고칠 것,
+  // day4/CLAUDE.md "Vercel 배포" 절 참고). place-info는 파일 기반 저장소라 서버리스로
+  // 옮길 수 없어 접두사 없이 이 로컬 서버에만 남아있다.
+  if (req.method === "GET" && url.pathname === "/api/day4/places") {
     handlePlacesApi(req, res, url.searchParams);
     return;
   }
-  if (req.method === "GET" && url.pathname === "/api/place-reviews") {
+  if (req.method === "GET" && url.pathname === "/api/day4/place-reviews") {
     handlePlaceReviewsApi(req, res, url.searchParams);
     return;
   }
-  if (req.method === "POST" && url.pathname === "/api/place-review-analysis") {
+  if (req.method === "POST" && url.pathname === "/api/day4/place-review-analysis") {
     handlePlaceReviewAnalysisApi(req, res);
     return;
   }

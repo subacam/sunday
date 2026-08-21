@@ -516,7 +516,7 @@
     return false;
   }
 
-  // 가게 검색: /api/places(day4/server.js가 카카오 로컬 API를 대신 호출)를 불러 실제
+  // 가게 검색: /api/day4/places(day4/server.js가 카카오 로컬 API를 대신 호출)를 불러 실제
   // 검색 결과를 보여준다. 카드는 DESIGN.md 6.11절의 재사용 카드 패턴을 그대로 따른다.
   var searchInput = document.getElementById('search');
   var resultsSection = document.getElementById('search-results-section');
@@ -584,7 +584,7 @@
     resultsList.innerHTML = '';
     resultsStatus.textContent = '검색 중입니다…';
 
-    fetch('/api/places?query=' + encodeURIComponent(q))
+    fetch('/api/day4/places?query=' + encodeURIComponent(q))
       .then(function (res) {
         return res.json().then(function (body) { return { ok: res.ok, body: body }; });
       })

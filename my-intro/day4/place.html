@@ -535,7 +535,7 @@
       analysisStatus.textContent = 'AI가 리뷰를 분석 하는 중...';
       analysisContent.classList.add('hidden');
 
-      fetch('/api/place-review-analysis', {
+      fetch('/api/day4/place-review-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -570,7 +570,7 @@
       reviewsStatus.textContent = '리뷰를 불러오는 중 …';
       reviewsContent.classList.add('hidden');
 
-      var url = '/api/place-reviews?name=' + encodeURIComponent(place.name) +
+      var url = '/api/day4/place-reviews?name=' + encodeURIComponent(place.name) +
         '&lat=' + encodeURIComponent(place.lat) + '&lng=' + encodeURIComponent(place.lng);
 
       fetch(url)
