@@ -366,14 +366,39 @@
     // 없다 — 이 트레이드오프는 day4/DESIGN.md에 기록해 뒀다.
     var placeLat = Number(place.lat);
     var placeLng = Number(place.lng);
+    // 표시용 지도(#pin-map) 인스턴스는 renderPin()에서도 써야 해서 바깥 스코프에 보관한다.
+    // 아직 등록된 핀이 없을 때는 이 위치에 카카오의 기본 마커(kakao.maps.Marker)를 잠깐
+    // 보여주고, 사용자 핀(CSS 오버레이)이 생기면 바로 치운다 — updatePinMapDefaultMarker()가
+    // 지도 준비 완료·entries 로드 완료 두 타이밍(순서는 보장 안 됨) 모두에서 안전하게
+    // 호출될 수 있도록 매번 DOM을 직접 확인해 판단한다.
+    var pinMapInstance = null;
+    var pinMapDefaultMarker = null;
+
+    function updatePinMapDefaultMarker() {
+      if (!pinMapInstance) return;
+      var hasRealPin = !!document.getElementById('pin-map').querySelector('.pin-marker');
+      if (hasRealPin) {
+        if (pinMapDefaultMarker) {
+          pinMapDefaultMarker.setMap(null);
+          pinMapDefaultMarker = null;
+        }
+      } else if (!pinMapDefaultMarker) {
+        pinMapDefaultMarker = new kakao.maps.Marker({
+          position: new kakao.maps.LatLng(placeLat, placeLng),
+          map: pinMapInstance
+        });
+      }
+    }
+
     if (window.kakao && window.kakao.maps && Number.isFinite(placeLat) && Number.isFinite(placeLng)) {
       kakao.maps.load(function () {
-        new kakao.maps.Map(document.getElementById('pin-map'), {
+        pinMapInstance = new kakao.maps.Map(document.getElementById('pin-map'), {
           center: new kakao.maps.LatLng(placeLat, placeLng),
           level: 3,
           draggable: false,
           zoomable: false
         });
+        updatePinMapDefaultMarker();
         new kakao.maps.Map(document.getElementById('pin-picker'), {
           center: new kakao.maps.LatLng(placeLat, placeLng),
           level: 3,
@@ -666,6 +691,7 @@
         pinDescription.textContent = entries.length > 0
           ? '가장 최근 설명 (핀 없음): ' + entries[0].text
           : '가장 최근에 등록된 입구 설명이 여기에 표시됩니다.';
+        updatePinMapDefaultMarker();
         return;
       }
 
@@ -679,6 +705,7 @@
       marker.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5" fill="#B45F49"/></svg>';
       pinMap.appendChild(marker);
       pinDescription.textContent = latest.text;
+      updatePinMapDefaultMarker();
     }
 
     function renderEntries(entries) {
