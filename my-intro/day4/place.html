@@ -689,13 +689,21 @@
         return;
       }
 
+      // 핀 추가용 지도(#pin-picker)의 마커와 같은 디자인(원형 배경 없는 앰버 물방울 핀)을
+      // 그대로 쓴다 — 두 지도의 핀이 서로 다르게 보이지 않도록 통일했다.
       var latest = pinned[0];
       var marker = document.createElement('div');
-      marker.className = 'pin-marker absolute z-10 grid h-11 w-11 -translate-x-1/2 -translate-y-full place-items-center rounded-full bg-terra shadow-lg';
+      marker.className = 'pin-marker pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full';
       marker.style.left = latest.pinX + '%';
       marker.style.top = latest.pinY + '%';
       marker.setAttribute('aria-hidden', 'true');
-      marker.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5" fill="#B45F49"/></svg>';
+      marker.innerHTML =
+        '<svg width="36" height="44" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg" ' +
+        'style="filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.45))">' +
+        '<path d="M18 43C18 43 34 26.8 34 17C34 7.6 26.84 0 18 0C9.16 0 2 7.6 2 17C2 26.8 18 43 18 43Z" ' +
+        'fill="#E8A33D" stroke="#1F2A24" stroke-width="2.5"/>' +
+        '<circle cx="18" cy="17" r="5" fill="#1F2A24"/>' +
+        '</svg>';
       pinMap.appendChild(marker);
       pinDescription.textContent = latest.text;
       updatePinMapDefaultMarker();
@@ -753,6 +761,36 @@
       }
     }
 
+    // 로그인이 없어 서버는 "이 항목이 누구 것인지" 모른다 — /api/day4/place-info-delete는
+    // 유효한 entryId라면 누구든 지울 수 있다(helpful 증가와 같은 신뢰 모델). 대신
+    // 이 브라우저가 방금 등록에 성공한 entryId만 localStorage에 남겨서, 삭제 버튼은
+    // "내가 이 브라우저로 등록한 것"에만 보이도록 UX 차원에서만 제한한다.
+    function mineStorageKey(entryId) {
+      return 'place-info-mine:' + entryId;
+    }
+
+    function isEntryMine(entryId) {
+      try {
+        return localStorage.getItem(mineStorageKey(entryId)) === 'true';
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function markEntryMine(entryId) {
+      try {
+        localStorage.setItem(mineStorageKey(entryId), 'true');
+      } catch (err) {
+        // localStorage를 쓸 수 없는 환경이면 삭제 버튼 없이 진행한다 — 등록 자체는 그대로 된다.
+      }
+    }
+
+    function forgetEntryMine(entryId) {
+      try {
+        localStorage.removeItem(mineStorageKey(entryId));
+      } catch (err) {}
+    }
+
     function renderEntryCard(entry) {
       var li = document.createElement('li');
       var photoHtml = entry.photoUrl
@@ -767,6 +805,7 @@
         ? '<span class="inline-flex items-center rounded-full bg-[#E9EDEA] px-3 py-1 text-[1rem] font-bold text-ink-soft">익명</span>'
         : '';
       var alreadyMarked = isHelpfulAlreadyMarked(entry.id);
+      var isMine = isEntryMine(entry.id);
 
       li.className = 'rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-shadow hover:shadow-lg sm:p-7';
       li.innerHTML =
@@ -778,48 +817,102 @@
         '</div>' +
         '<p class="mt-3 text-[1.0625rem] leading-[1.8] text-ink-soft">' + escapeHtml(entry.text) + '</p>' +
         photoHtml +
-        '<div class="mt-4 flex flex-wrap items-center gap-3">' +
+        '<div class="mt-4 flex flex-wrap items-center gap-3 entry-actions"></div>';
+
+      var actionsEl = li.querySelector('.entry-actions');
+
+      function renderActions() {
+        actionsEl.innerHTML =
           '<button type="button" class="helpful-btn inline-flex items-center gap-2 rounded-full border-2 px-4 py-2 text-[1rem] font-extrabold shadow-sm transition-colors ' +
             (alreadyMarked ? 'border-base-tint bg-base-tint text-base-dark' : 'border-base bg-white text-base-dark hover:bg-base-tint') + '" ' +
             (alreadyMarked ? 'data-clicked="true" aria-pressed="true"' : 'aria-pressed="false"') + '>' +
             '<span aria-hidden="true">👍</span> ' +
-            '<span class="helpful-label">' + (alreadyMarked ? '도움을 주셨어요' : '도움이 됐어요') + '</span>' +
+            '<span class="helpful-label">도움이 됐어요</span>' +
             ' <span class="helpful-count">' + entry.helpfulCount + '</span>' +
           '</button>' +
           pinBadgeHtml +
-        '</div>';
+          (isMine
+            ? '<button type="button" class="delete-btn inline-flex items-center gap-1 rounded-full border-2 border-terra px-4 py-2 text-[1rem] font-extrabold text-terra shadow-sm transition-colors hover:bg-terra-tint">삭제</button>'
+            : '');
 
-      var helpfulBtn = li.querySelector('.helpful-btn');
-      helpfulBtn.addEventListener('click', function () {
-        if (helpfulBtn.dataset.clicked === 'true') return;
-        helpfulBtn.dataset.clicked = 'true';
-        fetch('/api/day4/place-info-helpful', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ placeId: place.id, entryId: entry.id })
-        })
-          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
-          .then(function (result) {
-            if (!result.ok) {
-              helpfulBtn.dataset.clicked = 'false';
-              placeNotice((result.body && result.body.message) || '처리하지 못했습니다.');
-              return;
-            }
-            helpfulBtn.querySelector('.helpful-count').textContent = result.body.helpfulCount;
-            helpfulBtn.setAttribute('aria-pressed', 'true');
-            helpfulBtn.classList.remove('border-base', 'bg-white', 'hover:bg-base-tint');
-            helpfulBtn.classList.add('border-base-tint', 'bg-base-tint');
-            helpfulBtn.querySelector('.helpful-label').textContent = '도움을 주셨어요';
-            var totalEl = document.getElementById('stat-helpful-total');
-            totalEl.textContent = (parseInt(totalEl.textContent, 10) + 1) + '번';
-            markHelpfulDone(entry.id);
+        var helpfulBtn = actionsEl.querySelector('.helpful-btn');
+        helpfulBtn.addEventListener('click', function () {
+          if (helpfulBtn.dataset.clicked === 'true') return;
+          helpfulBtn.dataset.clicked = 'true';
+          fetch('/api/day4/place-info-helpful', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ placeId: place.id, entryId: entry.id })
           })
-          .catch(function () {
-            helpfulBtn.dataset.clicked = 'false';
-            placeNotice('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
-          });
-      });
+            .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+            .then(function (result) {
+              if (!result.ok) {
+                helpfulBtn.dataset.clicked = 'false';
+                placeNotice((result.body && result.body.message) || '처리하지 못했습니다.');
+                return;
+              }
+              helpfulBtn.querySelector('.helpful-count').textContent = result.body.helpfulCount;
+              helpfulBtn.setAttribute('aria-pressed', 'true');
+              helpfulBtn.classList.remove('border-base', 'bg-white', 'hover:bg-base-tint');
+              helpfulBtn.classList.add('border-base-tint', 'bg-base-tint');
+              alreadyMarked = true;
+              // 라벨은 클릭 전후로 그대로 "도움이 됐어요"를 유지한다 — 버튼 스타일/aria-pressed로만
+              // 이미 눌렀다는 상태를 표시하고, 문구 자체는 바꾸지 않는다.
+              var totalEl = document.getElementById('stat-helpful-total');
+              totalEl.textContent = (parseInt(totalEl.textContent, 10) + 1) + '번';
+              markHelpfulDone(entry.id);
+            })
+            .catch(function () {
+              helpfulBtn.dataset.clicked = 'false';
+              placeNotice('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+            });
+        });
 
+        if (!isMine) return;
+
+        // 삭제는 window.confirm을 쓰지 않는다 — day2/day8이 이미 기록한 대로 샌드박스
+        // 환경에서 네이티브 다이얼로그가 막히면 화면이 멈춘 것처럼 보인다. 버튼 영역
+        // 자체를 "정말 삭제할까요? [삭제] [취소]" 상태로 바꾸는 인라인 2단계 확인을 쓴다.
+        actionsEl.querySelector('.delete-btn').addEventListener('click', function () {
+          actionsEl.innerHTML =
+            '<span class="text-[1rem] font-bold text-terra">정말 삭제할까요?</span>' +
+            '<button type="button" class="delete-confirm-btn inline-flex items-center rounded-full bg-terra px-4 py-2 text-[1rem] font-extrabold text-white shadow-sm hover:bg-terra/90">삭제</button>' +
+            '<button type="button" class="delete-cancel-btn inline-flex items-center rounded-full border-2 border-base-tint px-4 py-2 text-[1rem] font-extrabold text-base-dark hover:bg-base-tint">취소</button>';
+
+          actionsEl.querySelector('.delete-cancel-btn').addEventListener('click', renderActions);
+
+          actionsEl.querySelector('.delete-confirm-btn').addEventListener('click', function () {
+            var confirmBtn = actionsEl.querySelector('.delete-confirm-btn');
+            var cancelBtn = actionsEl.querySelector('.delete-cancel-btn');
+            confirmBtn.disabled = true;
+            cancelBtn.disabled = true;
+            fetch('/api/day4/place-info-delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ placeId: place.id, entryId: entry.id })
+            })
+              .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+              .then(function (result) {
+                if (!result.ok) {
+                  confirmBtn.disabled = false;
+                  cancelBtn.disabled = false;
+                  placeNotice((result.body && result.body.message) || '삭제하지 못했습니다.');
+                  return;
+                }
+                forgetEntryMine(entry.id);
+                placeNotice('삭제되었습니다.');
+                loadEntries();
+              })
+              .catch(function () {
+                confirmBtn.disabled = false;
+                cancelBtn.disabled = false;
+                placeNotice('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+              });
+          });
+        });
+      }
+
+      renderActions();
       return li;
     }
 
@@ -836,17 +929,35 @@
     var pickedPinX = null;
     var pickedPinY = null;
 
+    // 핀 마커 디자인: 원형 배경(rounded-full bg-terra) 안에 작은 핀 아이콘을 넣는
+    // 이전 형태는 그 원이 실제로는 넓은 면적처럼 보여 정확한 지점을 찍기 어렵다는
+    // 피드백을 받았다 — 원형 배경을 없애고 끝이 뾰족한 물방울(핀) 모양 아이콘 하나만
+    // 크고 눈에 띄는 색(CTA 앰버 + 진한 외곽선)으로 키워서, 아이콘의 뾰족한 끝점이 곧
+    // 좌표가 되도록 했다. #pin-map(표시용, renderPin())의 등록된 핀도 같은 디자인을
+    // 쓴다 — 두 지도의 핀이 서로 달라 보이지 않도록. 클래스명은 여전히 서로 다르다
+    // (여기는 .pin-picker-marker, renderPin()은 .pin-marker) — updatePinMapDefaultMarker()가
+    // .pin-marker의 유무로 "등록된 핀이 있는지"를 판단하기 때문에 이 구분은 유지해야 한다.
+    // 지도 자체가 다르므로(픽커 vs 표시용) 클래스가 겹칠 일은 없지만, 이름을 통일하지
+    // 않은 이유는 이 판단 로직 때문이다. 표시용 지도가 "등록된 핀이 하나도 없을 때"
+    // 잠깐 보여주는 카카오맵 API 기본 마커(kakao.maps.Marker, updatePinMapDefaultMarker())는
+    // 이 CSS 마커와 완전히 별개이며 손대지 않았다.
     function setPickedPin(xPercent, yPercent) {
       pickedPinX = xPercent;
       pickedPinY = yPercent;
-      var existing = pinPicker.querySelector('.pin-marker');
+      var existing = pinPicker.querySelector('.pin-picker-marker');
       if (existing) existing.remove();
       var marker = document.createElement('div');
-      marker.className = 'pin-marker pointer-events-none absolute z-10 grid h-9 w-9 -translate-x-1/2 -translate-y-full place-items-center rounded-full bg-terra shadow-lg';
+      marker.className = 'pin-picker-marker pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full';
       marker.style.left = xPercent + '%';
       marker.style.top = yPercent + '%';
       marker.setAttribute('aria-hidden', 'true');
-      marker.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5" fill="#B45F49"/></svg>';
+      marker.innerHTML =
+        '<svg width="36" height="44" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg" ' +
+        'style="filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.45))">' +
+        '<path d="M18 43C18 43 34 26.8 34 17C34 7.6 26.84 0 18 0C9.16 0 2 7.6 2 17C2 26.8 18 43 18 43Z" ' +
+        'fill="#E8A33D" stroke="#1F2A24" stroke-width="2.5"/>' +
+        '<circle cx="18" cy="17" r="5" fill="#1F2A24"/>' +
+        '</svg>';
       pinPicker.appendChild(marker);
       pinPickerHint.classList.add('hidden');
       pinPickerClear.classList.remove('hidden');
@@ -855,16 +966,20 @@
       pinPickerStatus.textContent = '핀이 가로 ' + xPercent + '%, 세로 ' + yPercent + '% 위치에 표시되었습니다.';
     }
 
-    function clearPickedPin() {
+    // statusMessage를 생략하면 "핀을 지웠습니다."(사용자가 직접 핀 지우기를 눌렀을 때).
+    // 폼 제출 성공 후에는 같은 초기화 로직을 재사용하되, "지웠다"가 아니라 "이미
+    // 추가했다"는 걸 알려주도록 다른 문구를 넘겨준다 — 방금 등록한 핀을 지운 것으로
+    // 오해하지 않도록.
+    function clearPickedPin(statusMessage) {
       pickedPinX = null;
       pickedPinY = null;
-      var existing = pinPicker.querySelector('.pin-marker');
+      var existing = pinPicker.querySelector('.pin-picker-marker');
       if (existing) existing.remove();
       pinPickerHint.classList.remove('hidden');
       pinPickerClear.classList.add('hidden');
       pinPickerXInput.value = 50;
       pinPickerYInput.value = 50;
-      pinPickerStatus.textContent = '핀을 지웠습니다.';
+      pinPickerStatus.textContent = statusMessage || '핀을 지웠습니다.';
     }
 
     function handlePinPick(clientX, clientY) {
@@ -884,7 +999,9 @@
     pinPickerXInput.addEventListener('input', handlePinRangeInput);
     pinPickerYInput.addEventListener('input', handlePinRangeInput);
 
-    pinPickerClear.addEventListener('click', clearPickedPin);
+    pinPickerClear.addEventListener('click', function () {
+      clearPickedPin();
+    });
 
     // ---- 정보 남기기 폼 제출 ----
     var form = document.getElementById('contribute-form');
@@ -950,9 +1067,13 @@
             placeNotice((result.body && result.body.message) || '등록하지 못했습니다.');
             return;
           }
+          var hadPin = pickedPinX !== null && pickedPinY !== null;
+          if (result.body && result.body.entry && result.body.entry.id) {
+            markEntryMine(result.body.entry.id);
+          }
           placeNotice('등록되었습니다! 다음 사람에게 큰 도움이 됩니다.');
           form.reset();
-          clearPickedPin();
+          clearPickedPin(hadPin ? '이미 핀을 추가했습니다.' : undefined);
           resetPhotoPreview();
           loadEntries();
         })

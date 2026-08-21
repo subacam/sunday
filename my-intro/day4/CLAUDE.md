@@ -48,6 +48,16 @@
   오버레이가 실제 지도 위치와 어긋나 보인다. 이 두 지도를 "진짜 인터랙티브 지도"로
   업그레이드하려면(패닝·줌 가능) 핀 저장 방식 자체를 %좌표에서 실제 위도/경도로 바꾸고
   진짜 마커를 쓰는 별도 작업이 필요하다 — 지금은 하지 않았다.
+- **두 지도의 CSS 오버레이 마커는 같은 디자인을 쓴다**: 원형 배경 없이 끝이 뾰족한
+  물방울(핀) 모양 SVG 하나만 CTA 앰버(`#E8A33D`) 채우기 + 진한 외곽선(`#1F2A24`)으로
+  그린다. 이전에는 원형 배경(`rounded-full bg-terra`) 안에 작은 핀 아이콘을 넣는
+  형태였는데, 그 원이 실제로는 넓은 면적처럼 보여 `#pin-picker`에서 정확한 지점을
+  찍기 어렵다는 피드백을 받아 두 지도 모두 다시 그렸다. SVG의 뾰족한 끝점이 곧 좌표가
+  되도록 `viewBox`와 anchor(`-translate-x-1/2 -translate-y-full`)를 맞췄다. 클래스명은
+  여전히 다르다(`#pin-map`은 `.pin-marker`, `#pin-picker`는 `.pin-picker-marker`) —
+  `updatePinMapDefaultMarker()`가 `.pin-marker`의 유무로 "등록된 핀이 있는지"를
+  판단하므로 이 구분은 유지해야 한다(마크업이 겹칠 일은 없지만, 이름을 합치면 그
+  판단 로직이 헷갈리기 쉽다).
 - **`#pin-map`(표시용 지도)은 딱 하나만 예외적으로 진짜 `kakao.maps.Marker`를 쓴다** — 사용자
   제보 핀이 하나도 없을 때(`renderPin`의 `pinned.length === 0`) 이 가게 좌표에 카카오 기본
   마커를 잠깐 띄워서 지도가 완전히 비어 보이지 않게 한다. `updatePinMapDefaultMarker()`가
@@ -215,7 +225,8 @@ API 아님).
 `day4/data/place-info.json` 파일 기반이었으나, Vercel 서버리스가 파일시스템을 유지하지
 않아 배포본에서 못 썼던 문제를 해결하려고 옮겼다 — 이제 다른 세 엔드포인트와 같은
 `/day4/` 접두사를 쓰고 Vercel에도 정상 배포된다). `server.js`와 `api/day4/place-info.js`/
-`api/day4/place-info-helpful.js`가 `fetch()`로 Supabase PostgREST(`{SUPABASE_URL}/rest/v1/...`)를
+`api/day4/place-info-helpful.js`/`api/day4/place-info-delete.js`가 `fetch()`로 Supabase
+PostgREST(`{SUPABASE_URL}/rest/v1/...`)를
 직접 호출한다 — SDK 설치 없이 카카오/구글/제미나이 프록시와 같은 패턴이다. `server.js`/
 Vercel 함수 모두 **anon(publishable) 키만 쓴다** — service role 키는 쓰지 않는다(RLS의
 public select/insert 정책이 서버가 필요로 하는 권한과 정확히 같다). `place.html`이 이 API를
@@ -241,6 +252,20 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   호출해 `helpful_count`를 원자적으로 1 증가시킨다(예전 파일 기반 구현의 읽기→+1→쓰기
   경쟁 조건이 없어짐). 해당 `entryId`를 찾지 못하면(RPC가 `null` 반환) 404
   `ENTRY_NOT_FOUND`. 성공 시 200과 함께 증가된 `{ helpfulCount }`를 반환한다.
+- `POST /api/day4/place-info-delete` — 본문 `{ placeId, entryId }`(helpful과 같은 이유로
+  `placeId`는 검증에만 쓰이고 실제 삭제는 `entryId`만으로 한다). Postgres 함수
+  `delete_place_info_entry(p_entry_id uuid)`를 `POST .../rpc/delete_place_info_entry`로
+  호출해 해당 row를 지우고, 실제로 지워진 게 있으면 `true`/없으면 `false`를 반환한다.
+  `false`면 404 `ENTRY_NOT_FOUND`, 그 외엔 200과 함께 `{ deleted: true }`.
+  **`entryId`가 이 브라우저가 등록한 것인지 서버는 검증하지 않는다** — helpful 증가와
+  똑같은 신뢰 모델이다(로그인이 없어 "누구 것인지" 자체를 서버가 판단할 방법이 없다).
+  유효한 `entryId`라면 원칙적으로 누구든 지울 수 있다. `place.html`은 자신이 방금
+  등록에 성공해 응답으로 받은 `entryId`만 `localStorage`(`place-info-mine:{entryId}`)에
+  남겨두고, 그 항목에만 "삭제" 버튼을 보여주는 방식으로 UX 차원에서만 삭제 가능
+  범위를 제한한다 — 실제 서버 쪽 소유권 검증이 아니라는 점을 잊지 말 것. 삭제 확인은
+  `window.confirm`을 쓰지 않고(day2/day8과 같은 이유 — 샌드박스 환경에서 네이티브
+  다이얼로그가 막히면 화면이 멈춘 것처럼 보인다) 버튼 영역을 "정말 삭제할까요?
+  [삭제] [취소]" 상태로 바꾸는 인라인 2단계 확인을 쓴다.
 - **등록에 로그인을 요구하지 않는다(익명 허용) — DB 마이그레이션 이후에도 그대로다.**
   PRD.md §5.2/§5.5는 위치 정보 추가와 "도움이 됐어요" 모두 로그인을 요구하지만, 이 구현은
   로그인 게이트 없이 두 행위를 모두 허용하는 의도적인 MVP 이탈이다 — 자세한 설명은
@@ -253,9 +278,11 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   user_id uuid references auth.users)`. `place_id`에 인덱스. RLS 활성화, `select`/`insert`
   정책은 `anon`/`authenticated` 모두 허용(`using (true)` / `with check (true)`) — 지금의
   "로그인 없이 등록 가능" 규칙을 DB 레벨에서도 그대로 반영한다. `update`/`delete` 정책은
-  없음(막힘) — helpful 증가는 `SECURITY DEFINER` RPC로만 가능(Supabase 보안 어드바이저가
-  "anon이 SECURITY DEFINER 함수를 호출할 수 있다"고 경고하는데, 이건 의도된 설계다 —
-  RLS로는 막혀 있는 원자적 증가 한 가지 동작만 우회해서 허용하는 용도).
+  없음(막힘) — helpful 증가와 항목 삭제는 각각 `increment_place_info_helpful`/
+  `delete_place_info_entry` `SECURITY DEFINER` RPC로만 가능하다(Supabase 보안
+  어드바이저가 "anon이 SECURITY DEFINER 함수를 호출할 수 있다"고 두 함수 모두에 대해
+  경고하는데, 이건 의도된 설계다 — RLS로는 막혀 있는 특정 동작 하나씩만 우회해서
+  허용하는 용도이지, RLS를 완전히 무력화하는 게 아니다).
 
 ## 로그인(Supabase Auth) — `day4/auth.js`가 유일한 공유 파일인 이유
 
@@ -288,9 +315,9 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   한다.** 이 설정은 MCP 도구로 바꿀 수 없어 대시보드에서 직접 꺼야 한다 — 켜져 있으면
   `signUp()`이 세션 없이 반환되고, `auth.js`는 이 경우를 감지해 "이메일 인증이
   필요합니다" 안내만 하고 크래시 없이 끝낸다(즉시 로그인은 안 됨).
-- 로그인 여부와 무관하게 검색·리뷰 조회·AI 분석·핀 등록("도움이 됐어요" 포함)은 전부
-  그대로 동작한다 — 로그인은 지금은 순수 UI/세션 기능일 뿐, 어떤 기존 API도 게이트하지
-  않는다.
+- 로그인 여부와 무관하게 검색·리뷰 조회·AI 분석·핀 등록/삭제("도움이 됐어요" 포함)는
+  전부 그대로 동작한다 — 로그인은 지금은 순수 UI/세션 기능일 뿐, 어떤 기존 API도
+  게이트하지 않는다.
 
 ## 프론트 연동
 

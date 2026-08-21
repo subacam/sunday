@@ -514,6 +514,15 @@ function incrementPlaceInfoHelpful(entryId) {
   });
 }
 
+function deletePlaceInfoEntry(entryId) {
+  return fetch(SUPABASE_REST_BASE + "/rpc/delete_place_info_entry", {
+    method: "POST",
+    headers: supabaseHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ p_entry_id: entryId }),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+}
+
 // 프레임워크가 없으니 요청 본문을 직접 모아 JSON으로 파싱한다.
 function readJsonBody(req, maxBytes) {
   return new Promise((resolve, reject) => {
@@ -666,6 +675,45 @@ function handlePostPlaceInfoHelpful(req, res) {
     });
 }
 
+// entryId가 이 브라우저가 등록한 것인지는 서버가 검증하지 않는다 — helpful 증가와 같은
+// 신뢰 모델이다(로그인이 없어 "누구 것인지" 자체를 서버가 알 방법이 없다). place.html은
+// 자신이 방금 등록해 응답으로 받은 entryId만 localStorage에 남겨두고 그 항목에만 삭제
+// 버튼을 보여주는 방식으로 UX를 제한할 뿐, 이 엔드포인트 자체는 유효한 entryId라면
+// 누구든 지울 수 있다.
+function handleDeletePlaceInfo(req, res) {
+  readJsonBody(req, 2000)
+    .then((body) => {
+      const placeId = String(body.placeId || "").trim();
+      const entryId = String(body.entryId || "").trim();
+      if (!placeId || !entryId) {
+        sendJson(res, 400, { error: "MISSING_FIELDS", message: "placeId와 entryId가 필요합니다." });
+        return;
+      }
+      deletePlaceInfoEntry(entryId)
+        .then((upstreamRes) => {
+          if (!upstreamRes.ok) {
+            console.error("[data] place-info 삭제 실패, 상태: " + upstreamRes.status);
+            sendJson(res, 502, { error: "UPSTREAM_ERROR", message: "삭제하지 못했습니다." });
+            return;
+          }
+          return upstreamRes.json().then((deleted) => {
+            if (!deleted) {
+              sendJson(res, 404, { error: "ENTRY_NOT_FOUND", message: "해당 정보를 찾을 수 없습니다." });
+              return;
+            }
+            sendJson(res, 200, { deleted: true });
+          });
+        })
+        .catch((err) => {
+          console.error("[data] place-info 삭제 호출 실패:", err.message);
+          sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "위치 정보 서비스에 연결할 수 없습니다." });
+        });
+    })
+    .catch(() => {
+      sendJson(res, 400, { error: "INVALID_JSON", message: "요청 형식이 올바르지 않습니다." });
+    });
+}
+
 // index.html / place.html은 자체 완결(Tailwind CDN + Google Fonts CDN, 로컬 자산 없음)이라
 // 화이트리스트에 원래 두 HTML 파일만 있었다. auth.js는 두 HTML이 공유하는 유일한 로컬
 // 자산이라 여기 추가했다(day4/CLAUDE.md "로그인(Supabase Auth)" 절 참고). 디렉터리 밖
@@ -721,6 +769,10 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === "POST" && url.pathname === "/api/day4/place-info-helpful") {
     handlePostPlaceInfoHelpful(req, res);
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/day4/place-info-delete") {
+    handleDeletePlaceInfo(req, res);
     return;
   }
   if (req.method === "GET" && STATIC_FILES[url.pathname]) {
