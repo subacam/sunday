@@ -446,9 +446,10 @@ grant execute on function public.get_popular_places() to anon, authenticated;
   때만 보인다. 자세한 내용은 `DESIGN.md` §6.16 참고. **로컬(`node server.js`)에서 새 HTML
   페이지를 추가할 때는 위 "index.html / place.html / mypage.html은..." 주석 옆
   `STATIC_FILES` 화이트리스트에도 등록해야 한다** — 잊으면 그 페이지만 404가 난다(실제로
-  `mypage.html` 추가 때 한 번 빠뜨렸다가 잡았다). Vercel 배포본은 `vercel.json` 없는
-  zero-config 정적 호스팅이라 이 화이트리스트와 무관하게 저장소에 파일만 있으면 자동으로
-  서빙된다 — 로컬 전용으로 챙겨야 하는 항목이다.
+  `mypage.html` 추가 때, 그리고 `day4/images/*.jpg` 5개 추가 때 각각 한 번씩 빠뜨렸다가
+  잡았다 — HTML뿐 아니라 이미지 등 정적 자산을 새로 추가할 때도 똑같이 적용된다). Vercel
+  배포본은 `vercel.json` 없는 zero-config 정적 호스팅이라 이 화이트리스트와 무관하게
+  저장소에 파일만 있으면 자동으로 서빙된다 — 로컬 전용으로 챙겨야 하는 항목이다.
 - 히어로 바로 아래 "지금 인기 맛집 TOP 5"(로그인 여부 무관, 항상 표시)와 "나를 위한
   추천"(로그인 시에만 표시) 두 섹션이 있다. 전자는 `get_popular_places()` RPC, 후자는
   내 `place_saves`의 카테고리 집계 + 기존 `/api/day4/places` 재사용으로 만든다. 자세한

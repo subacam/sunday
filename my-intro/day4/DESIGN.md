@@ -222,7 +222,7 @@
 **재사용 가능한 카드 패턴 (다음 작업자 참고)**
 3장 "길찾기" 캐러셀 카드가 이번 리디자인의 기준 패턴이다. 실제 검색 결과 카드를 만들 때 아래 클래스 조합을 그대로 가져다 쓸 수 있다.
 - 카드(`<article>`): `flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl`
-- 이미지 영역: `relative h-40 overflow-hidden rounded-t-3xl` 안에 `<img class="h-full w-full object-cover">` + `absolute bottom-4 left-4`로 얹은 뱃지. 원래는 그라디언트 배경(`bg-gradient-to-br ...`)에 뱃지만 있었는데, 3장 "길찾기" 캐러셀의 예시 데이터 5곳에 [Lorem Picsum](https://picsum.photos)(`https://picsum.photos/seed/{고유 seed}/720/320`, API 키 불필요) 더미 이미지를 넣으면서 이 구조로 바뀌었다(2026-08-25) — seed는 가게별로 고정해 둬서 새로고침해도 같은 사진이 뜬다. **주의: Picsum은 카테고리 지정이 안 돼 임의의 스톡 사진이 나온다** — seed 이름(`day4-yeonnam-cafe` 등)은 가독성을 위한 라벨일 뿐 실제 사진 내용과 무관하다. 진짜 검색 결과 카드(`renderPlaceCard` 등)는 아직 사진이 없어 이 이미지 영역 자체가 없다
+- 이미지 영역: `relative h-40 overflow-hidden rounded-t-3xl` 안에 `<img class="h-full w-full object-cover">` + `absolute bottom-4 left-4`로 얹은 "입구 사진 N장" 뱃지 + `absolute bottom-1.5 right-2`로 얹은 저작자 표시 링크. 원래는 그라디언트 배경(`bg-gradient-to-br ...`)에 뱃지만 있었다가, 3장 "길찾기" 캐러셀의 예시 데이터 5곳에 처음엔 Lorem Picsum 더미 이미지(무관한 랜덤 스톡 사진)를 넣었는데, **실제 그 가게 사진**으로 바꿔달라는 요청을 받아 최종적으로 아래 방식으로 교체했다(2026-08-25). 진짜 검색 결과 카드(`renderPlaceCard` 등)는 아직 사진이 없어 이 이미지 영역 자체가 없다 — 자세한 내용은 아래 "예시 카드 실제 사진(Google Places Photos, 5곳)" 절 참고
 - 본문 영역: `flex flex-1 flex-col p-6`
 - 뱃지: `mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm`
 - 주요 액션 버튼: `mt-4 h-[52px] w-full rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-[transform,background-color,box-shadow] hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md`
@@ -232,6 +232,18 @@
   바꿨다. `transition-all`은 명시하지 않은 속성(예: `outline`)까지 애니메이션 대상이 되어
   포커스 링 전환 등에서 의도치 않은 부작용을 만들 수 있다 — 새 카드/버튼을 만들 때도 실제
   바뀌는 속성만 나열할 것.
+
+**예시 카드 실제 사진 (Google Places Photos, 5곳)**
+3장 "길찾기" 캐러셀의 예시 데이터 5곳(네시사분·원조만선호프·밀도 성수본점·정돈 강남점·희옥)에 그 가게의 **실제 사진**을 넣어달라는 요청을 받았다. 검색할 때마다 라이브로 사진을 불러오는 방식은(6.13절 구글 리뷰처럼) 요청마다 과금되는 SKU라 비용이 들지만, 이 5곳은 정적인 예시 데이터라 **딱 한 번만** 받아서 파일로 저장해두면 그 뒤로는 비용이 전혀 들지 않는다 — 그래서 이 방식을 택했다.
+
+| 항목 | 내용 |
+|---|---|
+| 받은 방법 | 일회성 스크립트(저장소에 남기지 않음)로 `places:searchText`(6.13절과 같은 Places API New)를 필드마스크 `places.photos,places.displayName`로 호출해 각 가게의 대표 사진 리소스 이름을 얻고, `{photo}/media?maxWidthPx=1000&key=...`로 실제 JPEG 바이트를 받아 `day4/images/{seed}.jpg`로 저장했다(2026-08-25, 5회 검색 + 5회 사진 요청 = 총 10회 호출, 그 이후로는 0회) |
+| 저장 위치 | `day4/images/day4-yeonnam-cafe.jpg` 등 5개 파일, 저장소에 커밋한다(용량 약 1.4MB 합계). `.gitignore`의 `data/` 제외 규칙과는 무관 |
+| 로컬 서빙 | `server.js`의 `STATIC_FILES` 화이트리스트에 5개 경로를 각각 추가했다(새 정적 파일을 추가할 때마다 이 화이트리스트도 챙겨야 한다는 "`STATIC_FILES` 화이트리스트" 메모 — day4/CLAUDE.md 참고). Vercel은 zero-config 정적 호스팅이라 화이트리스트와 무관하게 자동으로 서빙된다 |
+| **저작자 표시(필수)** | Google Places Photos는 이용약관상 `authorAttributions`(사진 올린 사람 이름·프로필 링크)를 반드시 함께 보여줘야 한다. 각 카드 이미지 우하단에 `absolute bottom-1.5 right-2` 작은 링크로 "사진: {이름} (Google)"을 얹었다 — 클릭하면 그 기여자의 구글 지도 프로필로 연결된다. 사진을 나중에 바꾸거나 추가할 때 이 표시를 빠뜨리지 말 것 |
+| 카테고리와 안 맞을 수 있음 | Places Photos는 그 가게에 달린 사진 중 첫 번째를 그대로 쓴다 — 대체로 입구·간판 사진이 나오지만("네시사분"은 실제 대문에 붙은 지번 문패까지, "정돈 강남점"은 벽돌 벽 브랜드 간판까지 나왔다), 매장 내부(주방 등)가 나올 수도 있다("밀도 성수본점") |
+| 다시 받으려면 | 위 "받은 방법"의 스크립트를 다시 만들어 실행하면 된다(저장소에 남겨두지 않았으므로) — `.env.local`의 `GOOGLE_PLACES_API_KEY`만 있으면 되고, 텍스트 검색 쿼리는 "가게이름 + 정확한 주소"로 넣어야 동명이인 가게로 잘못 매칭되지 않는다 |
 
 ### 6.12 가게 상세 페이지 (`day4/place.html`)
 > PRD.md 5.2절("위치 정보 보완/검증")이 설명하는 화면 — 한 가게에 대해 여러 사용자가 각자 남긴 사진·설명·정밀 핀이 누적되어 쌓이는 모습을 보여준다. **더 이상 정적 목업이 아니다**: `index.html`의 "길찾기" 카드나 검색 결과 카드의 "가게 상세 보기" 링크가 `id`(카카오 장소 ID)·`name`·`category`·`address`·`lat`·`lng`·`mapUrl`을 쿼리스트링으로 넘기고, 이 페이지는 그 `id`를 키로 `server.js`의 `/api/place-info` 계열 엔드포인트에서 실제 데이터를 읽고 쓴다 — 고정된 예시 가게("카페 모레") 하나만 보여주던 이전 버전과 달리, 쿼리스트링의 `id`가 바뀌면 완전히 다른 가게의 화면이 된다.

@@ -719,12 +719,20 @@ function handleDeletePlaceInfo(req, res) {
 // 추가하면서 세 개가 됐다. auth.js는 세 HTML이 공유하는 유일한 로컬 자산이라 여기
 // 추가했다(day4/CLAUDE.md "로그인(Supabase Auth)" 절 참고). 디렉터리 밖 경로를 절대 열어주지
 // 않기 위해 임의 경로 대신 화이트리스트를 쓴다(day7/restaurant/server.js와 동일한 접근).
+// /images/*.jpg 5개는 index.html 3장 "길찾기" 캐러셀 예시 카드용 더미 이미지(Google Places
+// Photos에서 한 번만 내려받아 저장한 실제 사진, day4/CLAUDE.md "예시 카드 더미 이미지" 절
+// 참고) — 매 요청마다 구글을 다시 부르지 않는다.
 const STATIC_FILES = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
   "/index.html": { file: "index.html", type: "text/html; charset=utf-8" },
   "/place.html": { file: "place.html", type: "text/html; charset=utf-8" },
   "/mypage.html": { file: "mypage.html", type: "text/html; charset=utf-8" },
   "/auth.js": { file: "auth.js", type: "text/javascript; charset=utf-8" },
+  "/images/day4-yeonnam-cafe.jpg": { file: "images/day4-yeonnam-cafe.jpg", type: "image/jpeg" },
+  "/images/day4-euljiro-hof.jpg": { file: "images/day4-euljiro-hof.jpg", type: "image/jpeg" },
+  "/images/day4-seongsu-bakery.jpg": { file: "images/day4-seongsu-bakery.jpg", type: "image/jpeg" },
+  "/images/day4-gangnam-donkatsu.jpg": { file: "images/day4-gangnam-donkatsu.jpg", type: "image/jpeg" },
+  "/images/day4-mangwon-ramen.jpg": { file: "images/day4-mangwon-ramen.jpg", type: "image/jpeg" },
 };
 
 function serveStatic(req, res, pathname) {
