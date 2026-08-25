@@ -17,12 +17,17 @@ function supabaseHeaders(apiKey, extra) {
 function reshapePlaceInfoEntry(row) {
   return {
     id: row.id,
+    placeId: row.place_id,
+    placeName: row.place_name || "",
+    category: row.category || "",
+    address: row.address || "",
     author: row.author,
     text: row.text,
     photoUrl: row.photo_url || "",
     pinX: row.pin_x === null || row.pin_x === undefined ? null : Number(row.pin_x),
     pinY: row.pin_y === null || row.pin_y === undefined ? null : Number(row.pin_y),
     helpfulCount: row.helpful_count || 0,
+    reportCount: row.report_count || 0,
     createdAt: row.created_at,
   };
 }
@@ -61,6 +66,9 @@ async function handlePost(req, res, restBase, apiKey) {
   const photoUrl = String(body.photoUrl || "").trim();
   const pinX = Number(body.pinX);
   const pinY = Number(body.pinY);
+  const placeName = String(body.placeName || "").trim().slice(0, 100);
+  const category = String(body.category || "").trim().slice(0, 50);
+  const address = String(body.address || "").trim().slice(0, 200);
 
   if (!placeId) {
     res.status(400).json({ error: "MISSING_PLACE_ID", message: "가게 id가 필요합니다." });
@@ -92,6 +100,9 @@ async function handlePost(req, res, restBase, apiKey) {
     photo_url: photoUrl,
     pin_x: Number.isFinite(pinX) && pinX >= 0 && pinX <= 100 ? Math.round(pinX * 10) / 10 : null,
     pin_y: Number.isFinite(pinY) && pinY >= 0 && pinY <= 100 ? Math.round(pinY * 10) / 10 : null,
+    place_name: placeName || null,
+    category: category || null,
+    address: address || null,
   };
 
   try {

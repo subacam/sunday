@@ -478,18 +478,38 @@ function supabaseHeaders(extra) {
 function reshapePlaceInfoEntry(row) {
   return {
     id: row.id,
+    placeId: row.place_id,
+    placeName: row.place_name || "",
+    category: row.category || "",
+    address: row.address || "",
     author: row.author,
     text: row.text,
     photoUrl: row.photo_url || "",
     pinX: row.pin_x === null || row.pin_x === undefined ? null : Number(row.pin_x),
     pinY: row.pin_y === null || row.pin_y === undefined ? null : Number(row.pin_y),
     helpfulCount: row.helpful_count || 0,
+    reportCount: row.report_count || 0,
     createdAt: row.created_at,
   };
 }
 
 function fetchPlaceInfoEntries(placeId) {
   const params = new URLSearchParams({ place_id: "eq." + placeId, order: "created_at.desc" });
+  return fetch(SUPABASE_REST_BASE + "/place_info_entries?" + params.toString(), {
+    headers: supabaseHeaders(),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+}
+
+// index.html "최근 등록된 길찾기" 티커용 — 특정 가게가 아니라 전체에서 최신 N개를 가져온다.
+// place_name이 비어 있는 행(더미 백필 이전의 옛 데이터 등)은 카드에 가게 이름을 못 띄우니
+// 제외한다.
+function fetchRecentPlaceInfoEntries(limit) {
+  const params = new URLSearchParams({
+    order: "created_at.desc",
+    limit: String(limit),
+    place_name: "not.is.null",
+  });
   return fetch(SUPABASE_REST_BASE + "/place_info_entries?" + params.toString(), {
     headers: supabaseHeaders(),
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -507,6 +527,15 @@ function insertPlaceInfoEntry(row) {
 
 function incrementPlaceInfoHelpful(entryId) {
   return fetch(SUPABASE_REST_BASE + "/rpc/increment_place_info_helpful", {
+    method: "POST",
+    headers: supabaseHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ p_entry_id: entryId }),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+}
+
+function incrementPlaceInfoReport(entryId) {
+  return fetch(SUPABASE_REST_BASE + "/rpc/increment_place_info_report", {
     method: "POST",
     headers: supabaseHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ p_entry_id: entryId }),
@@ -572,6 +601,25 @@ function handleGetPlaceInfo(req, res, query) {
     });
 }
 
+// index.html "최근 등록된 길찾기" 티커 전용 — 특정 가게가 아니라 전체 최신 N개.
+function handleGetPlaceInfoRecent(req, res) {
+  fetchRecentPlaceInfoEntries(12)
+    .then((upstreamRes) => {
+      if (!upstreamRes.ok) {
+        console.error("[data] place-info-recent 조회 실패, 상태: " + upstreamRes.status);
+        sendJson(res, 502, { error: "UPSTREAM_ERROR", message: "최근 길찾기 정보를 불러오지 못했습니다." });
+        return;
+      }
+      return upstreamRes.json().then((rows) => {
+        sendJson(res, 200, { entries: (Array.isArray(rows) ? rows : []).map(reshapePlaceInfoEntry) });
+      });
+    })
+    .catch((err) => {
+      console.error("[data] place-info-recent 조회 호출 실패:", err.message);
+      sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "위치 정보 서비스에 연결할 수 없습니다." });
+    });
+}
+
 function handlePostPlaceInfo(req, res) {
   readJsonBody(req, 20000)
     .then((body) => {
@@ -581,6 +629,12 @@ function handlePostPlaceInfo(req, res) {
       const photoUrl = String(body.photoUrl || "").trim();
       const pinX = Number(body.pinX);
       const pinY = Number(body.pinY);
+      // "최근 등록된 길찾기" 피드가 라이브 조인 없이 바로 쓸 수 있도록 place.html이 이미
+      // 알고 있는 가게 이름/카테고리/주소를 그대로 같이 저장한다(place_saves와 같은
+      // 비정규화 방식). 셋 다 선택 값 — 없어도 등록 자체는 그대로 된다.
+      const placeName = String(body.placeName || "").trim().slice(0, 100);
+      const category = String(body.category || "").trim().slice(0, 50);
+      const address = String(body.address || "").trim().slice(0, 200);
 
       if (!placeId) {
         sendJson(res, 400, { error: "MISSING_PLACE_ID", message: "가게 id가 필요합니다." });
@@ -612,6 +666,9 @@ function handlePostPlaceInfo(req, res) {
         photo_url: photoUrl,
         pin_x: Number.isFinite(pinX) && pinX >= 0 && pinX <= 100 ? Math.round(pinX * 10) / 10 : null,
         pin_y: Number.isFinite(pinY) && pinY >= 0 && pinY <= 100 ? Math.round(pinY * 10) / 10 : null,
+        place_name: placeName || null,
+        category: category || null,
+        address: address || null,
       };
 
       insertPlaceInfoEntry(row)
@@ -667,6 +724,43 @@ function handlePostPlaceInfoHelpful(req, res) {
         })
         .catch((err) => {
           console.error("[data] place-info helpful 호출 실패:", err.message);
+          sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "위치 정보 서비스에 연결할 수 없습니다." });
+        });
+    })
+    .catch(() => {
+      sendJson(res, 400, { error: "INVALID_JSON", message: "요청 형식이 올바르지 않습니다." });
+    });
+}
+
+// 핀 신고: increment_place_info_helpful과 완전히 같은 모양의 원자적 증가 RPC를 쓴다.
+// 신고 자체가 그 제보를 지우거나 평균 위치 계산에서 자동으로 빼진 않는다 — place.html이
+// report_count를 읽어서 UI(배지)로만 보여준다.
+function handlePostPlaceInfoReport(req, res) {
+  readJsonBody(req, 2000)
+    .then((body) => {
+      const placeId = String(body.placeId || "").trim();
+      const entryId = String(body.entryId || "").trim();
+      if (!placeId || !entryId) {
+        sendJson(res, 400, { error: "MISSING_FIELDS", message: "placeId와 entryId가 필요합니다." });
+        return;
+      }
+      incrementPlaceInfoReport(entryId)
+        .then((upstreamRes) => {
+          if (!upstreamRes.ok) {
+            console.error("[data] place-info 신고 실패, 상태: " + upstreamRes.status);
+            sendJson(res, 502, { error: "UPSTREAM_ERROR", message: "처리에 실패했습니다." });
+            return;
+          }
+          return upstreamRes.json().then((result) => {
+            if (result === null || result === undefined) {
+              sendJson(res, 404, { error: "ENTRY_NOT_FOUND", message: "해당 정보를 찾을 수 없습니다." });
+              return;
+            }
+            sendJson(res, 200, { reportCount: result });
+          });
+        })
+        .catch((err) => {
+          console.error("[data] place-info 신고 호출 실패:", err.message);
           sendJson(res, 502, { error: "UPSTREAM_UNAVAILABLE", message: "위치 정보 서비스에 연결할 수 없습니다." });
         });
     })
@@ -772,12 +866,20 @@ const server = http.createServer((req, res) => {
     handleGetPlaceInfo(req, res, url.searchParams);
     return;
   }
+  if (req.method === "GET" && url.pathname === "/api/day4/place-info-recent") {
+    handleGetPlaceInfoRecent(req, res);
+    return;
+  }
   if (req.method === "POST" && url.pathname === "/api/day4/place-info") {
     handlePostPlaceInfo(req, res);
     return;
   }
   if (req.method === "POST" && url.pathname === "/api/day4/place-info-helpful") {
     handlePostPlaceInfoHelpful(req, res);
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/day4/place-info-report") {
+    handlePostPlaceInfoReport(req, res);
     return;
   }
   if (req.method === "POST" && url.pathname === "/api/day4/place-info-delete") {

@@ -346,6 +346,50 @@
     return relativeTimeFormatter.format(-Math.floor(months / 12), 'year');
   }
 
+  // ---- 핀 평균 위치 계산 ----
+  // pinX/pinY는 0~100 범위의 퍼센트 좌표(지도 뷰 기준)라, 이 범위 안에서 "얼마나 멀면
+  // 이상치인가"를 고정 임계값으로 판단한다. 25는 지도 가로/세로 폭의 1/4 정도 떨어진
+  // 정도로, 같은 입구를 가리킨다고 보기엔 너무 멀다는 경험적 기준이다.
+  var PIN_OUTLIER_THRESHOLD_PCT = 25;
+
+  function pinDistance(a, b) {
+    var dx = a.pinX - b.pinX;
+    var dy = a.pinY - b.pinY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function meanPin(list) {
+    var sumX = 0, sumY = 0;
+    list.forEach(function (e) { sumX += e.pinX; sumY += e.pinY; });
+    return { pinX: sumX / list.length, pinY: sumY / list.length };
+  }
+
+  // 핀이 찍힌 제보들의 평균 위치를 구하되, 전체 평균에서 너무 먼(이상치) 핀은 빼고 다시
+  // 평균낸다. 핀이 2개 이하면 어느 쪽이 "이상한" 핀인지 통계적으로 가릴 근거가 없어
+  // 이상치 판정 없이 단순 평균만 낸다(3개부터 시도).
+  function computeAveragePin(pinned) {
+    if (pinned.length === 0) return null;
+
+    var mean = meanPin(pinned);
+    var outlierIds = {};
+    var excludedCount = 0;
+
+    if (pinned.length >= 3) {
+      var included = pinned.filter(function (e) { return pinDistance(e, mean) <= PIN_OUTLIER_THRESHOLD_PCT; });
+      // 전부가 서로 멀리 흩어진 병적인 경우(포함되는 게 하나도 없음)엔 제외 없이 전체
+      // 평균을 그대로 쓴다 — 빈 평균보다는 낫다.
+      if (included.length > 0 && included.length < pinned.length) {
+        pinned.forEach(function (e) {
+          if (pinDistance(e, mean) > PIN_OUTLIER_THRESHOLD_PCT) outlierIds[e.id] = true;
+        });
+        excludedCount = pinned.length - included.length;
+        mean = meanPin(included);
+      }
+    }
+
+    return { x: mean.pinX, y: mean.pinY, totalCount: pinned.length, excludedCount: excludedCount, outlierIds: outlierIds };
+  }
+
   // ---- 쿼리스트링에서 가게 정보 읽기 ----
   var params = new URLSearchParams(location.search);
   var place = {
@@ -741,6 +785,10 @@
     var reportsStatus = document.getElementById('reports-status');
     var reportsList = document.getElementById('reports-list');
 
+    // 제출 폼(아래 "정보 남기기")이 방금 등록하려는 핀이 기존 핀들과 너무 먼지 비교할 때
+    // 쓴다 — loadEntries()가 끝날 때마다 "이번 등록 이전까지의" 핀 목록으로 갱신해 둔다.
+    var currentPinnedEntries = [];
+
     function loadEntries() {
       reportsStatus.textContent = '불러오는 중입니다…';
       reportsList.innerHTML = '';
@@ -752,9 +800,15 @@
             return;
           }
           var entries = (result.body && result.body.entries) || [];
-          renderEntries(entries);
+          var pinned = entries.filter(function (e) {
+            return e.pinX !== null && e.pinX !== undefined && e.pinY !== null && e.pinY !== undefined;
+          });
+          var avgPin = computeAveragePin(pinned);
+          currentPinnedEntries = pinned;
+
+          renderEntries(entries, avgPin);
           renderStats(entries);
-          renderPin(entries);
+          renderPin(entries, avgPin);
         })
         .catch(function () {
           reportsStatus.textContent = '위치 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
@@ -769,15 +823,19 @@
       document.getElementById('stat-helpful-total').textContent = helpfulTotal + '번';
     }
 
-    function renderPin(entries) {
+    // 핀 하나(가장 최근 등록)를 그대로 보여주던 방식은 그 한 사람이 틀렸을 때 그대로 오답이
+    // 되는 문제가 있었다 — 그래서 핀이 여러 개면 평균 위치를 보여주고, 평균에서 너무 먼
+    // 핀(computeAveragePin의 이상치 판정)은 평균 계산에서 빼되 화면에서 완전히 지우진
+    // 않는다(아래 renderEntryCard의 배지로 표시). avgPin은 loadEntries()가 미리 계산해서
+    // 넘겨준다.
+    function renderPin(entries, avgPin) {
       var pinMap = document.getElementById('pin-map');
       var pinDescription = document.getElementById('pin-description');
 
       var existingMarker = pinMap.querySelector('.pin-marker');
       if (existingMarker) existingMarker.remove();
 
-      var pinned = entries.filter(function (e) { return e.pinX !== null && e.pinX !== undefined && e.pinY !== null && e.pinY !== undefined; });
-      if (pinned.length === 0) {
+      if (!avgPin) {
         pinDescription.textContent = entries.length > 0
           ? '가장 최근 설명 (핀 없음): ' + entries[0].text
           : '가장 최근에 등록된 입구 설명이 여기에 표시됩니다.';
@@ -787,11 +845,10 @@
 
       // 핀 추가용 지도(#pin-picker)의 마커와 같은 디자인(원형 배경 없는 앰버 물방울 핀)을
       // 그대로 쓴다 — 두 지도의 핀이 서로 다르게 보이지 않도록 통일했다.
-      var latest = pinned[0];
       var marker = document.createElement('div');
       marker.className = 'pin-marker pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full';
-      marker.style.left = latest.pinX + '%';
-      marker.style.top = latest.pinY + '%';
+      marker.style.left = avgPin.x + '%';
+      marker.style.top = avgPin.y + '%';
       marker.setAttribute('aria-hidden', 'true');
       marker.innerHTML =
         '<svg width="36" height="44" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg" ' +
@@ -801,11 +858,15 @@
         '<circle cx="18" cy="17" r="5" fill="#1F2A24"/>' +
         '</svg>';
       pinMap.appendChild(marker);
-      pinDescription.textContent = latest.text;
+      pinDescription.textContent = avgPin.totalCount === 1
+        ? '유일하게 등록된 핀 위치입니다.'
+        : (avgPin.excludedCount > 0
+            ? avgPin.totalCount + '명이 표시한 위치의 평균입니다. 그중 ' + avgPin.excludedCount + '개는 다른 핀과 위치 차이가 커서 평균 계산에서 제외했어요.'
+            : avgPin.totalCount + '명이 표시한 위치의 평균입니다.');
       updatePinMapDefaultMarker();
     }
 
-    function renderEntries(entries) {
+    function renderEntries(entries, avgPin) {
       if (entries.length === 0) {
         reportsStatus.textContent = '아직 등록된 입구 정보가 없습니다. 첫 정보를 남겨보세요!';
         reportsList.innerHTML = '';
@@ -814,7 +875,8 @@
       reportsStatus.textContent = entries.length + '개의 입구 설명이 등록되어 있습니다.';
       reportsList.innerHTML = '';
       entries.forEach(function (entry) {
-        reportsList.appendChild(renderEntryCard(entry));
+        var isPinOutlier = !!(avgPin && avgPin.outlierIds[entry.id]);
+        reportsList.appendChild(renderEntryCard(entry, isPinOutlier));
       });
     }
 
@@ -857,6 +919,27 @@
       }
     }
 
+    // 핀 신고 — helpful과 완전히 같은 중복 방지 방식(로컬스토리지 플래그)을 쓴다.
+    function reportStorageKey(entryId) {
+      return 'place-info-report:' + entryId;
+    }
+
+    function isReportAlreadyMarked(entryId) {
+      try {
+        return localStorage.getItem(reportStorageKey(entryId)) === 'true';
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function markReportDone(entryId) {
+      try {
+        localStorage.setItem(reportStorageKey(entryId), 'true');
+      } catch (err) {
+        // localStorage를 쓸 수 없는 환경이면 이번 방문 내 중복 클릭 방지만 유지한다.
+      }
+    }
+
     // 로그인이 없어 서버는 "이 항목이 누구 것인지" 모른다 — /api/day4/place-info-delete는
     // 유효한 entryId라면 누구든 지울 수 있다(helpful 증가와 같은 신뢰 모델). 대신
     // 이 브라우저가 방금 등록에 성공한 entryId만 localStorage에 남겨서, 삭제 버튼은
@@ -887,20 +970,24 @@
       } catch (err) {}
     }
 
-    function renderEntryCard(entry) {
+    function renderEntryCard(entry, isPinOutlier) {
       var li = document.createElement('li');
       var photoHtml = entry.photoUrl
         ? '<img src="' + escapeHtml(entry.photoUrl) + '" alt="' + escapeHtml(entry.author) + '가 남긴 사진" ' +
           'width="700" height="224" class="mt-4 h-56 w-full rounded-2xl object-cover" loading="lazy" onerror="handleEntryPhotoError(this)">'
         : '';
-      var pinBadgeHtml = (entry.pinX !== null && entry.pinX !== undefined)
-        ? '<span class="inline-flex items-center gap-1 rounded-full bg-base-tint px-3 py-1 text-[1rem] font-bold text-base-dark">📍 핀 위치 포함</span>'
-        : '';
+      var hasPinValue = entry.pinX !== null && entry.pinX !== undefined;
+      var pinBadgeHtml = !hasPinValue
+        ? ''
+        : isPinOutlier
+          ? '<span class="inline-flex items-center gap-1 rounded-full bg-terra-tint px-3 py-1 text-[1rem] font-bold text-terra" title="다른 사람들이 표시한 위치와 많이 달라 위 지도의 평균 위치 계산에서 제외했어요">⚠️ 핀 위치 포함 (평균과 차이 큼)</span>'
+          : '<span class="inline-flex items-center gap-1 rounded-full bg-base-tint px-3 py-1 text-[1rem] font-bold text-base-dark">📍 핀 위치 포함</span>';
       var isAnonymous = entry.author === '익명';
       var anonymousBadgeHtml = isAnonymous
         ? '<span class="inline-flex items-center rounded-full bg-[#E9EDEA] px-3 py-1 text-[1rem] font-bold text-ink-soft">익명</span>'
         : '';
       var alreadyMarked = isHelpfulAlreadyMarked(entry.id);
+      var reportAlreadyMarked = isReportAlreadyMarked(entry.id);
       var isMine = isEntryMine(entry.id);
 
       li.className = 'rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-shadow hover:shadow-lg sm:p-7';
@@ -927,9 +1014,50 @@
             ' <span class="helpful-count">' + entry.helpfulCount + '</span>' +
           '</button>' +
           pinBadgeHtml +
+          (hasPinValue
+            ? '<button type="button" class="report-btn inline-flex items-center gap-2 rounded-full border-2 px-4 py-2 text-[1rem] font-extrabold shadow-sm transition-colors ' +
+                (reportAlreadyMarked ? 'border-base-tint bg-base-tint text-ink-mute' : 'border-base-tint bg-white text-ink-mute hover:bg-base-tint') + '" ' +
+                (reportAlreadyMarked ? 'data-clicked="true" aria-pressed="true"' : 'aria-pressed="false"') + '>' +
+                '<span aria-hidden="true">🚩</span> ' +
+                '<span class="report-label">핀 신고</span>' +
+                ' <span class="report-count">' + entry.reportCount + '</span>' +
+              '</button>'
+            : '') +
           (isMine
             ? '<button type="button" class="delete-btn inline-flex items-center gap-1 rounded-full border-2 border-terra px-4 py-2 text-[1rem] font-extrabold text-terra shadow-sm transition-colors hover:bg-terra-tint">삭제</button>'
             : '');
+
+        if (hasPinValue) {
+          var reportBtn = actionsEl.querySelector('.report-btn');
+          reportBtn.addEventListener('click', function () {
+            if (reportBtn.dataset.clicked === 'true') return;
+            reportBtn.dataset.clicked = 'true';
+            fetch('/api/day4/place-info-report', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ placeId: place.id, entryId: entry.id })
+            })
+              .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+              .then(function (result) {
+                if (!result.ok) {
+                  reportBtn.dataset.clicked = 'false';
+                  placeNotice((result.body && result.body.message) || '처리하지 못했습니다.');
+                  return;
+                }
+                reportBtn.querySelector('.report-count').textContent = result.body.reportCount;
+                reportBtn.setAttribute('aria-pressed', 'true');
+                reportBtn.classList.remove('bg-white', 'hover:bg-base-tint');
+                reportBtn.classList.add('bg-base-tint');
+                reportAlreadyMarked = true;
+                markReportDone(entry.id);
+                placeNotice('신고가 접수됐습니다. 다른 사람들의 평균 위치 계산과는 별개로, 참고용으로만 쓰여요.');
+              })
+              .catch(function () {
+                reportBtn.dataset.clicked = 'false';
+                placeNotice('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+              });
+          });
+        }
 
         var helpfulBtn = actionsEl.querySelector('.helpful-btn');
         helpfulBtn.addEventListener('click', function () {
@@ -1155,6 +1283,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           placeId: place.id,
+          placeName: place.name,
+          category: place.category,
+          address: place.address,
           author: authorInput.value.trim(),
           text: text,
           photoUrl: photoInput.value.trim(),
@@ -1173,7 +1304,18 @@
           if (result.body && result.body.entry && result.body.entry.id) {
             markEntryMine(result.body.entry.id);
           }
-          placeNotice('등록되었습니다! 다음 사람에게 큰 도움이 됩니다.');
+
+          // 방금 찍은 핀이 기존(이번 등록 이전) 핀들의 평균과 너무 멀면 등록 자체는 그대로
+          // 진행하되(틀렸다고 단정할 근거는 없다 — 입구가 여러 곳일 수도 있다), 다시 한번
+          // 확인해 보라고 안내만 한다. 기존 핀이 하나뿐이어도 "그 핀과 너무 멀다"는 비교는
+          // 성립하므로 1개 이상이면 검사한다 — computeAveragePin의 이상치 "제외"(핀 3개
+          // 이상 필요)와는 별개 기준이다.
+          var isFarFromOthers = hadPin && currentPinnedEntries.length >= 1 &&
+            pinDistance({ pinX: pickedPinX, pinY: pickedPinY }, meanPin(currentPinnedEntries)) > PIN_OUTLIER_THRESHOLD_PCT;
+
+          placeNotice(isFarFromOthers
+            ? '등록되었습니다. 다만 표시하신 핀이 다른 분들 위치와 꽤 떨어져 있어요 — 위치를 다시 확인해 주세요.'
+            : '등록되었습니다! 다음 사람에게 큰 도움이 됩니다.');
           form.reset();
           clearPickedPin(hadPin ? '이미 핀을 추가했습니다.' : undefined);
           resetPhotoPreview();

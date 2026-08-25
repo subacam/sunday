@@ -225,7 +225,8 @@ API 아님).
 `day4/data/place-info.json` 파일 기반이었으나, Vercel 서버리스가 파일시스템을 유지하지
 않아 배포본에서 못 썼던 문제를 해결하려고 옮겼다 — 이제 다른 세 엔드포인트와 같은
 `/day4/` 접두사를 쓰고 Vercel에도 정상 배포된다). `server.js`와 `api/day4/place-info.js`/
-`api/day4/place-info-helpful.js`/`api/day4/place-info-delete.js`가 `fetch()`로 Supabase
+`api/day4/place-info-helpful.js`/`api/day4/place-info-delete.js`/`api/day4/place-info-report.js`가
+`fetch()`로 Supabase
 PostgREST(`{SUPABASE_URL}/rest/v1/...`)를
 직접 호출한다 — SDK 설치 없이 카카오/구글/제미나이 프록시와 같은 패턴이다. `server.js`/
 Vercel 함수 모두 **anon(publishable) 키만 쓴다** — service role 키는 쓰지 않는다(RLS의
@@ -234,17 +235,30 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
 
 - `GET /api/day4/place-info?id=가게id` — `id`가 비어 있으면 400 `MISSING_ID`. 응답은
   `{ entries: [...] }`이며 각 entry는 `created_at` 내림차순(최신 먼저)으로 정렬되어 있다.
-  entry 형태(DB의 snake_case를 서버가 camelCase로 재구성): `{ id, author, text, photoUrl,
-  pinX, pinY, helpfulCount, createdAt }`. `id`는 이제 uuid 문자열이다(예전 base36 짧은
-  id 아님). `pinX`/`pinY`는 핀을 남기지 않았으면 `null`이다.
-- `POST /api/day4/place-info` — 본문 `{ placeId, author, text, photoUrl, pinX, pinY }`.
-  `placeId` 누락 시 400 `MISSING_PLACE_ID`, `text` 누락 시 400 `MISSING_TEXT`, `text`가
-  500자 초과면 400 `TEXT_TOO_LONG`. `photoUrl`은 값이 있으면 `http(s)://`로 시작해야
-  하며(아니면 400 `INVALID_PHOTO_URL`), 500자를 넘으면 400 `PHOTO_URL_TOO_LONG`.
-  `author`가 비어 있으면 서버가 "익명"으로 채우고, 30자로 잘린다. `pinX`/`pinY`는 0~100
-  범위의 유한수일 때만 저장되고, 그 외에는 `null`로 저장된다. 이 유효성 검증은 모두
-  애플리케이션 코드에만 있다(DB 제약으로 옮기지 않음). 성공 시 201과 함께 생성된
-  `{ entry }`를 반환한다.
+  entry 형태(DB의 snake_case를 서버가 camelCase로 재구성): `{ id, placeId, placeName,
+  category, address, author, text, photoUrl, pinX, pinY, helpfulCount, reportCount,
+  createdAt }`. `id`는 이제 uuid 문자열이다(예전 base36 짧은 id 아님). `pinX`/`pinY`는
+  핀을 남기지 않았으면 `null`이다. `placeName`/`category`/`address`는 2026-08-25 이전에
+  등록된 행이면 빈 문자열일 수 있다(그 전엔 이 컬럼 자체가 없었다 — 아래 "테이블 스키마"
+  참고).
+- `GET /api/day4/place-info-recent`(2026-08-25 추가) — 쿼리 파라미터 없음. 특정 가게가
+  아니라 **전체 가게**를 통틀어 `created_at` 내림차순 최신 12건을 반환한다(`{ entries:
+  [...] }`, entry 형태는 위 `GET /api/day4/place-info`와 동일). `place_name is null`인
+  행(비정규화 컬럼 추가 이전의 옛 데이터)은 제외한다 — 가게 이름 없이는 카드에 뭘 보여줄지
+  알 수 없어서다. `index.html`의 "최근 등록된 길찾기" 티커가 로그인 여부와 무관하게
+  페이지 로드 시 이 엔드포인트 하나만 부른다.
+- `POST /api/day4/place-info` — 본문 `{ placeId, placeName, category, address, author,
+  text, photoUrl, pinX, pinY }`. `placeId` 누락 시 400 `MISSING_PLACE_ID`, `text` 누락 시
+  400 `MISSING_TEXT`, `text`가 500자 초과면 400 `TEXT_TOO_LONG`. `photoUrl`은 값이 있으면
+  `http(s)://`로 시작해야 하며(아니면 400 `INVALID_PHOTO_URL`), 500자를 넘으면 400
+  `PHOTO_URL_TOO_LONG`. `author`가 비어 있으면 서버가 "익명"으로 채우고, 30자로 잘린다.
+  `pinX`/`pinY`는 0~100 범위의 유한수일 때만 저장되고, 그 외에는 `null`로 저장된다.
+  `placeName`(100자)/`category`(50자)/`address`(200자)는 전부 **선택값**이다 — 없어도
+  등록 자체는 그대로 되지만(이전 계약과 호환), 값을 안 보내면 그 행은
+  `/api/day4/place-info-recent` 피드에서 빠진다(위 참고). `place.html`은 쿼리스트링으로
+  이미 받아둔 `place.name`/`place.category`/`place.address`를 그대로 실어 보낸다. 이
+  유효성 검증은 모두 애플리케이션 코드에만 있다(DB 제약으로 옮기지 않음). 성공 시 201과
+  함께 생성된 `{ entry }`를 반환한다.
 - `POST /api/day4/place-info-helpful` — 본문 `{ placeId, entryId }`. 둘 중 하나라도
   없으면 400 `MISSING_FIELDS`(`placeId`는 검증에만 쓰이고 실제 조회는 `entryId`만으로
   한다 — 요청 계약을 예전과 동일하게 유지하려고 남겨뒀다). Postgres 함수
@@ -252,6 +266,12 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   호출해 `helpful_count`를 원자적으로 1 증가시킨다(예전 파일 기반 구현의 읽기→+1→쓰기
   경쟁 조건이 없어짐). 해당 `entryId`를 찾지 못하면(RPC가 `null` 반환) 404
   `ENTRY_NOT_FOUND`. 성공 시 200과 함께 증가된 `{ helpfulCount }`를 반환한다.
+- `POST /api/day4/place-info-report`(2026-08-25 추가) — 본문 `{ placeId, entryId }`, 검증·
+  오류 코드·신뢰 모델 모두 위 `place-info-helpful`과 완전히 동일하되, 원자적 증가 대상이
+  `report_count`이고 Postgres 함수가 `increment_place_info_report(p_entry_id uuid)`,
+  성공 시 반환이 `{ reportCount }`라는 점만 다르다. "핀 신고" 기능(place.html, 핀이 있는
+  제보에만 노출)이 호출한다 — 신고된다고 그 제보가 삭제되거나 위 평균 위치 계산에서
+  자동으로 빠지지는 않는다(자세한 내용은 `DESIGN.md` §6.12 "핀 신고" 행 참고).
 - `POST /api/day4/place-info-delete` — 본문 `{ placeId, entryId }`(helpful과 같은 이유로
   `placeId`는 검증에만 쓰이고 실제 삭제는 `entryId`만으로 한다). Postgres 함수
   `delete_place_info_entry(p_entry_id uuid)`를 `POST .../rpc/delete_place_info_entry`로
@@ -274,15 +294,22 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   채우면 된다.
 - **테이블 스키마**: `place_info_entries(id uuid pk default gen_random_uuid(), place_id text,
   author text default '익명', text text, photo_url text default '', pin_x numeric,
-  pin_y numeric, helpful_count integer default 0, created_at timestamptz default now(),
-  user_id uuid references auth.users)`. `place_id`에 인덱스. RLS 활성화, `select`/`insert`
+  pin_y numeric, helpful_count integer default 0, report_count integer default 0
+  (2026-08-25 추가), created_at timestamptz default now(),
+  user_id uuid references auth.users, place_name text, category text, address text
+  (셋 다 2026-08-25 추가))`. `place_name`/`category`/`address`는 `place_saves`와 같은
+  이유로 비정규화해서 저장한다 — `/api/day4/place-info-recent`(전체 가게를 통틀어 최신
+  N건을 보여주는 피드)가 가게마다 따로 조회하지 않고 이 테이블 하나만 보고 가게 이름을
+  띄울 수 있게 하려는 목적. 컬럼 추가 당시 기존 행 4개는 전부 네시사분(`place_id
+  1925445486`) 테스트 데이터라 SQL로 직접 백필했다. `place_id`에 인덱스. RLS 활성화,
+  `select`/`insert`
   정책은 `anon`/`authenticated` 모두 허용(`using (true)` / `with check (true)`) — 지금의
   "로그인 없이 등록 가능" 규칙을 DB 레벨에서도 그대로 반영한다. `update`/`delete` 정책은
-  없음(막힘) — helpful 증가와 항목 삭제는 각각 `increment_place_info_helpful`/
-  `delete_place_info_entry` `SECURITY DEFINER` RPC로만 가능하다(Supabase 보안
-  어드바이저가 "anon이 SECURITY DEFINER 함수를 호출할 수 있다"고 두 함수 모두에 대해
-  경고하는데, 이건 의도된 설계다 — RLS로는 막혀 있는 특정 동작 하나씩만 우회해서
-  허용하는 용도이지, RLS를 완전히 무력화하는 게 아니다).
+  없음(막힘) — helpful/report 증가와 항목 삭제는 각각 `increment_place_info_helpful`/
+  `increment_place_info_report`/`delete_place_info_entry` `SECURITY DEFINER` RPC로만
+  가능하다(Supabase 보안 어드바이저가 "anon이 SECURITY DEFINER 함수를 호출할 수 있다"고
+  세 함수 모두에 대해 경고하는데, 이건 의도된 설계다 — RLS로는 막혀 있는 특정 동작
+  하나씩만 우회해서 허용하는 용도이지, RLS를 완전히 무력화하는 게 아니다).
 
 ## `place_saves` 테이블 — 가게 담기(즐겨찾기)
 
@@ -425,8 +452,8 @@ grant execute on function public.get_popular_places() to anon, authenticated;
 ## 프론트 연동
 
 - `index.html`의 히어로 검색 폼이 `/api/day4/places`를 호출한다. 결과는 히어로 바로 아래
-  "검색 결과" 섹션(`#search-results-section`)에 3장 "길찾기" 캐러셀 카드와 같은 카드 클래스
-  조합(DESIGN.md 6.11절)으로 렌더링된다.
+  "검색 결과" 섹션(`#search-results-section`)에 "먼저 다녀온 사람들이 남긴 길찾기"(1.6절)
+  캐러셀 카드와 같은 카드 클래스 조합(DESIGN.md 6.11절)으로 렌더링된다.
 - 로딩/빈 결과/오류 세 가지 상태를 처리한다. 오류는 페이지에 이미 있는 `#toast` +
   `demoNotice()`를 그대로 재사용해 보여준다(정의는 건드리지 않음).
 - `place.html`은 더 이상 정적 목업이 아니다 — `index.html`의 카드가 넘기는 `id` 쿼리
@@ -450,7 +477,20 @@ grant execute on function public.get_popular_places() to anon, authenticated;
   잡았다 — HTML뿐 아니라 이미지 등 정적 자산을 새로 추가할 때도 똑같이 적용된다). Vercel
   배포본은 `vercel.json` 없는 zero-config 정적 호스팅이라 이 화이트리스트와 무관하게
   저장소에 파일만 있으면 자동으로 서빙된다 — 로컬 전용으로 챙겨야 하는 항목이다.
-- 히어로 바로 아래 "지금 인기 맛집 TOP 5"(로그인 여부 무관, 항상 표시)와 "나를 위한
-  추천"(로그인 시에만 표시) 두 섹션이 있다. 전자는 `get_popular_places()` RPC, 후자는
-  내 `place_saves`의 카테고리 집계 + 기존 `/api/day4/places` 재사용으로 만든다. 자세한
-  내용은 `DESIGN.md` §6.17·§6.18과 이 문서의 "`get_popular_places()` 함수" 절 참고.
+- "지금 인기 맛집 TOP 5"(로그인 여부 무관, 항상 표시)와 "나를 위한 추천"(로그인 시에만
+  표시) 두 섹션이 있다(순서: 히어로 → 검색 결과 → 먼저 다녀온 사람들이 남긴 길찾기 →
+  인기 랭킹 → 맞춤 추천, 2026-08-25에 길찾기 섹션이 인기 랭킹 위로 옮겨왔다). 전자는
+  `get_popular_places()` RPC, 후자는 내 `place_saves`의 카테고리 집계 + 기존
+  `/api/day4/places` 재사용으로 만든다. 자세한 내용은 `DESIGN.md` §6.17·§6.18·§6.20과 이
+  문서의 "`get_popular_places()` 함수" 절 참고.
+- 검색 결과·인기 랭킹·나를 위한 추천·길찾기 예시 카드의 노란 CTA 버튼은 전부 "길찾기"로
+  통일돼 있고 눌러도 `place.html`(가게 상세)로 간다. 그 아래 보조 밑줄 링크가 "카카오맵에서
+  보기"로 외부 카카오맵을 새 탭에 연다(2026-08-25 이전엔 반대였다). 인기 랭킹 카드만 예외
+  — 카카오맵 링크가 없어 "가게 상세 보기" 링크 하나뿐이다. 자세한 내용은 `DESIGN.md`
+  §6.20 참고.
+- "최근 등록된 길찾기"(예전 이름 "최근 리뷰", `#recent-updates-title`)는 별점이 없는
+  활동 피드다 — 실제 리뷰 기능은 없으므로 이름과 내용을 맞췄다(2026-08-25). **처음엔
+  예시 데이터였지만(2026-08-25 안에서 또 한 번 바뀜) `/api/day4/place-info-recent`에서
+  실제 `place_info_entries`를 불러오는 실데이터 피드로 교체했다** — 예시 데이터로 남은
+  섹션은 이제 1.6절 "먼저 다녀온 사람들이 남긴 길찾기" 하나뿐이다. 자세한 내용은
+  `DESIGN.md` §6.21 참고.
