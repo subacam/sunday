@@ -222,7 +222,7 @@
 **재사용 가능한 카드 패턴 (다음 작업자 참고)**
 3장 "길찾기" 캐러셀 카드가 이번 리디자인의 기준 패턴이다. 실제 검색 결과 카드를 만들 때 아래 클래스 조합을 그대로 가져다 쓸 수 있다.
 - 카드(`<article>`): `flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl`
-- 이미지 영역: `flex h-40 items-end rounded-t-3xl bg-gradient-to-br ... p-4` (실제 사진이 들어오면 그라디언트 대신 `<img>`로 교체)
+- 이미지 영역: `relative h-40 overflow-hidden rounded-t-3xl` 안에 `<img class="h-full w-full object-cover">` + `absolute bottom-4 left-4`로 얹은 뱃지. 원래는 그라디언트 배경(`bg-gradient-to-br ...`)에 뱃지만 있었는데, 3장 "길찾기" 캐러셀의 예시 데이터 5곳에 [Lorem Picsum](https://picsum.photos)(`https://picsum.photos/seed/{고유 seed}/720/320`, API 키 불필요) 더미 이미지를 넣으면서 이 구조로 바뀌었다(2026-08-25) — seed는 가게별로 고정해 둬서 새로고침해도 같은 사진이 뜬다. **주의: Picsum은 카테고리 지정이 안 돼 임의의 스톡 사진이 나온다** — seed 이름(`day4-yeonnam-cafe` 등)은 가독성을 위한 라벨일 뿐 실제 사진 내용과 무관하다. 진짜 검색 결과 카드(`renderPlaceCard` 등)는 아직 사진이 없어 이 이미지 영역 자체가 없다
 - 본문 영역: `flex flex-1 flex-col p-6`
 - 뱃지: `mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm`
 - 주요 액션 버튼: `mt-4 h-[52px] w-full rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-[transform,background-color,box-shadow] hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md`
@@ -253,6 +253,7 @@
 | 접근성 | 1~5장 원칙을 그대로 상속한다 — 본문 18px, 캡션 16px 이상, 앰버는 실제 액션 버튼에만, 핀 아이콘은 `aria-hidden` 처리 후 옆에 텍스트 설명 병기(정밀 핀 지도의 마커·제보 폼 핀 마커 모두 동일하게 `aria-hidden`), 모든 인터랙티브 요소에 포커스 링 유지, "핀 지우기" 버튼은 `h-11`(44px)의 넉넉한 탭 영역을 갖는다. 지도(카카오맵)와 그 위 안내 문구도 `aria-hidden`·`pointer-events-none`으로 처리해 클릭 전용 보조 수단임을 분명히 하고, 진짜 키보드 조작은 가로/세로 range 두 개가 담당한다 |
 | 엔트리 카드는 hover 리프트를 쓰지 않는다 (의도적) | `index.html`의 검색 결과·길찾기 카드는 카드 전체가 링크라서 `hover:-translate-y-*`로 "누를 수 있다"는 신호를 준다. 이 페이지의 제보 카드는 전체가 링크가 아니므로(내부에 개별 버튼만 있음) 같은 리프트 효과를 의도적으로 넣지 않았다 — 나중에 편집자가 "일관성 없음"으로 오인해 임의로 추가하지 않도록 남겨두는 메모다 |
 | 카드 패턴 | 제보 카드·폼 카드 모두 6.11절 "재사용 가능한 카드 패턴"의 그림자·곡률 값을 그대로 따른다 |
+| 담기(즐겨찾기) 버튼 (§6.15와 같은 기능, 이 페이지 전용 구현) | 가게 헤더(1번 섹션) 우상단에 검색 결과 카드와 비슷한 자리(`absolute right-5 top-6`)로 붙였다. 헤더 섹션 자체를 `relative`로 두고, 제목·카테고리·주소 텍스트에는 `pr-16`을 줘서 버튼과 안 겹치게 했다. 아이콘·토글·중복 방지 로직은 index.html의 담기 버튼과 완전히 동일하지만(같은 SVG, 같은 `setSaveButtonState` 함수 모양), 공유 파일로 뽑지 않고 이 페이지 스크립트에 그대로 복붙했다 — auth.js만 예외로 공유한다는 원칙(아래 "로그인" 절) 때문이다. 초기 상태 확인·로그인 상태 변화 대응은 `window.day4RefreshPlaceSave`를 전역에 노출해 module 스크립트(auth.js 로드 이후)가 불러주는 방식이다 — `initPlacePage()`가 classic 스크립트에서 module 스크립트보다 먼저 실행돼 그 시점엔 `window.Day4Auth`가 아직 없기 때문에, `handleEntryPhotoError`를 `window`에 노출해 `onerror` 인라인 핸들러가 부르게 하는 것과 같은 패턴을 재사용했다 |
 | API 계약 | `day4/CLAUDE.md`의 `/api/place-info` 절 참고 — `/api/day4/places`와 같은 문서화 스타일로 정리했다 |
 | 구현 | `day4/place.html` 단일 파일. `index.html`과 같은 Tailwind 설정·폰트·접근성 스타일을 자체적으로 포함하며(day 폴더 간 자산 공유 금지 원칙), 이 페이지 전용 로직(엔트리 렌더링, 핀 피커, 사진 미리보기, "도움이 됐어요")은 이 파일 전용 `<script>`로 별도 작성했다 |
 
@@ -295,15 +296,15 @@
 | 항목 | 내용 |
 |---|---|
 | 목적 | 사용자가 나중에 다시 찾아볼 가게를 표시해 둘 수 있게 한다 |
-| 위치 | `#search-results-list`의 각 카드(`renderPlaceCard`) 우상단, 카드에 절대 위치(`absolute right-4 top-4`)로 얹은 원형 아이콘 버튼 — 6.11절 카드 패턴의 본문 레이아웃은 그대로 두고 카드에만 `relative`를 추가했다 |
+| 위치 | `#search-results-list`의 각 카드(`renderPlaceCard`) 우상단, 카드에 절대 위치(`absolute right-4 top-4`)로 얹은 원형 아이콘 버튼 — 6.11절 카드 패턴의 본문 레이아웃은 그대로 두고 카드에만 `relative`를 추가했다. 6.17절 인기 랭킹 카드(`renderPopularCard`)에도 같은 자리에 같은 버튼을 붙였다(좌상단 순위 배지와 자리가 겹치지 않는다). `place.html` 가게 상세 헤더에도 비슷한 위치(`absolute right-5 top-6`)로 별도 구현했다 — 자세한 내용은 6.12절 참고 |
 | 아이콘 | 책갈피(bookmark) SVG. 안 담김은 외곽선만(`stroke`), 담김은 앰버(`cta`) 채우기(`fill`) — 두 상태를 클래스 전환이 아니라 마크업 자체를 통째로 바꿔 그린다(같은 path에 fill/stroke를 섞어 CSS만으로 토글하기 어려워서) |
 | 로그인 게이트 | 비로그인 상태로 누르면 토스트로 "로그인하면 담을 수 있어요"를 띄우고 곧바로 `Day4Auth.openLoginModal()`로 로그인 모달을 연다. 등록/삭제 어느 쪽도 서버 API를 거치지 않고 클라이언트에서 직접 Supabase 테이블에 접근하므로, 로그인 여부 판단은 전적으로 `Day4Auth.getUser()`에 의존한다 |
 | 토글 동작 | 안 담김→누르면 `place_saves`에 insert, 담김→누르면 그 사용자·그 가게 행을 delete. 낙관적 갱신 없이 요청 완료(성공/실패) 후에만 아이콘 상태를 바꾼다. 요청 중 중복 클릭은 `btn.disabled`로 막는다 |
 | 중복 방지 | DB의 `unique(user_id, place_id)` 제약이 최종 방어선이다. 프론트에서 막고 있어 정상 흐름에서는 거의 발생하지 않지만, 혹시 insert가 `23505`(unique violation)로 실패하면 오류로 취급하지 않고 "이미 담김" 상태로 처리한다 |
-| 초기 상태 복원 | 검색 결과가 그려진 직후 `markSavedCards()`가 로그인 사용자·이번 검색 결과의 `place_id` 목록으로 `place_saves`를 한 번에 조회해, 이미 담아둔 가게의 버튼만 "담김"으로 바꿔 그린다. 로그아웃 상태거나 결과가 0건이면 조회 자체를 생략한다 |
+| 초기 상태 복원 | 검색 결과·인기 랭킹이 그려진 직후 `markSavedCards()`가 로그인 사용자·이번에 그려진 카드들의 `place_id` 목록으로 `place_saves`를 한 번에 조회해, 이미 담아둔 가게의 버튼만 "담김"으로 바꿔 그린다. 로그아웃 상태거나 결과가 0건이면 조회 자체를 생략한다. 버튼을 찾을 때 `document.querySelectorAll(...)`로 페이지 전체를 뒤진다 — 같은 가게가 검색 결과와 인기 랭킹에 동시에 카드로 떠 있을 수 있어, 특정 리스트 하나로 한정하면 나머지가 갱신 안 된다 |
 | 데이터 소스 | `day4/auth.js`가 새로 노출한 `Day4Auth.getClient()`(로그인에 쓰는 것과 같은 supabase-js 클라이언트 인스턴스)로 `place_saves` 테이블에 직접 insert/delete/select한다. `server.js`/`api/day4/*.js`는 건드리지 않았다 — RLS가 `auth.uid() = user_id`로 소유권을 강제하므로 서버를 거칠 이유가 없다(6.12절 핀 찍기 기능과 같은 "순수 클라이언트 사이드" 판단) |
 | 테이블/RLS | `day4/CLAUDE.md`의 "`place_saves` 테이블" 절 참고 |
-| 영향 범위 | `place.html`은 건드리지 않았다 — 담기는 검색 결과 카드에만 있고, 가게 상세 페이지에는 없다(요구 범위 밖) |
+| 영향 범위 | 처음엔 검색 결과 카드에만 있었으나, 이후 인기 랭킹 카드(6.17절)와 `place.html` 가게 상세 헤더(6.12절)까지 넓혔다 — 세 곳 모두 로직은 거의 동일하되, `place.html`은 자체 완결 원칙 때문에 index.html의 `setSaveButtonState`/클릭 핸들러를 그대로 복붙했다(공유 안 함) |
 
 ### 6.16 맛집주머니 (`day4/mypage.html`)
 > 6.15절 담기로 쌓인 `place_saves` 행을 사용자가 한곳에서 모아 보고 빼는 화면. PRD.md에는 없는 완전히 새로운 기능이라 PRD.md는 수정하지 않았다.
