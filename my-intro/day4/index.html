@@ -56,12 +56,18 @@
 <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-lg focus:bg-base focus:px-5 focus:py-3 focus:font-bold focus:text-white">본문 바로가기</a>
 
 <header class="sticky top-0 z-30 border-b border-base-tint/70 bg-white/95 shadow-sm backdrop-blur">
-  <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+  <div class="mx-auto flex max-w-5xl items-center justify-between gap-3 px-5 py-4">
     <span class="flex items-center gap-2 text-[1.25rem] font-extrabold text-base-dark">
       <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-2xl bg-base text-white shadow-sm">길</span>
       가게 길찾기
     </span>
-    <div id="auth-widget"></div>
+    <div class="flex items-center gap-3">
+      <a id="mypage-link" href="mypage.html"
+         class="hidden rounded-full bg-base-tint px-4 py-1.5 text-[1rem] font-bold text-base-dark hover:bg-base-tint/70">
+        맛집주머니
+      </a>
+      <div id="auth-widget"></div>
+    </div>
   </div>
 </header>
 
@@ -117,6 +123,24 @@
     <h2 id="search-results-title" class="text-[1.5rem] font-extrabold text-base-dark sm:text-[1.75rem]">검색 결과</h2>
     <p id="search-results-status" class="mt-3 text-[1.125rem] text-ink-soft" role="status" aria-live="polite"></p>
     <ul id="search-results-list" class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list"></ul>
+  </section>
+
+  <!-- 1.6 인기 랭킹 -->
+  <section id="popular-section" aria-labelledby="popular-title" class="bg-base-tint">
+    <div class="mx-auto max-w-5xl px-5 py-14 sm:py-20">
+      <h2 id="popular-title" class="text-[1.5rem] font-extrabold text-base-dark sm:text-[1.75rem]">지금 인기 맛집 TOP 5</h2>
+      <p class="mt-3 text-[1.125rem] text-ink-soft">사람들이 가장 많이 담아둔 가게예요.</p>
+      <p id="popular-status" class="mt-6 text-[1.0625rem] font-bold text-ink-mute" role="status" aria-live="polite"></p>
+      <ol id="popular-list" class="mt-2 hidden list-none grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list"></ol>
+    </div>
+  </section>
+
+  <!-- 1.7 맞춤 추천 (로그인 시에만 노출) -->
+  <section id="recommend-section" aria-labelledby="recommend-title" class="mx-auto hidden max-w-5xl px-5 py-14 sm:py-20">
+    <h2 id="recommend-title" class="text-[1.5rem] font-extrabold text-base-dark sm:text-[1.75rem]">나를 위한 추천</h2>
+    <p id="recommend-subtitle" class="mt-3 text-[1.125rem] text-ink-soft"></p>
+    <p id="recommend-status" class="mt-6 text-[1.0625rem] font-bold text-ink-mute" role="status" aria-live="polite"></p>
+    <ul id="recommend-list" class="mt-2 hidden grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list"></ul>
   </section>
 
   <!-- 2. 문제 공감 -->
@@ -544,6 +568,68 @@
     return 'place.html?' + params.toString();
   }
 
+  // 담기(즐겨찾기) 버튼 아이콘 — 담김/안 담김 두 상태를 다른 마크업으로 완전히
+  // 교체한다(fill/stroke를 CSS 클래스 전환만으로 섞어 표현하기 어려워서).
+  var BOOKMARK_ICON_OFF =
+    '<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
+    '<path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z" stroke-linejoin="round"/></svg>';
+  var BOOKMARK_ICON_ON =
+    '<svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">' +
+    '<path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z"/></svg>';
+
+  function setSaveButtonState(btn, saved) {
+    btn.dataset.saved = saved ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', saved ? 'true' : 'false');
+    btn.setAttribute('aria-label', saved ? '담김 (눌러서 취소)' : '담기');
+    btn.innerHTML = saved ? BOOKMARK_ICON_ON : BOOKMARK_ICON_OFF;
+    btn.className = 'absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full shadow-sm transition-colors ' +
+      (saved ? 'bg-cta text-ink hover:bg-cta-dark' : 'bg-white/95 text-ink-mute hover:bg-base-tint');
+  }
+
+  // 담기 클릭: 비로그인이면 안내 + 로그인 모달, 로그인 상태면 place_saves 테이블에 직접
+  // insert/delete로 토글한다(auth.js가 노출하는 supabase 클라이언트를 그대로 씀 — 이
+  // 기능은 순수 클라이언트 사이드라 server.js/api는 건드리지 않는다).
+  function handleSaveClick(place, btn) {
+    var user = window.Day4Auth && window.Day4Auth.getUser();
+    if (!user) {
+      demoNotice(null, '로그인하면 담을 수 있어요');
+      window.Day4Auth.openLoginModal();
+      return;
+    }
+    if (btn.disabled) return;
+
+    var wasSaved = btn.dataset.saved === 'true';
+    var client = window.Day4Auth.getClient();
+    btn.disabled = true;
+
+    var request = wasSaved
+      ? client.from('place_saves').delete().eq('user_id', user.id).eq('place_id', place.id)
+      : client.from('place_saves').insert({
+          user_id: user.id,
+          place_id: place.id,
+          place_name: place.name || '',
+          category: place.category || null,
+          address: place.address || null,
+          lat: place.lat || null,
+          lng: place.lng || null,
+        });
+
+    request.then(function (result) {
+      btn.disabled = false;
+      if (result.error) {
+        // 같은 가게를 거의 동시에 두 번 눌러 insert가 unique 제약에 걸린 경우는 실패가
+        // 아니라 "이미 담김"으로 간주한다.
+        if (!wasSaved && result.error.code === '23505') {
+          setSaveButtonState(btn, true);
+          return;
+        }
+        demoNotice(null, '담기에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      setSaveButtonState(btn, !wasSaved);
+    });
+  }
+
   function renderPlaceCard(place) {
     var li = document.createElement('li');
     var name = place.name || '이름 정보 없음';
@@ -561,15 +647,48 @@
         '가게 상세 보기</a>'
       : '';
     li.innerHTML =
-      '<article class="flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">' +
-        '<p class="text-[1rem] font-bold text-terra">' + escapeHtml(category) + '</p>' +
-        '<h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">' + escapeHtml(name) + '</h3>' +
+      '<article class="relative flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">' +
+        '<p class="pr-12 text-[1rem] font-bold text-terra">' + escapeHtml(category) + '</p>' +
+        '<h3 class="mt-1 pr-12 text-[1.25rem] font-extrabold text-ink">' + escapeHtml(name) + '</h3>' +
         '<p class="mt-3 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">' + escapeHtml(address) + '</p>' +
         '<p class="mt-2 text-[1rem] font-bold text-ink-mute">' + escapeHtml(phone) + '</p>' +
         linkHtml +
         detailHtml +
       '</article>';
+
+    if (place.id) {
+      var article = li.querySelector('article');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.saveBtn = 'true';
+      btn.dataset.placeId = place.id;
+      setSaveButtonState(btn, false);
+      btn.addEventListener('click', function () { handleSaveClick(place, btn); });
+      article.appendChild(btn);
+    }
+
     return li;
+  }
+
+  // 이번 검색 결과 중 이미 담아둔 가게가 있으면 처음부터 "담김" 상태로 보여준다.
+  function markSavedCards(places) {
+    var user = window.Day4Auth && window.Day4Auth.getUser();
+    if (!user) return;
+    var ids = places.map(function (p) { return p.id; }).filter(Boolean);
+    if (ids.length === 0) return;
+
+    window.Day4Auth.getClient()
+      .from('place_saves')
+      .select('place_id')
+      .eq('user_id', user.id)
+      .in('place_id', ids)
+      .then(function (result) {
+        if (result.error || !result.data) return;
+        result.data.forEach(function (row) {
+          var btn = resultsList.querySelector('[data-save-btn][data-place-id="' + CSS.escape(row.place_id) + '"]');
+          if (btn) setSaveButtonState(btn, true);
+        });
+      });
   }
 
   function handleSearchSubmit(event) {
@@ -604,6 +723,7 @@
         places.forEach(function (place) {
           resultsList.appendChild(renderPlaceCard(place));
         });
+        markSavedCards(places);
       })
       .catch(function () {
         resultsSection.classList.add('hidden');
@@ -612,6 +732,147 @@
       });
 
     return false;
+  }
+
+  // 인기 랭킹: place_saves를 사용자 조건 없이 집계해야 해서(RLS는 자기 담기만 허용) 서버
+  // 함수 get_popular_places()(SECURITY DEFINER, 가게 정보·담긴 횟수만 반환하고 누가
+  // 담았는지는 절대 내보내지 않음)를 RPC로 부른다.
+  function renderPopularCard(rank, place) {
+    var li = document.createElement('li');
+    var name = place.name || '이름 정보 없음';
+    var category = place.category || '정보 없음';
+    var address = place.address || '주소 정보 없음';
+    var detailHtml = place.id
+      ? '<a href="' + escapeHtml(buildPlaceHref(place)) + '" ' +
+        'class="mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark">' +
+        '가게 상세 보기</a>'
+      : '';
+    li.innerHTML =
+      '<article class="relative flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white p-6 pt-8 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">' +
+        '<span class="absolute -left-3 -top-3 grid h-10 w-10 place-items-center rounded-full bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm">' + rank + '</span>' +
+        '<p class="text-[1rem] font-bold text-terra">' + escapeHtml(category) + '</p>' +
+        '<h3 class="mt-1 text-[1.25rem] font-extrabold text-ink">' + escapeHtml(name) + '</h3>' +
+        '<p class="mt-3 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">' + escapeHtml(address) + '</p>' +
+        '<p class="mt-2 text-[1rem] font-bold text-ink-mute">' + place.saveCount + '명이 담았어요</p>' +
+        detailHtml +
+      '</article>';
+    return li;
+  }
+
+  function loadPopularPlaces() {
+    var status = document.getElementById('popular-status');
+    var list = document.getElementById('popular-list');
+    status.textContent = '불러오는 중입니다…';
+    list.innerHTML = '';
+    list.classList.add('hidden');
+
+    window.Day4Auth.getClient()
+      .rpc('get_popular_places')
+      .then(function (result) {
+        if (result.error) {
+          status.textContent = '';
+          return;
+        }
+        var rows = result.data || [];
+        if (rows.length === 0) {
+          status.textContent = '아직 담긴 가게가 없어요. 첫 번째로 담아보세요!';
+          return;
+        }
+        status.textContent = '';
+        rows.forEach(function (row, index) {
+          list.appendChild(renderPopularCard(index + 1, {
+            id: row.place_id,
+            name: row.place_name,
+            category: row.category,
+            address: row.address,
+            lat: row.lat,
+            lng: row.lng,
+            saveCount: row.save_count,
+          }));
+        });
+        list.classList.remove('hidden');
+      });
+  }
+
+  // 맞춤 추천: 로그인한 사용자가 담은 가게들의 category 중 가장 많이 등장한 카테고리를
+  // 찾아, 그 카테고리로 기존 검색 API를 다시 호출해 새로운 가게를 보여준다. 이미 담은
+  // 가게(place_id 기준)는 결과에서 제외한다. 별도 서버 로직 없이 기존 place_saves
+  // select(RLS로 본인 것만)와 /api/day4/places만 재사용한다.
+  function loadRecommendations() {
+    var section = document.getElementById('recommend-section');
+    var subtitle = document.getElementById('recommend-subtitle');
+    var status = document.getElementById('recommend-status');
+    var list = document.getElementById('recommend-list');
+
+    status.textContent = '추천을 준비하는 중입니다…';
+    subtitle.textContent = '';
+    list.innerHTML = '';
+    list.classList.add('hidden');
+    section.classList.remove('hidden');
+
+    window.Day4Auth.getClient()
+      .from('place_saves')
+      .select('place_id, category')
+      .then(function (result) {
+        if (result.error) {
+          section.classList.add('hidden');
+          return;
+        }
+        var rows = result.data || [];
+        var savedIds = {};
+        var categoryCounts = {};
+        rows.forEach(function (row) {
+          if (row.place_id) savedIds[row.place_id] = true;
+          var cat = (row.category || '').trim();
+          if (!cat) return;
+          categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        });
+
+        var topCategory = null;
+        var topCount = 0;
+        Object.keys(categoryCounts).forEach(function (cat) {
+          if (categoryCounts[cat] > topCount) {
+            topCategory = cat;
+            topCount = categoryCounts[cat];
+          }
+        });
+
+        if (!topCategory) {
+          section.classList.add('hidden');
+          return;
+        }
+
+        subtitle.textContent = '자주 담은 "' + topCategory + '" 카테고리의 다른 가게예요.';
+
+        fetch('/api/day4/places?query=' + encodeURIComponent(topCategory))
+          .then(function (res) {
+            return res.json().then(function (body) { return { ok: res.ok, body: body }; });
+          })
+          .then(function (result) {
+            if (!result.ok) {
+              status.textContent = '';
+              section.classList.add('hidden');
+              return;
+            }
+            var places = ((result.body && result.body.places) || [])
+              .filter(function (place) { return place.id && !savedIds[place.id]; })
+              .slice(0, 5);
+
+            status.textContent = '';
+            if (places.length === 0) {
+              status.textContent = '추천할 새로운 가게를 찾지 못했어요.';
+              return;
+            }
+            places.forEach(function (place) {
+              list.appendChild(renderPlaceCard(place));
+            });
+            list.classList.remove('hidden');
+          })
+          .catch(function () {
+            status.textContent = '';
+            section.classList.add('hidden');
+          });
+      });
   }
 
   // 리뷰 흐름 멈추기 / 다시 흐르게 하기
@@ -628,6 +889,31 @@
 <script type="module">
   import './auth.js';
   window.Day4Auth.mountHeaderWidget(document.getElementById('auth-widget'));
+
+  // auth.js는 초기 세션 확인(getSession)과 Supabase의 자체 INITIAL_SESSION 이벤트가 각각
+  // notify를 부르므로, 로그인 상태 자체는 안 바뀌었는데도 onAuthChange가 두 번 불릴 수
+  // 있다. loadRecommendations()는 시작할 때만 목록을 비우고 완료 시 append만 하므로, 짧은
+  // 간격으로 두 번 겹쳐 불리면 추천 카드가 중복으로 그려진다(mypage.html의 담기 목록에서
+  // 실제로 겪은 버그와 같은 원인) — 마지막으로 처리한 사용자 id와 같으면 다시 부르지
+  // 않도록 막는다.
+  var lastAuthUserId = null;
+  window.Day4Auth.onAuthChange(function (user) {
+    var mypageLink = document.getElementById('mypage-link');
+    if (mypageLink) mypageLink.classList.toggle('hidden', !user);
+
+    var userId = user ? user.id : null;
+    if (userId === lastAuthUserId) return;
+    lastAuthUserId = userId;
+
+    if (user) {
+      loadRecommendations();
+    } else {
+      document.getElementById('recommend-section').classList.add('hidden');
+    }
+  });
+
+  // 인기 랭킹은 로그인 여부와 무관하게 누구나 볼 수 있는 공개 콘텐츠라 한 번만 불러온다.
+  loadPopularPlaces();
 </script>
 
 </body>

@@ -714,15 +714,16 @@ function handleDeletePlaceInfo(req, res) {
     });
 }
 
-// index.html / place.html은 자체 완결(Tailwind CDN + Google Fonts CDN, 로컬 자산 없음)이라
-// 화이트리스트에 원래 두 HTML 파일만 있었다. auth.js는 두 HTML이 공유하는 유일한 로컬
-// 자산이라 여기 추가했다(day4/CLAUDE.md "로그인(Supabase Auth)" 절 참고). 디렉터리 밖
-// 경로를 절대 열어주지 않기 위해 임의 경로 대신 화이트리스트를 쓴다(day7/restaurant/server.js와
-// 동일한 접근).
+// index.html / place.html / mypage.html은 각자 자체 완결(Tailwind CDN + Google Fonts CDN,
+// 로컬 자산 없음)이라 화이트리스트에 원래 두 HTML 파일만 있었고, mypage.html("맛집주머니")을
+// 추가하면서 세 개가 됐다. auth.js는 세 HTML이 공유하는 유일한 로컬 자산이라 여기
+// 추가했다(day4/CLAUDE.md "로그인(Supabase Auth)" 절 참고). 디렉터리 밖 경로를 절대 열어주지
+// 않기 위해 임의 경로 대신 화이트리스트를 쓴다(day7/restaurant/server.js와 동일한 접근).
 const STATIC_FILES = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
   "/index.html": { file: "index.html", type: "text/html; charset=utf-8" },
   "/place.html": { file: "place.html", type: "text/html; charset=utf-8" },
+  "/mypage.html": { file: "mypage.html", type: "text/html; charset=utf-8" },
   "/auth.js": { file: "auth.js", type: "text/javascript; charset=utf-8" },
 };
 

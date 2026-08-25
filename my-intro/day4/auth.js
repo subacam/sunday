@@ -239,6 +239,12 @@ function mountHeaderWidget(container) {
   onAuthChange((user) => renderHeaderWidget(container, user));
 }
 
+// 로그인 상태를 재사용하는 미래 기능(즐겨찾기/담기 등)이 auth.js를 새로 열지 않고도
+// 같은 세션이 걸린 supabase 클라이언트로 직접 테이블을 조회/기록할 수 있게 노출한다.
+function getClient() {
+  return supabase;
+}
+
 window.Day4Auth = {
   getUser: getUser,
   onAuthChange: onAuthChange,
@@ -246,4 +252,5 @@ window.Day4Auth = {
   openLoginModal: openLoginModal,
   signOut: signOut,
   mountHeaderWidget: mountHeaderWidget,
+  getClient: getClient,
 };

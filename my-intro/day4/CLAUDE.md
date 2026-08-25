@@ -284,6 +284,97 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   경고하는데, 이건 의도된 설계다 — RLS로는 막혀 있는 특정 동작 하나씩만 우회해서
   허용하는 용도이지, RLS를 완전히 무력화하는 게 아니다).
 
+## `place_saves` 테이블 — 가게 담기(즐겨찾기)
+
+로그인한 사용자가 검색 결과 카드에서 가게를 자기 목록에 담아두는 기능(`index.html`
+전용, `place.html`에는 없음)을 위한 테이블이다. `place_info_entries`와 달리 **서버를
+거치지 않는다** — `index.html`이 `auth.js`가 노출하는 `Day4Auth.getClient()`(로그인에
+쓰는 것과 같은 supabase-js 클라이언트)로 직접 insert/delete/select한다. RLS의
+`auth.uid() = user_id` 정책이 소유권을 강제하므로 anon 키를 쓰는 서버 프록시를 하나 더
+둘 이유가 없다 — place.html의 핀 찍기 기능(day4/CLAUDE.md "카카오맵 JS SDK" 절)과 같은
+판단이다. 자세한 UI 동작은 `DESIGN.md` §6.15 참고.
+
+- **테이블 스키마**: `place_saves(id uuid pk default gen_random_uuid(), user_id uuid not
+  null references auth.users(id) on delete cascade, place_id text not null, place_name
+  text not null, category text, address text, lat text, lng text, created_at timestamptz
+  not null default now(), unique(user_id, place_id))`. `user_id`에 인덱스.
+  `place_info_entries.pin_x`/`pin_y`는 0~100 퍼센트라 `numeric`을 쓰지만, `lat`/`lng`은
+  카카오가 원래 문자열로 주는 좌표(`day4/CLAUDE.md`의 `/api/day4/places` 계약 —
+  "`lat`/`lng`(`y`/`x`, 문자열 그대로)")를 그대로 저장할 뿐 연산하지 않으므로 `text`로
+  통일했다.
+- **RLS**: 활성화. `select`/`insert`/`delete` 세 정책 모두 `to authenticated`이고
+  `auth.uid() = user_id`(insert는 `with check`, 나머지는 `using`)로 자기 행만 건드릴 수
+  있게 막는다. `anon`에는 어떤 정책도 없다 — 비로그인 사용자는 담기 자체를 시도하지
+  못하게 프론트에서 막고 있어(`Day4Auth.getUser()` 확인 후 없으면 로그인 모달만 연다)
+  서버 쪽에서도 굳이 열어둘 이유가 없다. `update` 정책은 없음(막힘, 애초에 갱신할 열이
+  없음).
+- **중복 방지**: `unique(user_id, place_id)`가 최종 방어선이다. 프론트는 버튼의
+  `data-saved` 상태로 같은 가게를 두 번 담는 요청 자체를 웬만하면 안 보내지만, 혹시
+  경쟁 상태로 insert가 `23505`(unique violation)로 실패하면 `index.html`이 이를 오류가
+  아니라 "이미 담김"으로 처리한다.
+- 테이블 생성 SQL은 저장소에 파일로 두지 않았다(`place_info_entries`도 마찬가지 —
+  Supabase 대시보드 SQL 에디터에 직접 붙여넣어 실행하는 방식이 이 프로젝트의 관례다).
+
+## `get_popular_places()` 함수 — 인기 랭킹 전용 창구
+
+`place_saves`는 RLS로 `select`가 `auth.uid() = user_id`(본인 것만)로 막혀 있어(위
+"`place_saves` 테이블" 절), 메인 화면의 "지금 인기 맛집 TOP 5"처럼 **모든 사용자**의
+담기를 합산해야 하는 화면은 일반 select로는 만들 수 없다. RLS를 끄는 대신(금지 사항)
+`increment_place_info_helpful`/`delete_place_info_entry`(위 `place_info_entries` 절)와
+같은 패턴으로 `SECURITY DEFINER` Postgres 함수를 하나 더 뒀다.
+
+```sql
+create or replace function public.get_popular_places()
+returns table (
+  place_id text, place_name text, category text, address text,
+  lat text, lng text, save_count bigint
+)
+language sql stable security definer set search_path = public as $$
+  select place_id, max(place_name), max(category), max(address), max(lat), max(lng), count(*)
+  from public.place_saves
+  group by place_id
+  order by save_count desc, place_id
+  limit 5;
+$$;
+
+grant execute on function public.get_popular_places() to anon, authenticated;
+```
+
+- **소유자(함수를 만든 role, 이 프로젝트에서는 `postgres`) 권한으로 실행**되어 RLS를
+  우회해 전체 `place_saves`를 집계할 수 있지만, **반환 컬럼에 `user_id`가 없다** — "누가
+  담았는지"는 함수 정의 자체에 존재하지 않아 호출부가 실수로도 받을 방법이 없다. 반환하는
+  건 가게 정보(이름·카테고리·주소·좌표)와 `save_count`(그 가게를 담은 서로 다른 사용자
+  수 — `place_saves`의 `unique(user_id, place_id)` 덕분에 `count(*)`가 곧 distinct 사용자
+  수와 같다)뿐이다.
+- `anon`·`authenticated` 둘 다 EXECUTE 권한을 줬다 — 로그인 여부와 무관하게 누구나 보는
+  공개 랭킹이라서다(6.17절). 담기(6.15절)·맛집주머니(6.16절)가 로그인을 요구하는 것과는
+  다른 공개 범위이니 혼동하지 말 것.
+- 클라이언트는 `Day4Auth.getClient().rpc('get_popular_places')`로 직접 부른다 —
+  서버(`server.js`/`api/day4/*.js`)를 거치지 않는다(6.15/6.16절과 같은 판단: RLS/함수
+  권한이 이미 접근 범위를 정확히 통제하므로 anon 키 프록시를 하나 더 둘 이유가 없다).
+- 이 함수는 `apply_migration`으로 만들었다(테이블과 달리 이건 저장소에 SQL로 남겨두지
+  않았다는 원칙에서 예외를 둔 게 아니라, 위 SQL 자체가 그 기록이다 — 필요하면 Supabase
+  대시보드 SQL 에디터에 그대로 다시 붙여넣어도 된다. `create or replace function`이라
+  재실행해도 안전하다).
+
+## 더미 시드 데이터 (`place_saves`, 100건)
+
+인기 랭킹·맞춤 추천 기능을 실제 데이터 없이 개발/확인하기 위해 `place_saves`에 100건을
+채워 넣었다(2026-08-25). 실제 서비스 데이터가 아니므로 언제든 지워도 무방하다.
+
+- **가짜 가게 25곳** — `place_id`가 `seed-0001`~`seed-0025`인 서울 지역 가상의 가게(한식·
+  카페·일식·고기구이·술집 등 다양한 카테고리). 담긴 횟수는 상위 5곳이 15/12/10/9/8건,
+  나머지 20곳이 3건 또는 2건으로 분산되도록 의도적으로 설계해 랭킹 TOP 5가 명확히
+  구분되게 했다(합계 100건).
+- **가짜 계정 20명** — `auth.users`에 `seed-user-01@dummy.local`~`seed-user-20@dummy.local`
+  이메일로 만든 계정. `place_saves.user_id`가 `auth.users(id)`를 참조하는 FK라 더미
+  담기 행을 만들려면 실제로 존재하는 `auth.users` 행이 있어야 해서다. **로그인에 쓸 수
+  없다** — `encrypted_password`를 빈 문자열로 넣어서 실제 인증 흐름(비밀번호 로그인)이
+  통과하지 못한다. 오직 FK 대상으로만 존재한다.
+- 정리하려면 `delete from public.place_saves where place_id like 'seed-%';` 다음
+  `delete from auth.users where email like 'seed-user-%@dummy.local';` 순서로 지우면
+  된다(참조 무결성 때문에 place_saves를 먼저 지워야 한다).
+
 ## 로그인(Supabase Auth) — `day4/auth.js`가 유일한 공유 파일인 이유
 
 `index.html`/`place.html`은 원칙적으로 각자 자체 완결이라 작은 헬퍼(`escapeHtml()`, 토스트
@@ -304,10 +395,13 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   쓰는 `.env.local`의 같은 값과 반드시 일치해야 한다 — 값이 바뀌면 세 곳 다 고칠 것.
 - `window.Day4Auth`가 유일한 공개 접점이다: `getUser()`(캐시된 세션 기준 동기 반환),
   `onAuthChange(callback)`(구독 즉시 현재 상태로 1회 호출 + 이후 변경마다 호출),
-  `requireLogin()`(로그인 안 됐으면 모달 열고 `false` 반환 — 미래에 "로그인 필요" 액션의
-  클릭 핸들러 맨 앞에 한 줄로 꽂아 쓰라고 만든 헬퍼, 이번 범위에선 아무도 호출하지
-  않는다), `openLoginModal()`, `signOut()`, `mountHeaderWidget(containerEl)`(헤더의
-  로그인/로그아웃 표시를 그리고 상태 변화에 맞춰 자동 갱신).
+  `requireLogin()`(로그인 안 됐으면 모달 열고 `false` 반환 — "로그인 필요" 액션의 클릭
+  핸들러 맨 앞에 한 줄로 꽂아 쓰라고 만든 헬퍼, 아직 아무도 호출하지 않는다),
+  `openLoginModal()`, `signOut()`, `mountHeaderWidget(containerEl)`(헤더의 로그인/로그아웃
+  표시를 그리고 상태 변화에 맞춰 자동 갱신), `getClient()`(로그인에 쓰는 것과 같은
+  supabase-js 클라이언트 인스턴스를 그대로 반환 — 담기(`place_saves`)처럼 RLS로 소유권을
+  검증하면 되는 기능이 서버를 거치지 않고 바로 테이블을 두드릴 수 있게 하려고 추가했다.
+  자세한 사용례는 "`place_saves` 테이블" 절).
 - 세션 유지는 `createClient` 기본 동작(`persistSession`/`autoRefreshToken`)에 그대로
   맡긴다 — 별도로 손댄 게 없다. 새로고침해도 로그인 상태가 유지되는 이유.
 - 회원가입 흐름(`supabase.auth.signUp`)이 가입 즉시 로그인까지 되려면 **Supabase
@@ -318,6 +412,15 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
 - 로그인 여부와 무관하게 검색·리뷰 조회·AI 분석·핀 등록/삭제("도움이 됐어요" 포함)는
   전부 그대로 동작한다 — 로그인은 지금은 순수 UI/세션 기능일 뿐, 어떤 기존 API도
   게이트하지 않는다.
+- **`onAuthChange`는 페이지 진입 시 같은 로그인 상태로 두 번 불릴 수 있다.** 초기 세션
+  확인(`supabase.auth.getSession()`)과 Supabase 자체의 `INITIAL_SESSION` 이벤트
+  (`onAuthStateChange`)가 각각 `notify()`를 부르기 때문이다. 콜백 안에서 매번 목록을
+  새로 그리는 로직(예: `mypage.html`의 `loadSavedPlaces()`, `index.html`의
+  `loadRecommendations()`)은 시작할 때만 비우고 완료 시 append만 하므로, 두 번 겹쳐
+  불리면 같은 데이터가 카드로 중복 렌더링된다 — `mypage.html` 개발 중 실제로 겪은
+  버그(DB에는 1행인데 화면엔 카드 2장)다. 두 파일 모두 `onAuthChange` 콜백 맨 앞에서
+  "마지막으로 처리한 사용자 id와 같으면 무시" 가드를 넣어 막았다(`var lastAuthUserId`
+  패턴). **이런 콜백을 새로 추가할 때는 같은 가드를 반드시 넣을 것.**
 
 ## 프론트 연동
 
@@ -333,3 +436,18 @@ public select/insert 정책이 서버가 필요로 하는 권한과 정확히 �
   **버튼 없이 자동으로** 이어진다 — 리뷰 자체는 여전히 "리뷰 보기" 클릭이 트리거지만, 그
   다음 AI 분석은 리뷰 로딩 완료가 트리거다. 리뷰가 0개면 이 자동 트리거 자체가 발동하지
   않는다. 자세한 내용은 `DESIGN.md` §6.14 참고.
+- 검색 결과 카드마다 우상단에 담기(즐겨찾기) 아이콘 버튼이 있다 — 로그인 필요, 클릭으로
+  담기/취소 토글, 이미 담아둔 가게는 검색 직후 자동으로 "담김" 상태로 표시된다. 자세한
+  내용은 `DESIGN.md` §6.15와 이 문서의 "`place_saves` 테이블" 절 참고.
+- `day4/mypage.html`("맛집주머니")은 `place_saves`에 쌓인 내 담기 목록을 카드로 모아 보고
+  삭제(X)할 수 있는 별도 페이지다. `index.html` 헤더의 "맛집주머니" 버튼은 로그인 상태일
+  때만 보인다. 자세한 내용은 `DESIGN.md` §6.16 참고. **로컬(`node server.js`)에서 새 HTML
+  페이지를 추가할 때는 위 "index.html / place.html / mypage.html은..." 주석 옆
+  `STATIC_FILES` 화이트리스트에도 등록해야 한다** — 잊으면 그 페이지만 404가 난다(실제로
+  `mypage.html` 추가 때 한 번 빠뜨렸다가 잡았다). Vercel 배포본은 `vercel.json` 없는
+  zero-config 정적 호스팅이라 이 화이트리스트와 무관하게 저장소에 파일만 있으면 자동으로
+  서빙된다 — 로컬 전용으로 챙겨야 하는 항목이다.
+- 히어로 바로 아래 "지금 인기 맛집 TOP 5"(로그인 여부 무관, 항상 표시)와 "나를 위한
+  추천"(로그인 시에만 표시) 두 섹션이 있다. 전자는 `get_popular_places()` RPC, 후자는
+  내 `place_saves`의 카테고리 집계 + 기존 `/api/day4/places` 재사용으로 만든다. 자세한
+  내용은 `DESIGN.md` §6.17·§6.18과 이 문서의 "`get_popular_places()` 함수" 절 참고.

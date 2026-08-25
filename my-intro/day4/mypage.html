@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>맛집주머니 | 가게 길찾기</title>
+<meta name="description" content="내가 담은 가게를 한곳에서 모아 보세요.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          base:  { DEFAULT: '#2F5D50', dark: '#1E4036', light: '#3E7A67', tint: '#EDF3EF' },
+          terra: { DEFAULT: '#B45F49', tint: '#FAF0EB' },
+          cta:   { DEFAULT: '#E8A33D', dark: '#C9871F' },
+          ink:   { DEFAULT: '#1F2A24', soft: '#3F4B45', mute: '#5C6B63' }
+        },
+        fontFamily: {
+          sans: ['Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', 'sans-serif']
+        }
+      }
+    }
+  };
+</script>
+<style>
+  /* 본문 18px 기준(DESIGN 3.2) — 캡션도 16px 아래로 내려가지 않는다 */
+  body { font-size: 18px; line-height: 1.75; }
+
+  /* 키보드 포커스를 항상 눈에 보이게 */
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid #1E4036;
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body class="bg-white font-sans text-ink antialiased">
+
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-lg focus:bg-base focus:px-5 focus:py-3 focus:font-bold focus:text-white">본문 바로가기</a>
+
+<header class="sticky top-0 z-30 border-b border-base-tint/70 bg-white/95 shadow-sm backdrop-blur">
+  <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+    <a href="index.html" class="flex items-center gap-2 text-[1.25rem] font-extrabold text-base-dark">
+      <span aria-hidden="true" class="grid h-9 w-9 place-items-center rounded-2xl bg-base text-white shadow-sm">길</span>
+      가게 길찾기
+    </a>
+    <div id="auth-widget"></div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- 뒤로가기 -->
+  <div class="mx-auto max-w-5xl px-5 pt-6">
+    <a href="index.html" class="inline-flex items-center gap-1.5 text-[1.0625rem] font-bold text-base-dark hover:text-cta-dark">
+      <span aria-hidden="true">←</span> 메인으로 돌아가기
+    </a>
+  </div>
+
+  <section class="mx-auto max-w-5xl px-5 pb-16 pt-6 sm:pt-8">
+    <p class="text-[1rem] font-bold text-terra">내가 담은 가게</p>
+    <h1 class="mt-1 text-[2rem] font-extrabold leading-[1.35] text-base-dark sm:text-[2.5rem]">맛집주머니</h1>
+    <p class="mt-3 max-w-2xl text-[1.125rem] leading-[1.8] text-ink-soft">
+      담아둔 가게를 한곳에서 모아 보고, 필요 없어지면 바로 빼세요.
+    </p>
+
+    <!-- 로그인 필요 -->
+    <div id="login-required-section" class="mt-10 hidden rounded-3xl border border-base-tint/60 bg-base-tint p-10 text-center">
+      <p class="text-[1.125rem] font-bold text-ink">로그인하면 담아둔 가게를 볼 수 있어요.</p>
+      <button type="button" onclick="window.Day4Auth && window.Day4Auth.openLoginModal();"
+              class="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-cta px-8 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
+        로그인
+      </button>
+    </div>
+
+    <!-- 로딩/오류 상태 줄 -->
+    <p id="saved-status" role="status" aria-live="polite" class="mt-10 text-[1.0625rem] font-bold text-ink-mute"></p>
+
+    <!-- 아무것도 안 담았을 때 -->
+    <div id="empty-section" class="mt-2 hidden rounded-3xl border border-base-tint/60 bg-base-tint p-10 text-center">
+      <p class="text-[1.125rem] font-bold text-ink">아직 담은 맛집이 없어요. 검색하러 가볼까요?</p>
+      <a href="index.html"
+         class="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-cta px-8 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
+        검색하러 가기
+      </a>
+    </div>
+
+    <!-- 담은 가게 카드 목록 -->
+    <ul id="saved-list" class="mt-2 hidden grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list"></ul>
+  </section>
+
+</main>
+
+<footer class="bg-base-dark text-white">
+  <div class="mx-auto max-w-5xl px-5 py-12">
+    <p class="text-[1.25rem] font-extrabold">가게 길찾기</p>
+    <p class="mt-3 max-w-xl text-[1.0625rem] leading-[1.75] text-[#D6E2DB]">
+      주소는 아는데 입구를 못 찾는 문제를 해결합니다. 맛집주머니는 로그인한 사용자가 담아둔 가게를 모아 보는 화면입니다.
+    </p>
+
+    <ul class="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-[1.0625rem]" role="list">
+      <li>만든 사람 <span class="font-bold">JYS</span></li>
+      <li><a class="font-bold underline underline-offset-4 hover:text-cta" href="https://github.com/subacam" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a class="font-bold underline underline-offset-4 hover:text-cta" href="index.html">가게 길찾기 메인으로</a></li>
+    </ul>
+
+    <p class="mt-8 text-[1rem] text-[#B7C8BE]">© 2026 JYS · my-intro / day4</p>
+  </div>
+</footer>
+
+<!-- 데모 안내 토스트 -->
+<div id="mypage-toast" role="status" aria-live="polite"
+     class="pointer-events-none fixed inset-x-0 bottom-6 z-50 mx-auto hidden w-[min(90%,32rem)] rounded-xl bg-ink px-5 py-4 text-center text-[1.0625rem] font-bold text-white"></div>
+
+<script>
+  var mypageToast = document.getElementById('mypage-toast');
+  var mypageToastTimer;
+  function mypageNotice(message) {
+    mypageToast.textContent = message;
+    mypageToast.classList.remove('hidden');
+    clearTimeout(mypageToastTimer);
+    mypageToastTimer = setTimeout(function () { mypageToast.classList.add('hidden'); }, 2600);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function formatSavedDate(isoString) {
+    var d = new Date(isoString);
+    if (isNaN(d.getTime())) return '';
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '.' + m + '.' + day;
+  }
+
+  // 저장된 좌표로 구글 지도 검색 링크를 만든다 — place_saves에는 구글맵 링크 자체를
+  // 저장하지 않으므로(카카오 place_url만 알고 있음) 좌표 기반 검색 딥링크로 대체한다.
+  function googleMapsUrl(entry) {
+    if (entry.lat && entry.lng) {
+      return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(entry.lat) + ',' + encodeURIComponent(entry.lng);
+    }
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(entry.place_name || '');
+  }
+
+  var savedList = document.getElementById('saved-list');
+  var savedStatus = document.getElementById('saved-status');
+  var emptySection = document.getElementById('empty-section');
+  var loginRequiredSection = document.getElementById('login-required-section');
+
+  function renderSavedCard(entry) {
+    var li = document.createElement('li');
+    var name = entry.place_name || '이름 정보 없음';
+    var category = entry.category || '정보 없음';
+    var address = entry.address || '주소 정보 없음';
+    var savedDate = formatSavedDate(entry.created_at);
+
+    li.innerHTML =
+      '<article class="relative flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">' +
+        '<p class="pr-10 text-[1rem] font-bold text-terra">' + escapeHtml(category) + '</p>' +
+        '<h3 class="mt-1 pr-10 text-[1.25rem] font-extrabold text-ink">' + escapeHtml(name) + '</h3>' +
+        '<p class="mt-3 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">' + escapeHtml(address) + '</p>' +
+        (savedDate ? '<p class="mt-2 text-[1rem] font-bold text-ink-mute">' + escapeHtml(savedDate) + ' 담음</p>' : '') +
+        '<a href="' + escapeHtml(googleMapsUrl(entry)) + '" target="_blank" rel="noopener" ' +
+          'class="mt-4 flex h-[52px] items-center justify-center rounded-2xl bg-cta px-4 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">' +
+          '구글맵 보기</a>' +
+      '</article>';
+
+    var article = li.querySelector('article');
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.setAttribute('aria-label', '맛집주머니에서 삭제');
+    delBtn.className = 'absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-white/95 text-ink-mute shadow-sm transition-colors hover:bg-terra hover:text-white';
+    delBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">' +
+      '<path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>';
+    delBtn.addEventListener('click', function () { handleDelete(entry.id, li, delBtn); });
+    article.appendChild(delBtn);
+
+    return li;
+  }
+
+  function showEmptyState() {
+    emptySection.classList.remove('hidden');
+    savedList.classList.add('hidden');
+  }
+
+  function handleDelete(id, li, btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    window.Day4Auth.getClient()
+      .from('place_saves')
+      .delete()
+      .eq('id', id)
+      .then(function (result) {
+        if (result.error) {
+          btn.disabled = false;
+          mypageNotice('삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+          return;
+        }
+        li.remove();
+        if (savedList.children.length === 0) {
+          showEmptyState();
+        }
+      });
+  }
+
+  // "내 것만 골라줘" 조건을 걸지 않고 전체를 요청한다 — RLS의
+  // place_saves_select_own 정책(auth.uid() = user_id)이 로그인한 사용자 몫만 돌려준다.
+  function loadSavedPlaces() {
+    savedStatus.textContent = '불러오는 중입니다…';
+    savedList.innerHTML = '';
+    savedList.classList.add('hidden');
+    emptySection.classList.add('hidden');
+
+    window.Day4Auth.getClient()
+      .from('place_saves')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(function (result) {
+        if (result.error) {
+          savedStatus.textContent = '';
+          mypageNotice('맛집주머니를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+          return;
+        }
+        var entries = result.data || [];
+        savedStatus.textContent = '';
+        if (entries.length === 0) {
+          showEmptyState();
+          return;
+        }
+        entries.forEach(function (entry) {
+          savedList.appendChild(renderSavedCard(entry));
+        });
+        savedList.classList.remove('hidden');
+      });
+  }
+</script>
+
+<script type="module">
+  import './auth.js';
+  window.Day4Auth.mountHeaderWidget(document.getElementById('auth-widget'));
+
+  // auth.js는 초기 세션 확인(getSession) 결과와 Supabase의 자체 INITIAL_SESSION 이벤트가
+  // 각각 notify를 부르므로, 로그인 상태 자체는 안 바뀌었는데도 onAuthChange가 두 번
+  // 불릴 수 있다. loadSavedPlaces()는 시작할 때만 목록을 비우고 완료 시 append만 하므로,
+  // 짧은 간격으로 두 번 겹쳐 불리면 같은 행이 카드로 두 번 그려진다 — 실제로 겪은 버그라
+  // 마지막으로 처리한 사용자 id와 같으면 다시 부르지 않도록 막는다.
+  var lastAuthUserId = null;
+  window.Day4Auth.onAuthChange(function (user) {
+    var userId = user ? user.id : null;
+    if (userId === lastAuthUserId) return;
+    lastAuthUserId = userId;
+
+    if (!user) {
+      loginRequiredSection.classList.remove('hidden');
+      savedStatus.textContent = '';
+      savedList.classList.add('hidden');
+      emptySection.classList.add('hidden');
+      return;
+    }
+    loginRequiredSection.classList.add('hidden');
+    loadSavedPlaces();
+  });
+</script>
+
+</body>
+</html>
