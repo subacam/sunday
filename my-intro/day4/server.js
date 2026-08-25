@@ -895,5 +895,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log("가게 길찾기 서버 실행 중: http://localhost:" + PORT);
+  console.log("맛집 길찾기 서버 실행 중: http://localhost:" + PORT);
 });

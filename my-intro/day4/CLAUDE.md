@@ -1,6 +1,6 @@
 # CLAUDE.md (day4)
 
-가게 길찾기 랜딩페이지 + 가게 상세 목업. 스펙은 `PRD.md`, 비주얼/화면 구성은 `DESIGN.md` 참고.
+맛집 길찾기 랜딩페이지 + 가게 상세 목업. 스펙은 `PRD.md`, 비주얼/화면 구성은 `DESIGN.md` 참고.
 
 ## Tooling — plain Node.js, not Next.js
 
