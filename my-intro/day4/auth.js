@@ -93,6 +93,11 @@ function ensureModal() {
   dialog.className =
     "w-[min(92vw,26rem)] rounded-3xl border border-base-tint/60 bg-white p-0 shadow-xl backdrop:bg-ink/40";
   dialog.innerHTML =
+    // 이 모달은 auth.js가 어느 페이지에 삽입되든(index.html/place.html/mypage.html) 항상
+    // 같은 마크업으로 동작해야 해서, 포커스 링을 호스트 페이지의 전역 CSS에 기대지 않고
+    // 스코프를 좁힌 자체 규칙으로 보장한다 — 한 페이지(mypage.html)만 그 전역 규칙에서
+    // input을 빠뜨렸던 적이 있었다.
+    '<style>#auth-dialog input:focus-visible { outline: 3px solid #1E4036; outline-offset: 2px; }</style>' +
     '<div class="p-6">' +
     '<div class="mb-4 flex items-center justify-between">' +
     '<h2 class="text-[1.25rem] font-extrabold text-base-dark">로그인</h2>' +
@@ -100,16 +105,16 @@ function ensureModal() {
     "</div>" +
     '<div class="space-y-3">' +
     '<label class="block text-[0.95rem] font-bold text-ink-soft">이메일' +
-    '<input type="email" name="email" required autocomplete="email" class="mt-1 h-[48px] w-full rounded-xl border border-base-tint/70 px-3 text-[1rem] text-ink focus-visible:outline-none">' +
+    '<input type="email" name="email" required autocomplete="email" spellcheck="false" class="mt-1 h-[48px] w-full rounded-xl border border-base-tint/70 px-3 text-[1rem] text-ink">' +
     "</label>" +
     '<label class="block text-[0.95rem] font-bold text-ink-soft">비밀번호' +
-    '<input type="password" name="password" required autocomplete="current-password" class="mt-1 h-[48px] w-full rounded-xl border border-base-tint/70 px-3 text-[1rem] text-ink focus-visible:outline-none">' +
+    '<input type="password" name="password" required autocomplete="current-password" class="mt-1 h-[48px] w-full rounded-xl border border-base-tint/70 px-3 text-[1rem] text-ink">' +
     "</label>" +
     "</div>" +
     '<p data-auth-error role="alert" class="mt-3 hidden text-[0.9rem] font-bold text-terra"></p>' +
     '<div class="mt-5 flex gap-2">' +
-    '<button type="button" data-auth-signup class="h-[48px] flex-1 rounded-2xl border border-base bg-white text-[1rem] font-bold text-base-dark hover:bg-base-tint">회원가입</button>' +
-    '<button type="button" data-auth-signin class="h-[48px] flex-1 rounded-2xl bg-cta text-[1rem] font-bold text-ink shadow-sm hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">로그인</button>' +
+    '<button type="button" data-auth-signup data-idle-text="회원가입" data-busy-text="가입하는 중…" class="h-[48px] flex-1 rounded-2xl border border-base bg-white text-[1rem] font-bold text-base-dark hover:bg-base-tint">회원가입</button>' +
+    '<button type="button" data-auth-signin data-idle-text="로그인" data-busy-text="로그인 중…" class="h-[48px] flex-1 rounded-2xl bg-cta text-[1rem] font-bold text-ink shadow-sm hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">로그인</button>' +
     "</div>" +
     "</div>";
   document.body.appendChild(dialog);
@@ -118,6 +123,8 @@ function ensureModal() {
   const emailInput = dialog.querySelector('input[name="email"]');
   const passwordInput = dialog.querySelector('input[name="password"]');
   const buttons = dialog.querySelectorAll("button");
+  const signinBtn = dialog.querySelector("[data-auth-signin]");
+  const signupBtn = dialog.querySelector("[data-auth-signup]");
 
   function showError(message) {
     errorEl.textContent = message;
@@ -127,10 +134,15 @@ function ensureModal() {
     errorEl.classList.add("hidden");
     errorEl.textContent = "";
   }
-  function setBusy(busy) {
+  // activeBtn만 busy 중 "로그인 중…"/"가입하는 중…"으로 라벨을 바꾼다 — 두 버튼 다
+  // disabled는 되지만, 누르지 않은 쪽까지 라벨을 바꾸면 어떤 동작이 진행 중인지 헷갈린다.
+  function setBusy(busy, activeBtn) {
     buttons.forEach((btn) => {
       btn.disabled = busy;
     });
+    if (activeBtn) {
+      activeBtn.textContent = busy ? activeBtn.dataset.busyText : activeBtn.dataset.idleText;
+    }
   }
   function resetFields() {
     emailInput.value = "";
@@ -140,7 +152,7 @@ function ensureModal() {
   dialog.querySelector("[data-auth-close]").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", clearError);
 
-  dialog.querySelector("[data-auth-signin]").addEventListener("click", async () => {
+  signinBtn.addEventListener("click", async () => {
     clearError();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -148,9 +160,9 @@ function ensureModal() {
       showError("이메일과 비밀번호를 입력해 주세요.");
       return;
     }
-    setBusy(true);
+    setBusy(true, signinBtn);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
+    setBusy(false, signinBtn);
     if (error) {
       showError(mapAuthError(error));
       return;
@@ -159,7 +171,7 @@ function ensureModal() {
     dialog.close();
   });
 
-  dialog.querySelector("[data-auth-signup]").addEventListener("click", async () => {
+  signupBtn.addEventListener("click", async () => {
     clearError();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -167,9 +179,9 @@ function ensureModal() {
       showError("이메일과 비밀번호를 입력해 주세요.");
       return;
     }
-    setBusy(true);
+    setBusy(true, signupBtn);
     const { data, error } = await supabase.auth.signUp({ email, password });
-    setBusy(false);
+    setBusy(false, signupBtn);
     if (error) {
       showError(mapAuthError(error));
       return;

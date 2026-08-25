@@ -28,8 +28,10 @@
   /* 본문 18px 기준(DESIGN 3.2) — 캡션도 16px 아래로 내려가지 않는다 */
   body { font-size: 18px; line-height: 1.75; }
 
-  /* 키보드 포커스를 항상 눈에 보이게 */
-  a:focus-visible, button:focus-visible {
+  /* 키보드 포커스를 항상 눈에 보이게 — 이 페이지엔 input이 없지만, auth.js 로그인
+     모달이 이 페이지에도 이메일/비밀번호 input을 주입하므로 함께 포함해 둔다
+     (index.html/place.html과 일관성 유지). */
+  a:focus-visible, button:focus-visible, input:focus-visible {
     outline: 3px solid #1E4036;
     outline-offset: 2px;
   }
@@ -69,7 +71,7 @@
     <div id="login-required-section" class="mt-10 hidden rounded-3xl border border-base-tint/60 bg-base-tint p-10 text-center">
       <p class="text-[1.125rem] font-bold text-ink">로그인하면 담아둔 가게를 볼 수 있어요.</p>
       <button type="button" onclick="window.Day4Auth && window.Day4Auth.openLoginModal();"
-              class="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-cta px-8 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
+              class="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-cta px-8 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-[transform,background-color,box-shadow] hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
         로그인
       </button>
     </div>
@@ -81,13 +83,16 @@
     <div id="empty-section" class="mt-2 hidden rounded-3xl border border-base-tint/60 bg-base-tint p-10 text-center">
       <p class="text-[1.125rem] font-bold text-ink">아직 담은 맛집이 없어요. 검색하러 가볼까요?</p>
       <a href="index.html"
-         class="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-cta px-8 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
+         class="mt-6 inline-flex h-[52px] items-center justify-center rounded-2xl bg-cta px-8 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-[transform,background-color,box-shadow] hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">
         검색하러 가기
       </a>
     </div>
 
-    <!-- 담은 가게 카드 목록 -->
-    <ul id="saved-list" class="mt-2 hidden grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list"></ul>
+    <!-- 담은 가게 카드 목록 — 카드 제목이 h3(renderSavedCard)라 h1 다음 곧장 h3로 건너뛰지
+         않도록 h2를 둔다. 위에 이미 "맛집주머니"(h1)와 안내 문장이 같은 내용을 보여주므로
+         화면에는 안 보이게(sr-only) 두고 접근성 트리용으로만 쓴다. -->
+    <h2 id="saved-list-title" class="sr-only">담은 가게 목록</h2>
+    <ul id="saved-list" aria-labelledby="saved-list-title" class="mt-2 hidden grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list"></ul>
   </section>
 
 </main>
@@ -129,13 +134,13 @@
     });
   }
 
+  // Intl.DateTimeFormat('ko')는 기본적으로 "2026. 08. 05."처럼 공백과 끝 마침표가
+  // 붙어 나온다 — 이 페이지가 쓰던 "2026.08.05" 표기와 맞추려고 그 둘만 제거한다.
+  var savedDateFormatter = new Intl.DateTimeFormat('ko', { year: 'numeric', month: '2-digit', day: '2-digit' });
   function formatSavedDate(isoString) {
     var d = new Date(isoString);
     if (isNaN(d.getTime())) return '';
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, '0');
-    var day = String(d.getDate()).padStart(2, '0');
-    return y + '.' + m + '.' + day;
+    return savedDateFormatter.format(d).replace(/\s+/g, '').replace(/\.$/, '');
   }
 
   // 저장된 좌표로 구글 지도 검색 링크를 만든다 — place_saves에는 구글맵 링크 자체를
@@ -158,19 +163,22 @@
     var category = entry.category || '정보 없음';
     var address = entry.address || '주소 정보 없음';
     var savedDate = formatSavedDate(entry.created_at);
+    var mapButtonHtml =
+      '<a href="' + escapeHtml(googleMapsUrl(entry)) + '" target="_blank" rel="noopener" ' +
+        'class="mt-4 flex h-[52px] items-center justify-center rounded-2xl bg-cta px-4 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-[transform,background-color,box-shadow] hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">' +
+        '구글맵 보기</a>';
 
     li.innerHTML =
-      '<article class="relative flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">' +
+      '<article class="relative flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white p-6 shadow-md transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl">' +
         '<p class="pr-10 text-[1rem] font-bold text-terra">' + escapeHtml(category) + '</p>' +
         '<h3 class="mt-1 pr-10 text-[1.25rem] font-extrabold text-ink">' + escapeHtml(name) + '</h3>' +
         '<p class="mt-3 flex-1 text-[1.0625rem] leading-[1.75] text-ink-soft">' + escapeHtml(address) + '</p>' +
         (savedDate ? '<p class="mt-2 text-[1rem] font-bold text-ink-mute">' + escapeHtml(savedDate) + ' 담음</p>' : '') +
-        '<a href="' + escapeHtml(googleMapsUrl(entry)) + '" target="_blank" rel="noopener" ' +
-          'class="mt-4 flex h-[52px] items-center justify-center rounded-2xl bg-cta px-4 text-[1.0625rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md">' +
-          '구글맵 보기</a>' +
+        '<div class="card-actions">' + mapButtonHtml + '</div>' +
       '</article>';
 
     var article = li.querySelector('article');
+    var actionsEl = li.querySelector('.card-actions');
     var delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.setAttribute('aria-label', '맛집주머니에서 삭제');
@@ -178,7 +186,29 @@
     delBtn.innerHTML =
       '<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">' +
       '<path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>';
-    delBtn.addEventListener('click', function () { handleDelete(entry.id, li, delBtn); });
+
+    // place.html의 위치 정보 삭제와 같은 이유로 window.confirm을 쓰지 않는다(day2/day8부터
+    // 이어진 관례 — 샌드박스 환경에서 네이티브 다이얼로그가 막히면 화면이 멈춘 것처럼
+    // 보인다). "구글맵 보기" 버튼 자리를 "정말 뺄까요? [빼기] [취소]"로 바꾸는 인라인
+    // 2단계 확인을 쓴다.
+    delBtn.addEventListener('click', function () {
+      delBtn.disabled = true;
+      actionsEl.innerHTML =
+        '<span class="flex-1 text-[1rem] font-bold text-terra">정말 뺄까요?</span>' +
+        '<button type="button" class="delete-confirm-btn inline-flex items-center rounded-xl bg-terra px-4 py-2 text-[1rem] font-extrabold text-white shadow-sm hover:bg-terra/90">빼기</button>' +
+        '<button type="button" class="delete-cancel-btn inline-flex items-center rounded-xl border-2 border-base-tint px-4 py-2 text-[1rem] font-extrabold text-base-dark hover:bg-base-tint">취소</button>';
+      actionsEl.className = 'card-actions mt-4 flex flex-wrap items-center gap-2';
+
+      actionsEl.querySelector('.delete-cancel-btn').addEventListener('click', function () {
+        delBtn.disabled = false;
+        actionsEl.className = 'card-actions';
+        actionsEl.innerHTML = mapButtonHtml;
+      });
+
+      actionsEl.querySelector('.delete-confirm-btn').addEventListener('click', function () {
+        handleDelete(entry.id, li, delBtn, actionsEl, mapButtonHtml);
+      });
+    });
     article.appendChild(delBtn);
 
     return li;
@@ -189,16 +219,20 @@
     savedList.classList.add('hidden');
   }
 
-  function handleDelete(id, li, btn) {
-    if (btn.disabled) return;
-    btn.disabled = true;
+  function handleDelete(id, li, delBtn, actionsEl, mapButtonHtml) {
+    var confirmBtn = actionsEl.querySelector('.delete-confirm-btn');
+    var cancelBtn = actionsEl.querySelector('.delete-cancel-btn');
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
     window.Day4Auth.getClient()
       .from('place_saves')
       .delete()
       .eq('id', id)
       .then(function (result) {
         if (result.error) {
-          btn.disabled = false;
+          delBtn.disabled = false;
+          actionsEl.className = 'card-actions';
+          actionsEl.innerHTML = mapButtonHtml;
           mypageNotice('삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
           return;
         }

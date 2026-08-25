@@ -221,12 +221,17 @@
 
 **재사용 가능한 카드 패턴 (다음 작업자 참고)**
 3장 "길찾기" 캐러셀 카드가 이번 리디자인의 기준 패턴이다. 실제 검색 결과 카드를 만들 때 아래 클래스 조합을 그대로 가져다 쓸 수 있다.
-- 카드(`<article>`): `flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl`
+- 카드(`<article>`): `flex h-full flex-col rounded-3xl border border-base-tint/60 bg-white shadow-md transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl`
 - 이미지 영역: `flex h-40 items-end rounded-t-3xl bg-gradient-to-br ... p-4` (실제 사진이 들어오면 그라디언트 대신 `<img>`로 교체)
 - 본문 영역: `flex flex-1 flex-col p-6`
 - 뱃지: `mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[1rem] font-extrabold text-ink shadow-sm`
-- 주요 액션 버튼: `mt-4 h-[52px] w-full rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md`
+- 주요 액션 버튼: `mt-4 h-[52px] w-full rounded-2xl bg-cta text-[1.125rem] font-extrabold text-ink shadow-sm transition-[transform,background-color,box-shadow] hover:-translate-y-0.5 hover:bg-cta-dark hover:shadow-md`
 - 보조 링크(가게 상세 보기 등): `mt-3 block rounded-xl py-2 text-center text-[1rem] font-bold text-base-dark underline underline-offset-4 hover:text-cta-dark`
+- **`transition-all`을 쓰지 않는다** — Vercel Web Interface Guidelines 점검(2026-08-25)에서
+  지적된 뒤 위 두 항목을 `transition-[transform,box-shadow]`/`transition-[transform,background-color,box-shadow]`로
+  바꿨다. `transition-all`은 명시하지 않은 속성(예: `outline`)까지 애니메이션 대상이 되어
+  포커스 링 전환 등에서 의도치 않은 부작용을 만들 수 있다 — 새 카드/버튼을 만들 때도 실제
+  바뀌는 속성만 나열할 것.
 
 ### 6.12 가게 상세 페이지 (`day4/place.html`)
 > PRD.md 5.2절("위치 정보 보완/검증")이 설명하는 화면 — 한 가게에 대해 여러 사용자가 각자 남긴 사진·설명·정밀 핀이 누적되어 쌓이는 모습을 보여준다. **더 이상 정적 목업이 아니다**: `index.html`의 "길찾기" 카드나 검색 결과 카드의 "가게 상세 보기" 링크가 `id`(카카오 장소 ID)·`name`·`category`·`address`·`lat`·`lng`·`mapUrl`을 쿼리스트링으로 넘기고, 이 페이지는 그 `id`를 키로 `server.js`의 `/api/place-info` 계열 엔드포인트에서 실제 데이터를 읽고 쓴다 — 고정된 예시 가게("카페 모레") 하나만 보여주던 이전 버전과 달리, 쿼리스트링의 `id`가 바뀌면 완전히 다른 가게의 화면이 된다.
@@ -311,7 +316,7 @@
 | 로그인 게이트 | 페이지 진입 시 `Day4Auth.onAuthChange`로 로그인 여부를 확인한다. 비로그인이면 "로그인하면 담아둔 가게를 볼 수 있어요" 안내 + 로그인 버튼만 보여주고 목록 조회 자체를 시도하지 않는다. 로그인되면 그 시점에 바로 `loadSavedPlaces()`를 호출한다 |
 | 목록 조회 | `place_saves`를 `user_id` 조건 없이 `select('*').order('created_at', { ascending: false })`로 전체 조회한다 — "내 것만 골라줘"를 애플리케이션 코드에 넣지 않고, 6.15절에서 건 RLS(`auth.uid() = user_id`)가 로그인한 사용자 몫만 돌려주는 것에 전적으로 의존한다. 최신 담은 게 맨 위로 오는 정렬도 이 `order`가 담당한다 |
 | 카드 구성 | 가게 이름·카테고리·주소·"담은 날짜"(YYYY.MM.DD, `created_at` 기준)·"구글맵 보기" 버튼. `place_saves`에는 구글맵 링크 자체를 저장하지 않으므로(카카오 `place_url`만 알고 있음) 저장된 `lat`/`lng`로 `https://www.google.com/maps/search/?api=1&query={lat},{lng}` 딥링크를 즉석에서 만든다 |
-| 삭제(X) | 카드 우상단의 원형 X 버튼 — 6.15절 담기 버튼과 같은 위치·크기 규칙(`absolute right-4 top-4`)이지만 아이콘과 hover 색(`terra`)으로 "빼기"라는 다른 의도를 구분했다. 클릭 시 별도 확인 단계 없이 바로 `place_saves`에서 그 행(`id` 기준)을 delete하고, 성공하면 카드도 DOM에서 즉시 제거한다. `place.html`의 위치 정보 삭제(day4/CLAUDE.md `/api/day4/place-info-delete` 절)와 달리 2단계 인라인 확인을 쓰지 않았다 — 여기서는 "내가 담은 것 빼기"라 소유권 검증(RLS가 이미 보장)과 별개로 실수 시 되돌리기 쉬운(다시 검색해서 담으면 그만인) 저위험 동작이라 판단해서다 |
+| 삭제(X) | 카드 우상단의 원형 X 버튼 — 6.15절 담기 버튼과 같은 위치·크기 규칙(`absolute right-4 top-4`)이지만 아이콘과 hover 색(`terra`)으로 "빼기"라는 다른 의도를 구분했다. 클릭하면 `place.html`의 위치 정보 삭제(day4/CLAUDE.md `/api/day4/place-info-delete` 절)와 같은 인라인 2단계 확인으로 바뀐다 — "구글맵 보기" 버튼 자리가 "정말 뺄까요? [빼기] [취소]"로 잠깐 바뀌고, [빼기]를 눌러야 실제로 `place_saves`에서 그 행(`id` 기준)이 delete된다(`window.confirm`은 day2/day8부터의 관례대로 쓰지 않는다). 처음엔 확인 단계 없이 즉시 삭제하도록 만들었다가, Web Interface Guidelines 점검(2026-08-25)에서 "파괴적 동작은 확인 또는 되돌리기 없이 즉시 실행하지 말 것"에 걸려 이 2단계 확인으로 바꿨다 |
 | 빈 상태 | 담은 게 하나도 없으면(최초 조회든, 마지막 카드를 삭제해 0건이 되든) 카드 목록 대신 "아직 담은 맛집이 없어요. 검색하러 가볼까요?" 안내 + `index.html`로 가는 버튼을 보여준다 |
 | 데이터 소스 | 6.15절과 동일하게 `Day4Auth.getClient()`로 `place_saves`를 직접 select/delete한다. 서버(`server.js`/`api/day4/*.js`)는 이 화면을 위해 전혀 건드리지 않았다 |
 
@@ -339,3 +344,19 @@
 | 이미 담은 가게 제외 | 위에서 조회한 내 `place_saves`의 `place_id` 집합으로 검색 결과를 필터링한다(`place.id`가 그 집합에 있으면 제외) — "새로운" 추천만 남도록. 최대 5개까지만 보여준다 |
 | 카드 | `renderPlaceCard`(6.11절, 검색 결과 카드와 완전히 동일한 함수)를 그대로 재사용한다 — 이미 담은 가게를 걸러낸 뒤라 카드에 붙는 담기 버튼(6.15절)은 항상 "안 담김" 상태로 시작하고, 그대로 눌러서 담을 수 있다 |
 | 빈 상태 | 카테고리를 찾았는데 필터링 후 추천할 가게가 0개면 "추천할 새로운 가게를 찾지 못했어요"만 보여준다(섹션 자체는 유지) |
+
+### 6.19 Web Interface Guidelines 점검 (2026-08-25)
+> `web-design-guidelines` 스킬(vercel-labs/agent-skills)로 `index.html`/`place.html`/`mypage.html`/`auth.js` 4개 파일을 점검하고 나온 지적을 전부 반영했다. 원 지적 목록은 이 스킬 실행 대화 기록에 있고, 여기서는 실제로 코드가 바뀐 지점만 요약한다.
+
+| 영역 | 무엇을 바꿨나 |
+|---|---|
+| 포커스 링 (가장 중요) | `auth.js` 로그인 모달의 이메일/비밀번호 input에 있던 `focus-visible:outline-none`을 지웠다. Tailwind 클래스 명시도(specificity)가 각 페이지의 `input:focus-visible{outline:3px solid...}` 규칙보다 높아서, 사실상 **세 페이지 전부의 로그인 모달에서 키보드 포커스 링이 안 보이는 상태**였다. auth.js는 어느 페이지에 삽입될지 몰라 호스트 페이지 CSS에 기대지 않고, 모달 자체에 `#auth-dialog input:focus-visible{...}` 스코프 스타일을 갖게 했다 |
+| `transition-all` 제거 | 6.11절 카드 패턴과 CTA 버튼 전반에 쓰이던 `transition-all`을 실제로 바뀌는 속성만 나열한 `transition-[transform,box-shadow]` / `transition-[transform,background-color,box-shadow]`로 바꿨다(6.11절 패턴 정의 자체도 갱신) |
+| `mypage.html` 삭제 확인 | X 버튼이 확인 없이 바로 지우던 것을, place.html과 같은 인라인 2단계 확인("정말 뺄까요? [빼기][취소]")으로 바꿨다(위 6.16절 표 참고) |
+| `mypage.html` 헤딩 계층 | `<h1>` 다음 카드 제목이 `<h2>` 없이 바로 `<h3>`였던 걸, `sr-only` `<h2 id="saved-list-title">담은 가게 목록</h2>`을 목록 앞에 추가해 고쳤다(시각적으로는 h1 아래 안내 문구가 이미 같은 내용을 전달하므로 화면엔 안 보이게만) |
+| 날짜 포맷 | `mypage.html`의 `formatSavedDate()`, `place.html`의 `timeAgo()` 둘 다 손으로 짠 포맷 대신 `Intl.DateTimeFormat`/`Intl.RelativeTimeFormat`을 쓰도록 바꿨다(`timeAgo`는 `numeric:'always'`로 고정 — `'auto'`면 "1년 전"이 "작년"처럼 관용구로 바뀌어 기존 표기 스타일이 깨진다) |
+| 폼 필드 | `place.html`의 `#contribute-author`/`#contribute-photo`/`#contribute-text`/핀 range 두 개에 `name` 속성을 추가했다(기존엔 없었다 — JS가 `.value`로 직접 읽어서 동작엔 문제없었지만 폼 시맨틱·자동완성 관점에서 누락이었다). 빈 설명 제출 시 안내를 토스트 대신 필드 바로 아래 인라인 에러(`#contribute-text-error`)로 바꿨다 |
+| 검색 URL 동기화 | `index.html` 검색이 `?q=` 쿼리스트링에 반영되도록 `history.pushState`를 추가했다 — 새로고침·뒤로가기·링크 공유로 같은 검색 결과를 다시 볼 수 있다. `popstate`도 처리한다 |
+| 타이포그래피 | `index.html`의 후기·인용 문구에 쓰인 직선 따옴표(`"..."`)를 곡선 따옴표(`"..."`)로, `place.html`의 `"AI가 리뷰를 분석 하는 중..."`과 사진 URL placeholder의 `...`을 `…`로 바꿨다 |
+| 성능/기타 | `index.html` `<head>`에 `cdn.jsdelivr.net`/`cdn.tailwindcss.com` `preconnect`와 `theme-color` 메타를 추가했다. `place.html`의 사진 `<img>` 두 곳(미리보기·제보 사진)에 `width`/`height` 속성을 추가했다(레이아웃 시프트 방지 — 다만 이미 `h-32`/`h-56` CSS 높이가 고정돼 있어 실제 체감 효과는 크지 않다). 인기 랭킹 순위 배지에 `aria-label="N위"`를 추가했다 |
+| 그대로 둔 것 | `place.html`의 `#pin-picker` 클릭 div는 `aria-hidden="true"`이고 바로 옆 range 입력 두 개가 키보드 대안이라 문제없다고 판단해 그대로 뒀다. 다크 모드는 이 서비스의 색상 체계(2장) 자체가 라이트 전용으로 설계돼 있어 손대지 않았다 |
