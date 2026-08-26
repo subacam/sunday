@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E0D2;font-family:'Noto Sans KR',-apple-system,sans-serif}
+@keyframes spin{to{transform:rotate(360deg)}}
+a{color:#E8927C}
+a:hover{color:#d97c63}
+</style>
+</helmet>
+<div style="width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#E4E0D2;padding:40px 20px;box-sizing:border-box">
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="width:100%;height:100%;position:relative;overflow:hidden;background:#FAF6EC;font-family:'Noto Sans KR',-apple-system,sans-serif">
+
+<sc-if value="{{isSplash}}" hint-placeholder-val="{{true}}">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:#FAF6EC;z-index:50">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:#DAD4C2"></div>
+      <div style="width:18px;height:1.5px;background:#DAD4C2"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#C6CBA9"></div>
+      <div style="width:18px;height:1.5px;background:#DAD4C2"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#9DBE9A"></div>
+      <div style="width:18px;height:1.5px;background:#DAD4C2"></div>
+      <div style="width:15px;height:15px;border-radius:50%;background:#E8927C;box-shadow:0 0 0 6px rgba(232,146,124,0.16)"></div>
+    </div>
+    <div style="font-size:28px;font-weight:800;color:#2E2B24;letter-spacing:-0.5px">산책기록</div>
+    <div style="font-size:14px;color:#8B8578;font-weight:500">오늘의 걸음을 기록해요</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{isOnboarding}}" hint-placeholder-val="{{false}}">
+  <div style="position:absolute;inset:0;background:#FAF6EC;display:flex;flex-direction:column;z-index:45">
+    <div style="height:54px"></div>
+    <div onClick="{{obSkip}}" style="align-self:flex-end;padding:0 20px;font-size:13px;color:#8B8578;font-weight:600;cursor:pointer">건너뛰기</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:0 30px">
+      <sc-if value="{{isOb0}}" hint-placeholder-val="{{true}}">
+        <svg width="140" height="140" viewBox="0 0 160 160">
+          <circle cx="80" cy="82" r="70" fill="#F3EFE4"></circle>
+          <rect x="35" y="55" width="70" height="52" rx="14" fill="#fff" stroke="#2E2B24" stroke-width="3"></rect>
+          <rect x="55" y="45" width="22" height="14" rx="5" fill="#fff" stroke="#2E2B24" stroke-width="3"></rect>
+          <circle cx="70" cy="81" r="17" fill="#FCE9E1" stroke="#2E2B24" stroke-width="3"></circle>
+          <circle cx="70" cy="81" r="7" fill="#E8927C"></circle>
+          <circle cx="95" cy="64" r="3" fill="#2E2B24"></circle>
+          <path d="M110 40l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#F3C463"></path>
+          <path d="M35 30l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#9DBE9A"></path>
+          <rect x="98" y="95" width="46" height="30" rx="10" fill="#fff" stroke="#2E2B24" stroke-width="2.5"></rect>
+          <path d="M110 125l-6 8v-8z" fill="#fff" stroke="#2E2B24" stroke-width="2.5"></path>
+          <line x1="106" y1="104" x2="136" y2="104" stroke="#E8927C" stroke-width="3" stroke-linecap="round"></line>
+          <line x1="106" y1="112" x2="128" y2="112" stroke="#E8927C" stroke-width="3" stroke-linecap="round"></line>
+        </svg>
+        <div style="font-size:18px;font-weight:800;color:#2E2B24;text-align:center;line-height:1.4">찍으면 AI가<br>감성 캡션을 붙여줘요</div>
+        <div style="font-size:13px;color:#8B8578;text-align:center">사진 한 장이면 캡션·태그·무드가 저절로</div>
+      </sc-if>
+      <sc-if value="{{isOb1}}" hint-placeholder-val="{{false}}">
+        <svg width="140" height="140" viewBox="0 0 160 160">
+          <circle cx="80" cy="82" r="70" fill="#EAF2E6"></circle>
+          <path d="M25 120 C 55 120, 55 80, 85 80 S 110 40, 135 40" stroke="#fff" stroke-width="6" stroke-dasharray="2 10" stroke-linecap="round" fill="none"></path>
+          <circle cx="25" cy="120" r="6" fill="#9DBE9A"></circle>
+          <circle cx="85" cy="80" r="7" fill="#F3C463"></circle>
+          <g transform="translate(122,24)">
+            <path d="M13 0C6 0 0 6 0 13c0 9 13 21 13 21s13-12 13-21C26 6 20 0 13 0z" fill="#E8927C"></path>
+            <circle cx="13" cy="13" r="5" fill="#fff"></circle>
+          </g>
+        </svg>
+        <div style="font-size:18px;font-weight:800;color:#2E2B24;text-align:center;line-height:1.4">지도에 발자취가<br>쌓여요</div>
+        <div style="font-size:13px;color:#8B8578;text-align:center">내가 걸은 길이 그대로 나만의 지도가 돼요</div>
+      </sc-if>
+      <sc-if value="{{isOb2}}" hint-placeholder-val="{{false}}">
+        <svg width="140" height="140" viewBox="0 0 160 160">
+          <circle cx="80" cy="82" r="70" fill="#FBEEE3"></circle>
+          <rect x="35" y="90" width="16" height="40" rx="6" fill="#9DBE9A"></rect>
+          <rect x="60" y="65" width="16" height="65" rx="6" fill="#E8927C"></rect>
+          <rect x="85" y="100" width="16" height="30" rx="6" fill="#F3C463"></rect>
+          <circle cx="122" cy="55" r="20" fill="none" stroke="#BFA8DE" stroke-width="8"></circle>
+          <circle cx="122" cy="55" r="20" fill="none" stroke="#E8927C" stroke-width="8" stroke-dasharray="60 70" stroke-linecap="round" transform="rotate(-90 122 55)"></circle>
+        </svg>
+        <div style="font-size:18px;font-weight:800;color:#2E2B24;text-align:center;line-height:1.4">대시보드로 나의<br>산책을 돌아봐요</div>
+        <div style="font-size:13px;color:#8B8578;text-align:center">태그, 요일, 무드로 나의 산책 습관을 확인해요</div>
+      </sc-if>
+    </div>
+    <div style="display:flex;justify-content:center;gap:6px;padding-bottom:18px">
+      <sc-for list="{{obDots}}" as="d" hint-placeholder-count="3">
+        <div style="width:{{d.w}}px;height:8px;border-radius:4px;background:{{d.color}}"></div>
+      </sc-for>
+    </div>
+    <div style="padding:0 20px 40px">
+      <div onClick="{{obNext}}" style="text-align:center;padding:15px;border-radius:16px;background:#E8927C;color:#fff;font-weight:700;font-size:15px;cursor:pointer">{{obBtnLabel}}</div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{isApp}}" hint-placeholder-val="{{false}}">
+<div style="height:100%;display:flex;flex-direction:column;position:relative">
+
+  <div style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch">
+    <div style="height:54px"></div>
+
+    <sc-if value="{{isFeed}}" hint-placeholder-val="{{true}}">
+      <div style="padding:2px 20px 24px">
+        <div style="font-size:26px;font-weight:800;color:#2E2B24;padding:6px 0 0">피드</div>
+        <div style="font-size:13px;color:#8B8578;font-weight:500;padding:4px 0 18px">{{recordCount}}개의 기록</div>
+        <sc-if value="{{isFeedEmpty}}" hint-placeholder-val="{{false}}">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px 20px">
+            <svg width="130" height="130" viewBox="0 0 160 160">
+              <circle cx="80" cy="82" r="70" fill="#F3EFE4"></circle>
+              <rect x="40" y="60" width="70" height="52" rx="14" fill="#fff" stroke="#2E2B24" stroke-width="3"></rect>
+              <rect x="60" y="50" width="22" height="14" rx="5" fill="#fff" stroke="#2E2B24" stroke-width="3"></rect>
+              <circle cx="75" cy="86" r="17" fill="#EAF2E6" stroke="#2E2B24" stroke-width="3"></circle>
+              <circle cx="75" cy="86" r="7" fill="#9DBE9A"></circle>
+              <circle cx="118" cy="112" r="16" fill="#E8927C"></circle>
+              <line x1="118" y1="105" x2="118" y2="119" stroke="#fff" stroke-width="3" stroke-linecap="round"></line>
+              <line x1="111" y1="112" x2="125" y2="112" stroke="#fff" stroke-width="3" stroke-linecap="round"></line>
+            </svg>
+            <div style="font-size:16px;font-weight:800;color:#2E2B24;text-align:center">지금 첫 기록을 남겨주세요</div>
+            <div style="font-size:13px;color:#8B8578;text-align:center">아래 카메라 버튼을 눌러 산책을 기록해보세요</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{hasRecords}}" hint-placeholder-val="{{true}}">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <sc-for list="{{records}}" as="rec" hint-placeholder-count="4">
+            <div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 10px rgba(46,43,36,0.07)">
+              <div style="position:relative;height:150px;background:{{rec.photoBg}}">
+                <div style="position:absolute;top:12px;left:12px;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,0.88);font-size:12px;font-weight:700;color:{{rec.moodColor}}">{{rec.mood}}</div>
+              </div>
+              <div style="padding:16px">
+                <div style="font-size:14.5px;color:#2E2B24;font-weight:500;line-height:1.5">{{rec.caption}}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+                  <sc-for list="{{rec.tags}}" as="tag" hint-placeholder-count="3">
+                    <span style="font-size:12px;color:#6B6656;background:#F3F0E6;padding:4px 10px;border-radius:14px;font-weight:500">{{tag}}</span>
+                  </sc-for>
+                </div>
+                <div style="font-size:12px;color:#B0AA98;font-weight:500;margin-top:12px;text-align:right">{{rec.date}}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isMap}}" hint-placeholder-val="{{false}}">
+      <div style="padding:2px 20px 12px">
+        <div style="font-size:26px;font-weight:800;color:#2E2B24;padding:6px 0 0">지도</div>
+        <div style="font-size:13px;color:#8B8578;font-weight:500;padding:4px 0 14px">발자취가 쌓인 곳</div>
+      </div>
+      <div style="position:relative;margin:0 16px 16px;height:540px;border-radius:24px;overflow:hidden;background:#EEEDE1">
+        <svg width="100%" height="100%" viewBox="0 0 300 400" preserveAspectRatio="none" style="position:absolute;inset:0">
+          <ellipse cx="70" cy="90" rx="65" ry="48" fill="#DCE6D6"></ellipse>
+          <ellipse cx="235" cy="300" rx="55" ry="70" fill="#DCE6D6"></ellipse>
+          <path d="M0 150 C 90 130, 130 200, 300 190" stroke="#DAD5C4" stroke-width="7" fill="none"></path>
+          <path d="M20 0 C 60 90, 40 220, 90 400" stroke="#DAD5C4" stroke-width="6" fill="none"></path>
+          <path d="M300 60 C 220 100, 210 260, 260 400" stroke="#DAD5C4" stroke-width="6" fill="none"></path>
+        </svg>
+        <sc-for list="{{records}}" as="rec" hint-placeholder-count="5">
+          <div onClick="{{rec.select}}" style="position:absolute;left:{{rec.left}}%;top:{{rec.top}}%;transform:translate(-50%,-100%);cursor:pointer">
+            <svg width="26" height="34" viewBox="0 0 20 26">
+              <path d="M10 0C4.5 0 0 4.5 0 10c0 7 10 16 10 16s10-9 10-16C20 4.5 15.5 0 10 0z" fill="{{rec.moodColor}}"></path>
+              <circle cx="10" cy="10" r="4" fill="#fff"></circle>
+            </svg>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isDash}}" hint-placeholder-val="{{false}}">
+      <div style="padding:2px 20px 30px">
+        <div style="font-size:26px;font-weight:800;color:#2E2B24;padding:6px 0 18px">대시보드</div>
+
+        <div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(46,43,36,0.06)">
+          <div style="font-size:13px;font-weight:700;color:#8B8578;margin-bottom:14px">태그 워드클라우드</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <sc-for list="{{tagCloud}}" as="t" hint-placeholder-count="8">
+              <span style="font-size:{{t.size}}px;font-weight:700;color:{{t.color}}">{{t.word}}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(46,43,36,0.06)">
+          <div style="font-size:13px;font-weight:700;color:#8B8578;margin-bottom:16px">요일별 기록 수</div>
+          <div style="display:flex;align-items:flex-end;gap:10px;height:120px">
+            <sc-for list="{{weekData}}" as="w" hint-placeholder-count="7">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+                <div style="width:100%;max-width:26px;border-radius:8px;height:{{w.heightPct}}%;background:{{w.barColor}}"></div>
+                <div style="font-size:12px;color:#8B8578;font-weight:600">{{w.day}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 10px rgba(46,43,36,0.06)">
+          <div style="font-size:13px;font-weight:700;color:#8B8578;margin-bottom:16px">무드 분포</div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="width:110px;height:110px;border-radius:50%;background:{{donutGradient}};position:relative;flex-shrink:0">
+              <div style="position:absolute;inset:16px;border-radius:50%;background:#fff"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;flex:1">
+              <sc-for list="{{moodLegend}}" as="m" hint-placeholder-count="7">
+                <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#4A463B">
+                  <div style="width:8px;height:8px;border-radius:50%;background:{{m.color}};flex-shrink:0"></div>
+                  <div style="flex:1">{{m.mood}}</div>
+                  <div style="font-weight:700;color:#2E2B24">{{m.pct}}%</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isProfile}}" hint-placeholder-val="{{false}}">
+      <div style="padding:2px 20px 30px">
+        <div style="font-size:26px;font-weight:800;color:#2E2B24;padding:6px 0 18px">내 정보</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding-bottom:16px">
+          <div style="width:76px;height:76px;border-radius:50%;background:#E8927C;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(232,146,124,0.35)">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" fill="#fff"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" fill="#fff"></path></svg>
+          </div>
+          <div style="font-size:17px;font-weight:800;color:#2E2B24;margin-top:6px">산책자</div>
+          <div style="font-size:12.5px;color:#8B8578">2026년 8월부터 걷고 있어요</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding-bottom:16px">
+          <div style="background:#fff;border-radius:16px;padding:14px 8px;text-align:center;box-shadow:0 2px 8px rgba(46,43,36,0.05)">
+            <div style="font-size:18px;font-weight:800;color:#2E2B24">{{recordCount}}</div>
+            <div style="font-size:11px;color:#8B8578;margin-top:2px">총 기록</div>
+          </div>
+          <div style="background:#fff;border-radius:16px;padding:14px 8px;text-align:center;box-shadow:0 2px 8px rgba(46,43,36,0.05)">
+            <div style="font-size:18px;font-weight:800;color:#2E2B24">{{uniqueTagCount}}</div>
+            <div style="font-size:11px;color:#8B8578;margin-top:2px">고유 태그</div>
+          </div>
+          <div style="background:#fff;border-radius:16px;padding:14px 8px;text-align:center;box-shadow:0 2px 8px rgba(46,43,36,0.05)">
+            <div style="font-size:14px;font-weight:800;color:#2E2B24">{{lastRecordDate}}</div>
+            <div style="font-size:11px;color:#8B8578;margin-top:2px">최근 기록</div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 8px rgba(46,43,36,0.05)">
+          <div onClick="{{reopenOnboarding}}" style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid #F1EDE2;cursor:pointer">
+            <span style="font-size:14.5px;color:#2E2B24;font-weight:500">온보딩 다시보기</span>
+            <svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="#C7C2B2" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid #F1EDE2">
+            <span style="font-size:14.5px;color:#2E2B24;font-weight:500">알림 설정</span>
+            <svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="#C7C2B2" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid #F1EDE2">
+            <span style="font-size:14.5px;color:#2E2B24;font-weight:500">위치 권한</span>
+            <svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="#C7C2B2" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px">
+            <span style="font-size:14.5px;color:#E37F6A;font-weight:600">로그아웃</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;align-items:center;padding:8px 8px 24px;background:rgba(250,246,236,0.94);backdrop-filter:blur(10px);border-top:1px solid rgba(46,43,36,0.06);position:relative;z-index:5">
+    <div onClick="{{setTabFeed}}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <g transform="rotate(-18 7 16)"><ellipse cx="7" cy="16.5" rx="3.3" ry="5" fill="{{feedColor}}"></ellipse><circle cx="6.3" cy="10.2" r="1.2" fill="{{feedColor}}"></circle><circle cx="8.6" cy="10.6" r="1" fill="{{feedColor}}"></circle></g>
+        <g transform="rotate(18 17 8)"><ellipse cx="17" cy="8.5" rx="3.3" ry="5" fill="{{feedColor}}"></ellipse><circle cx="16.3" cy="2.5" r="1.2" fill="{{feedColor}}"></circle><circle cx="18.6" cy="2.9" r="1" fill="{{feedColor}}"></circle></g>
+      </svg>
+      <span style="font-size:11px;font-weight:700;color:{{feedColor}}">피드</span>
+    </div>
+    <div onClick="{{setTabMap}}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" stroke="{{mapColor}}" stroke-width="2" fill="none"></path><circle cx="12" cy="9" r="2.5" stroke="{{mapColor}}" stroke-width="2"></circle></svg>
+      <span style="font-size:11px;font-weight:700;color:{{mapColor}}">지도</span>
+    </div>
+    <div style="display:flex;justify-content:center">
+      <div onClick="{{openCapture}}" style="width:56px;height:56px;border-radius:50%;background:#E8927C;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(232,146,124,0.4);margin-top:-26px;cursor:pointer">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" stroke="#fff" stroke-width="2" fill="none"></path><circle cx="12" cy="14" r="3.5" stroke="#fff" stroke-width="2"></circle></svg>
+      </div>
+    </div>
+    <div onClick="{{setTabDash}}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M12 20V4M20 20v-7" stroke="{{dashColor}}" stroke-width="2.2" stroke-linecap="round"></path></svg>
+      <span style="font-size:11px;font-weight:700;color:{{dashColor}}">대시보드</span>
+    </div>
+    <div onClick="{{openProfile}}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="{{profileColor}}" stroke-width="2"></circle><path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" stroke="{{profileColor}}" stroke-width="2" fill="none"></path></svg>
+      <span style="font-size:11px;font-weight:700;color:{{profileColor}}">내정보</span>
+    </div>
+  </div>
+
+  <sc-if value="{{showPinSheet}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:18px 20px 30px;box-shadow:0 -8px 24px rgba(0,0,0,0.14);z-index:35">
+      <div style="display:flex;justify-content:flex-end">
+        <div onClick="{{closeSheet}}" style="width:28px;height:28px;border-radius:50%;background:#F3F0E6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:#8B8578">✕</div>
+      </div>
+      <div style="height:130px;border-radius:16px;background:{{selectedRecord.photoBg}};position:relative;margin-top:4px">
+        <div style="position:absolute;top:10px;left:10px;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,0.88);font-size:12px;font-weight:700;color:{{selectedRecord.moodColor}}">{{selectedRecord.mood}}</div>
+      </div>
+      <div style="font-size:14.5px;color:#2E2B24;font-weight:500;line-height:1.5;margin-top:14px">{{selectedRecord.caption}}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+        <sc-for list="{{selectedRecord.tags}}" as="tag" hint-placeholder-count="3">
+          <span style="font-size:12px;color:#6B6656;background:#F3F0E6;padding:4px 10px;border-radius:14px;font-weight:500">{{tag}}</span>
+        </sc-for>
+      </div>
+      <div style="font-size:12px;color:#B0AA98;font-weight:500;margin-top:12px;text-align:right">{{selectedRecord.date}}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hasCapture}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;inset:0;background:rgba(30,28,22,0.45);z-index:40;display:flex;align-items:flex-end">
+
+      <sc-if value="{{isChoose}}" hint-placeholder-val="{{false}}">
+        <div style="width:100%;background:#fff;border-radius:24px 24px 0 0;padding:22px 20px 34px;display:flex;flex-direction:column;gap:12px">
+          <div style="width:36px;height:4px;border-radius:2px;background:#E3DFD2;margin:0 auto 6px"></div>
+          <div style="font-size:18px;font-weight:800;color:#2E2B24;text-align:center">새로운 기록</div>
+          <div style="font-size:13px;color:#8B8578;text-align:center;margin-bottom:6px">사진을 찍으면 AI가 감성을 붙여드려요</div>
+          <div onClick="{{chooseCamera}}" style="display:flex;align-items:center;gap:12px;padding:16px;border-radius:16px;background:#FAF6EC;cursor:pointer">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" stroke="#E8927C" stroke-width="2" fill="none"></path><circle cx="12" cy="14" r="3.5" stroke="#E8927C" stroke-width="2"></circle></svg>
+            <div><div style="font-weight:700;font-size:15px;color:#2E2B24">카메라로 촬영</div><div style="font-size:12px;color:#8B8578">지금 이 순간을 담아요</div></div>
+          </div>
+          <div onClick="{{chooseGallery}}" style="display:flex;align-items:center;gap:12px;padding:16px;border-radius:16px;background:#FAF6EC;cursor:pointer">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="#9DBE9A" stroke-width="2"></rect><circle cx="8.5" cy="9.5" r="1.5" fill="#9DBE9A"></circle><path d="M4 16l5-5 4 4 3-3 4 4" stroke="#9DBE9A" stroke-width="2" fill="none"></path></svg>
+            <div><div style="font-weight:700;font-size:15px;color:#2E2B24">갤러리에서 선택</div><div style="font-size:12px;color:#8B8578">이미 찍어둔 사진이 있어요</div></div>
+          </div>
+          <div onClick="{{closeCapture}}" style="text-align:center;font-size:14px;color:#8B8578;font-weight:600;padding-top:4px;cursor:pointer">취소</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isLoading}}" hint-placeholder-val="{{false}}">
+        <div style="width:100%;background:#fff;border-radius:24px 24px 0 0;padding:44px 20px 54px;display:flex;flex-direction:column;align-items:center;gap:16px">
+          <div style="width:42px;height:42px;border-radius:50%;border:4px solid #F3EFE4;border-top-color:#E8927C;animation:spin 0.9s linear infinite"></div>
+          <div style="font-size:15px;font-weight:700;color:#2E2B24">AI가 사진을 분석하고 있어요</div>
+          <div style="font-size:12.5px;color:#8B8578">캡션, 태그, 무드를 찾는 중...</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isResult}}" hint-placeholder-val="{{false}}">
+        <div style="width:100%;background:#fff;border-radius:24px 24px 0 0;padding:20px 20px 30px;display:flex;flex-direction:column;gap:14px;max-height:660px;overflow:auto;box-sizing:border-box">
+          <div style="width:36px;height:4px;border-radius:2px;background:#E3DFD2;margin:0 auto"></div>
+          <div style="height:140px;border-radius:16px;background:{{pendingRecord.photoBg}};position:relative">
+            <div style="position:absolute;top:10px;left:10px;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,0.88);font-size:12px;font-weight:700;color:{{pendingRecord.moodColor}}">{{pendingRecord.mood}}</div>
+          </div>
+          <div style="font-size:14.5px;color:#2E2B24;font-weight:500;line-height:1.5">{{pendingRecord.caption}}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{pendingRecord.tags}}" as="tag" hint-placeholder-count="3">
+              <span style="font-size:12px;color:#6B6656;background:#F3F0E6;padding:4px 10px;border-radius:14px;font-weight:500">{{tag}}</span>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8B8578">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" stroke="#8B8578" stroke-width="2" fill="none"></path><circle cx="12" cy="9" r="2.5" stroke="#8B8578" stroke-width="2"></circle></svg>
+            현재 위치가 기록돼요
+          </div>
+          <div style="display:flex;gap:10px;margin-top:6px">
+            <div onClick="{{retake}}" style="flex:1;text-align:center;padding:14px;border-radius:14px;border:1.5px solid #E3DFD2;color:#6B6656;font-weight:700;font-size:14px;cursor:pointer">다시 촬영</div>
+            <div onClick="{{saveRecord}}" style="flex:1;text-align:center;padding:14px;border-radius:14px;background:#E8927C;color:#fff;font-weight:700;font-size:14px;cursor:pointer">저장</div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;top:60px;left:20px;right:20px;background:#2E2B24;color:#fff;padding:14px 18px;border-radius:14px;font-size:13px;font-weight:600;text-align:center;z-index:60;box-shadow:0 8px 20px rgba(0,0,0,0.2)">{{toastMsg}}</div>
+  </sc-if>
+
+
+</div>
+</sc-if>
+
+</div>
+</x-import>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MOOD_COLOR = {
+  '평온': '#7FA372', '설렘': '#E37F9C', '활기': '#DBA426',
+  '쓸쓸함': '#748DA6', '그리움': '#9C81C4', '행복': '#E07A54', '여유': '#4FA98E',
+};
+const MOOD_BG = {
+  '평온': 'linear-gradient(135deg,#EAF2E8,#9DBE9A)',
+  '설렘': 'linear-gradient(135deg,#FBE9EE,#F2A9BE)',
+  '활기': 'linear-gradient(135deg,#FDF2DC,#F3C463)',
+  '쓸쓸함': 'linear-gradient(135deg,#EDF1F5,#9FB4C7)',
+  '그리움': 'linear-gradient(135deg,#F1EBFA,#BFA8DE)',
+  '행복': 'linear-gradient(135deg,#FCE9E1,#F0977A)',
+  '여유': 'linear-gradient(135deg,#E6F5F0,#8FD0C0)',
+};
+const WEEK_ORDER = ['월','화','수','목','금','토','일'];
+const AI_POOL = [
+  { caption: '잠시 멈춰서 바라본 하늘, 마음이 가벼워졌다', tags: ['하늘','바람','오늘'], mood: '평온' },
+  { caption: '낯선 골목에서 발견한 작은 화단이 반가웠다', tags: ['골목','꽃','발견'], mood: '설렘' },
+  { caption: '익숙한 길인데 오늘은 유난히 여유로웠다', tags: ['익숙함','여유','저녁'], mood: '여유' },
+];
+
+class Component extends DCLogic {
+  state = {
+    screen: 'splash',
+    activeTab: 'feed',
+    captureStep: null,
+    selectedPin: null,
+    toast: null,
+    records: [
+      { id: 1, day: '월', date: '8월 24일', caption: '가을 냄새가 나는 골목길, 마음이 편안해졌다', tags: ['골목길','가을','고요함'], mood: '평온', left: 28, top: 38 },
+      { id: 2, day: '화', date: '8월 24일', caption: '노을이 예뻐서 한참을 서 있었다', tags: ['노을','하늘','산책'], mood: '행복', left: 58, top: 22 },
+      { id: 3, day: '수', date: '8월 25일', caption: '오랜만에 만난 동네 고양이, 반가웠다', tags: ['고양이','동네','우연'], mood: '설렘', left: 72, top: 58 },
+      { id: 4, day: '목', date: '8월 25일', caption: '비 온 뒤 젖은 흙길 냄새가 좋았다', tags: ['비','흙길','냄새'], mood: '여유', left: 42, top: 72 },
+      { id: 5, day: '토', date: '8월 22일', caption: '혼자 걷는 밤길, 조금 쓸쓸했지만 나쁘지 않았다', tags: ['밤길','혼자','도시'], mood: '쓸쓸함', left: 18, top: 52 },
+    ],
+    pendingRecord: null,
+    obStep: 0,
+    showProfile: false,
+  };
+
+  componentDidMount() {
+    setTimeout(() => this.setState({ screen: 'onboarding' }), 1800);
+  }
+
+  setTabFeed = () => this.setState({ activeTab: 'feed', selectedPin: null });
+  setTabMap = () => this.setState({ activeTab: 'map', selectedPin: null });
+  setTabDash = () => this.setState({ activeTab: 'dashboard', selectedPin: null });
+  closeSheet = () => this.setState({ selectedPin: null });
+  obNext = () => {
+    if (this.state.obStep >= 2) this.setState({ screen: 'app', obStep: 0 });
+    else this.setState(s => ({ obStep: s.obStep + 1 }));
+  };
+  obSkip = () => this.setState({ screen: 'app', obStep: 0 });
+  openProfile = () => this.setState({ activeTab: 'profile', selectedPin: null });
+  reopenOnboarding = () => this.setState({ screen: 'onboarding', obStep: 0 });
+
+  openCapture = () => this.setState({ captureStep: 'choose' });
+  closeCapture = () => this.setState({ captureStep: null, pendingRecord: null });
+  retake = () => this.setState({ captureStep: 'choose', pendingRecord: null });
+
+  chooseSource = () => {
+    this.setState({ captureStep: 'loading' });
+    setTimeout(() => {
+      const pick = AI_POOL[Math.floor(Math.random() * AI_POOL.length)];
+      this.setState({
+        captureStep: 'result',
+        pendingRecord: { ...pick, photoBg: MOOD_BG[pick.mood], moodColor: MOOD_COLOR[pick.mood] },
+      });
+    }, 1600);
+  };
+  chooseCamera = () => this.chooseSource();
+  chooseGallery = () => this.chooseSource();
+
+  saveRecord = () => {
+    const p = this.state.pendingRecord;
+    if (!p) return;
+    const rec = {
+      id: Date.now(), day: '수', date: '8월 26일',
+      caption: p.caption, tags: p.tags, mood: p.mood,
+      left: 30 + Math.round(Math.random() * 40), top: 25 + Math.round(Math.random() * 40),
+    };
+    this.setState(s => ({
+      records: [rec, ...s.records], captureStep: null, pendingRecord: null,
+      activeTab: 'feed', toast: '산책 기록이 저장되었어요',
+    }));
+    setTimeout(() => this.setState({ toast: null }), 2200);
+  };
+
+  renderVals() {
+    const s = this.state;
+    const records = s.records.map(r => ({
+      ...r,
+      photoBg: MOOD_BG[r.mood], moodColor: MOOD_COLOR[r.mood],
+      select: () => this.setState({ selectedPin: r.id }),
+    }));
+    const activeColor = '#E8927C', mutedColor = '#B0AA98';
+
+    const weekCounts = WEEK_ORDER.map(d => s.records.filter(r => r.day === d).length);
+    const maxCount = Math.max(1, ...weekCounts);
+    const weekData = WEEK_ORDER.map((d, i) => ({
+      day: d, count: weekCounts[i],
+      heightPct: weekCounts[i] === 0 ? 6 : Math.max(14, Math.round((weekCounts[i] / maxCount) * 100)),
+      barColor: weekCounts[i] === 0 ? '#EEEAdd' : '#9DBE9A',
+    }));
+
+    const tagCloudWords = [
+      { word: '산책', weight: 4 }, { word: '고양이', weight: 3 }, { word: '골목길', weight: 2 },
+      { word: '노을', weight: 2 }, { word: '흙길', weight: 2 }, { word: '밤길', weight: 2 },
+      { word: '동네', weight: 2 }, { word: '가을', weight: 1 }, { word: '하늘', weight: 1 }, { word: '우연', weight: 1 },
+    ];
+    const cloudColors = ['#2E2B24', '#8FAE8B', '#E8927C', '#8B8578'];
+    const tagCloud = tagCloudWords.map((t, i) => ({
+      word: t.word, size: 12 + t.weight * 6, color: cloudColors[i % cloudColors.length],
+    }));
+
+    const moodDist = [
+      { mood: '평온', pct: 25 }, { mood: '행복', pct: 20 }, { mood: '설렘', pct: 15 },
+      { mood: '여유', pct: 15 }, { mood: '쓸쓸함', pct: 10 }, { mood: '그리움', pct: 10 }, { mood: '활기', pct: 5 },
+    ];
+    const moodLegend = moodDist.map(m => ({ ...m, color: MOOD_COLOR[m.mood] }));
+    let acc = 0;
+    const gradParts = moodLegend.map(m => {
+      const from = acc, to = acc + m.pct * 3.6;
+      acc = to;
+      return `${m.color} ${from}deg ${to}deg`;
+    });
+    const donutGradient = `conic-gradient(${gradParts.join(', ')})`;
+
+    const selectedRecord = s.selectedPin != null ? records.find(r => r.id === s.selectedPin) : null;
+    const uniqueTagCount = new Set(s.records.flatMap(r => r.tags)).size;
+    const lastRecordDate = s.records.length ? s.records[0].date : '-';
+    const obDots = [0, 1, 2].map(i => ({
+      color: i === s.obStep ? '#E8927C' : '#E3DFD2', w: i === s.obStep ? 20 : 8,
+    }));
+
+    return {
+      isOnboarding: s.screen === 'onboarding',
+      isOb0: s.obStep === 0, isOb1: s.obStep === 1, isOb2: s.obStep === 2,
+      obDots, obNext: this.obNext, obSkip: this.obSkip,
+      obBtnLabel: s.obStep >= 2 ? '시작하기' : '다음',
+      isProfile: s.activeTab === 'profile', openProfile: this.openProfile,
+      profileColor: s.activeTab === 'profile' ? activeColor : mutedColor,
+      reopenOnboarding: this.reopenOnboarding, uniqueTagCount, lastRecordDate,
+      hasRecords: s.records.length > 0, isFeedEmpty: s.records.length === 0 && s.activeTab === 'feed',
+      isSplash: s.screen === 'splash', isApp: s.screen === 'app',
+      isFeed: s.activeTab === 'feed', isMap: s.activeTab === 'map', isDash: s.activeTab === 'dashboard',
+      feedColor: s.activeTab === 'feed' ? activeColor : mutedColor,
+      mapColor: s.activeTab === 'map' ? activeColor : mutedColor,
+      dashColor: s.activeTab === 'dashboard' ? activeColor : mutedColor,
+      records, recordCount: s.records.length,
+      weekData, tagCloud, moodLegend, donutGradient,
+      setTabFeed: this.setTabFeed, setTabMap: this.setTabMap, setTabDash: this.setTabDash,
+      openCapture: this.openCapture, closeCapture: this.closeCapture,
+      chooseCamera: this.chooseCamera, chooseGallery: this.chooseGallery,
+      retake: this.retake, saveRecord: this.saveRecord, closeSheet: this.closeSheet,
+      hasCapture: !!s.captureStep,
+      isChoose: s.captureStep === 'choose', isLoading: s.captureStep === 'loading', isResult: s.captureStep === 'result',
+      pendingRecord: s.pendingRecord || { photoBg: MOOD_BG['평온'], moodColor: MOOD_COLOR['평온'], mood: '', caption: '', tags: [] },
+      showPinSheet: s.activeTab === 'map' && !!selectedRecord,
+      selectedRecord: selectedRecord || { photoBg: MOOD_BG['평온'], moodColor: MOOD_COLOR['평온'], mood: '', caption: '', tags: [], date: '' },
+      hasToast: !!s.toast, toastMsg: s.toast || '',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -208,12 +208,6 @@
     overflow: hidden;
     isolation: isolate;
   }
-  .intro-bg {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-  }
   .intro-content { position: relative; }
 
   /* 마스크 리빌 — 줄을 감싼 틀이 넘치는 부분을 자르고, 안쪽 줄이
@@ -303,7 +297,9 @@
      읽지만, 로고나 버튼에 테두리가 그려지지는 않는다 */
   #intro:focus, #intro:focus-visible,
   #list:focus, #list:focus-visible { outline: none; }
-  .list-bg {
+  /* 인트로 ↔ 리스트 전환 내내 유지되는 공용 배경. 화면 전환 타임라인이
+     이 레이어의 opacity를 건드리지 않아, 광원이 한 번도 꺼지지 않는다 */
+  .page-bg {
     position: fixed;
     inset: 0;
     z-index: -1;
@@ -311,10 +307,6 @@
     pointer-events: none;
     background: var(--canvas);
   }
-  .list-bg .blob { filter: blur(90px); }
-  .list-bg .blob-1 { opacity: 0.34; }
-  .list-bg .blob-2 { opacity: 0.22; }
-  .list-bg .blob-3 { opacity: 0.32; }
 
   /* 헤더 — 유리 */
   .list-header {
@@ -708,15 +700,16 @@
 </head>
 <body>
 
+<!-- 배경 광원 · 노이즈 — 인트로 → 리스트 전환 내내 유지되는 공용 레이어 -->
+<div class="page-bg" aria-hidden="true">
+  <span class="blob blob-1"></span>
+  <span class="blob blob-2"></span>
+  <span class="blob blob-3"></span>
+  <span class="noise"></span>
+</div>
+
 <!-- 인트로 (FR-1) -->
 <section id="intro" tabindex="-1">
-  <div class="intro-bg" aria-hidden="true">
-    <span class="blob blob-1"></span>
-    <span class="blob blob-2"></span>
-    <span class="blob blob-3"></span>
-    <span class="noise"></span>
-  </div>
-
   <div class="intro-content">
     <h1 class="intro-title"><span class="line-mask"><span class="line">ARCHIVE</span></span></h1>
     <p class="intro-ko"><span class="line-mask"><span class="line">아카이브</span></span></p>
@@ -733,13 +726,6 @@
 
 <!-- 리스트 (FR-3) -->
 <div id="list" hidden tabindex="-1">
-  <div class="list-bg" aria-hidden="true">
-    <span class="blob blob-1"></span>
-    <span class="blob blob-2"></span>
-    <span class="blob blob-3"></span>
-    <span class="noise"></span>
-  </div>
-
   <header class="list-header">
     <div class="container">
       <button type="button" id="logo-btn" class="header-logo">ARCHIVE</button>
@@ -1011,12 +997,35 @@
         ],
         result: '이 저장소에서 처음으로 다중 사용자 공유 저장소를 다뤄봤다. 서버 없이도 RLS만으로 공개 읽기/쓰기를 안전하게 열 수 있다는 걸 확인했고, day4에서 배운 "키의 종류에 따라 다른 보안 모델"이라는 원칙이 그대로 재사용됐다.'
       }
+    },
+    {
+      id: 'walk-record',
+      no: '11',
+      title: '산책기록',
+      subtitle: 'AI Walk Journal',
+      tagline: '산책 중 사진을 찍으면 Gemini Vision이 감성 캡션·태그·무드를 자동으로 붙이고, 촬영 위치가 지도에 핀으로 쌓이는 개인용 산책 기록 PWA',
+      period: '2026.08',
+      role: '기획(PRD) · 디자인(Claude Design) · 개발 전체',
+      stack: ['Next.js', 'TypeScript', 'Supabase', 'Gemini Vision API'],
+      thumb: 'thumbs/11.jpg',
+      liveUrl: 'https://walk-record.vercel.app',
+      sourceUrl: null,
+      study: {
+        problem: 'Claude Design으로 만든 인터랙티브 목업(PRD + 디자인 프로토타입)을 실제로 로그인하고 사진을 저장하는 앱으로 옮겨야 했다. 카메라·GPS·AI 비전·DB·스토리지가 전부 실제로 붙는 것은 이 저장소에서 처음이었다.',
+        approach: '목업의 픽셀 값은 그대로 베끼되 내부 구조(Claude Design 전용 템플릿 엔진)는 버리고 Next.js로 다시 짰다. 데이터 모델과 RLS 정책을 먼저 설계해 "누구 것인지" 접근 통제부터 확정한 뒤 화면을 붙였고, Gemini API 키는 클라이언트에 절대 내려가지 않도록 Supabase Edge Function 뒤에 숨겼다.',
+        highlights: [
+          '목업의 지도가 단순 placeholder처럼 보였지만, 디자인 도구의 대화 기록을 다시 읽어보니 "심플/미니멀 지도"가 사용자가 직접 고른 최종 결정이었다 — PRD 문서가 권장한 Kakao/Mapbox 실지도 대신 추상 SVG 지도를 그대로 구현하기로 했다.',
+          '실제 Gemini 키가 없는 상태에서도 전체 플로우를 검증할 수 있도록 Edge Function에 mock 모드를 기본값으로 넣었다. 나중에 키만 등록하면 코드 변경 없이 실제 AI 응답으로 바뀐다.',
+          '실제 브라우저로 회원가입부터 저장까지 끝까지 돌려보다가, 로그인 버튼이 "처리 중..."에서 영원히 멈추는 진짜 버그를 발견했다 — 메서드를 변수로 분리해 호출하면서 this 바인딩이 깨진 것. mock 데이터로만 확인했다면 못 봤을 문제였다.'
+        ],
+        result: '디자인 목업 → PRD → 실제 서비스로 이어지는 전체 파이프라인을 처음부터 끝까지 다뤘다. "무엇을 숨기고 무엇을 노출해도 되는가"를 키의 성격(day4/day8)으로 판단하던 원칙이 AI API 키에도 그대로 확장됐고, mock 우선 개발이 실제 버그를 잡는 안전망이 된다는 것도 확인했다.'
+      }
     }
   ];
 
   var MAX_STACK_TAGS = 5;   /* FR-4.4 */
   var LINE_STAGGER = 0.12;  /* DESIGN.md motion.stagger-line */
-  var CARD_STAGGER = 0.1;   /* DESIGN.md motion.stagger-card */
+  var CARD_STAGGER = 0.12;  /* DESIGN.md motion.stagger-card */
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var hasGsap = typeof window.gsap !== 'undefined';
@@ -1233,8 +1242,7 @@
       intro.classList.remove('screen-over');
       if (hasGsap) {
         gsap.set(intro, { clearProps: 'all' });
-        gsap.set(list, { clearProps: 'transform,opacity' });
-        gsap.set('.card-float', { clearProps: 'opacity' });
+        gsap.set(['.list-header', '.list-intro', '.card-float'], { clearProps: 'opacity,transform' });
       }
       document.documentElement.classList.remove('is-switching');
       jumpTop();
@@ -1252,16 +1260,21 @@
     animating = true;
     intro.classList.add('screen-over');
 
+    /* .page-bg는 이 타임라인에서 건드리지 않는다 — 인트로에서 리스트로
+       넘어가는 동안 배경 광원이 그대로 유지되어야, 카드가 나타나는 구간에
+       배경까지 함께 옅어졌다 되돌아오는 "빈 화면"이 생기지 않는다.
+       카드는 .card-float 하나만 페이드+상승시켜, 조상(#list)과 opacity가
+       겹쳐 곱해지며 흐려지던 문제도 함께 없앤다 */
     var tl = gsap.timeline({
       onComplete: function () { animating = false; settle(); }
     });
     tl.to(intro, { opacity: 0, scale: 1.06, duration: 0.8, ease: 'power2.in' }, 0)
-      .fromTo(list,
-        { opacity: 0, scale: 1.03 },
-        { opacity: 1, scale: 1, duration: 1.2, ease: 'expo.out' }, 0.25)
+      .fromTo(['.list-header', '.list-intro'],
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 0.2)
       .fromTo('.card-float',
-        { opacity: 0, y: 54 },
-        { opacity: 1, y: 0, duration: 1.3, ease: 'expo.out', stagger: CARD_STAGGER }, 0.4);
+        { opacity: 0, y: 60 },
+        { opacity: 1, y: 0, duration: 1.1, ease: 'expo.out', stagger: CARD_STAGGER }, 0.4);
   }
 
   function goToIntro() {
