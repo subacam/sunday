@@ -81,7 +81,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
       style={{
         position: "absolute",
         inset: 0,
-        background: "#FAF6EC",
+        background:
+          "radial-gradient(90% 70% at 15% 10%, #FBE2DC 0%, transparent 60%), radial-gradient(80% 65% at 90% 90%, #E9E0FA 0%, transparent 60%), #FAF6EC",
         display: "flex",
         flexDirection: "column",
         zIndex: 45,
@@ -138,7 +139,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
             textAlign: "center",
             padding: 15,
             borderRadius: 16,
-            background: "#E8927C",
+            background: "linear-gradient(135deg,#F0A28C,#D97BA0)",
             color: "#fff",
             fontWeight: 700,
             fontSize: 15,

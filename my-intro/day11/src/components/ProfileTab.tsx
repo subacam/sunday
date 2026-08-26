@@ -35,7 +35,7 @@ export default function ProfileTab({
             width: 76,
             height: 76,
             borderRadius: "50%",
-            background: "#E8927C",
+            background: "linear-gradient(135deg,#F0A28C,#D97BA0)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

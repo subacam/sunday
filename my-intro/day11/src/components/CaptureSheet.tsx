@@ -125,7 +125,7 @@ export default function CaptureSheet({
             <div onClick={onRetake} style={{ flex: 1, textAlign: "center", padding: 14, borderRadius: 14, border: "1.5px solid #E3DFD2", color: "#6B6656", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
               다시 촬영
             </div>
-            <div onClick={onSave} style={{ flex: 1, textAlign: "center", padding: 14, borderRadius: 14, background: "#E8927C", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            <div onClick={onSave} style={{ flex: 1, textAlign: "center", padding: 14, borderRadius: 14, background: "linear-gradient(135deg,#F0A28C,#D97BA0)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
               저장
             </div>
           </div>

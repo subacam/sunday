@@ -14,12 +14,23 @@ export default function FeedTab({
   imageUrls: Record<string, string>;
 }) {
   return (
-    <div style={{ padding: "2px 20px 24px" }}>
-      <div style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 0" }}>피드</div>
-      <div style={{ fontSize: 13, color: "#8B8578", fontWeight: 500, padding: "4px 0 18px" }}>
-        {records.length}개의 기록
+    <div>
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 8,
+          background:
+            "radial-gradient(120% 100% at 10% 0%, #FDE7E0 0%, transparent 55%), radial-gradient(100% 90% at 100% 10%, #E7F2E4 0%, transparent 50%), #FAF6EC",
+          padding: "2px 20px 12px",
+        }}
+      >
+        <div style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 0" }}>피드</div>
+        <div style={{ fontSize: 13, color: "#8B8578", fontWeight: 500, padding: "4px 0 0" }}>
+          {records.length}개의 기록
+        </div>
       </div>
-
+      <div style={{ padding: "6px 20px 24px" }}>
       {records.length === 0 ? (
         <div
           style={{
@@ -123,6 +134,7 @@ export default function FeedTab({
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

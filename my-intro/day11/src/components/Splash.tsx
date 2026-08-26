@@ -9,7 +9,8 @@ export default function Splash() {
         alignItems: "center",
         justifyContent: "center",
         gap: 22,
-        background: "#FAF6EC",
+        background:
+          "radial-gradient(90% 70% at 20% 15%, #FBE2DC 0%, transparent 60%), radial-gradient(80% 65% at 85% 85%, #E3F0DE 0%, transparent 60%), #FAF6EC",
         zIndex: 50,
       }}
     >
@@ -25,12 +26,24 @@ export default function Splash() {
             width: 15,
             height: 15,
             borderRadius: "50%",
-            background: "#E8927C",
+            background: "linear-gradient(135deg,#F0A28C,#D97BA0)",
             boxShadow: "0 0 0 6px rgba(232,146,124,0.16)",
           }}
         />
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: "#2E2B24", letterSpacing: -0.5 }}>산책기록</div>
+      <div
+        style={{
+          fontSize: 30,
+          fontWeight: 800,
+          background: "linear-gradient(135deg,#E8927C,#9C81C4)",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+          letterSpacing: -0.5,
+        }}
+      >
+        산책기록
+      </div>
       <div style={{ fontSize: 14, color: "#8B8578", fontWeight: 500 }}>오늘의 걸음을 기록해요</div>
     </div>
   );

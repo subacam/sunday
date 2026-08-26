@@ -33,15 +33,17 @@ export default function TabBar({
     >
       <div onClick={() => onSelect("feed")} style={tabCol}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <g transform="rotate(-18 7 16)">
-            <ellipse cx="7" cy="16.5" rx="3.3" ry="5" fill={feedColor} />
-            <circle cx="6.3" cy="10.2" r="1.2" fill={feedColor} />
-            <circle cx="8.6" cy="10.6" r="1" fill={feedColor} />
+          <g transform="rotate(-16 7 16)">
+            <ellipse cx="7" cy="17" rx="4.2" ry="5.6" fill={feedColor} />
+            <circle cx="3.4" cy="10.8" r="1.7" fill={feedColor} />
+            <circle cx="7" cy="9.4" r="1.7" fill={feedColor} />
+            <circle cx="10.6" cy="10.8" r="1.7" fill={feedColor} />
           </g>
-          <g transform="rotate(18 17 8)">
-            <ellipse cx="17" cy="8.5" rx="3.3" ry="5" fill={feedColor} />
-            <circle cx="16.3" cy="2.5" r="1.2" fill={feedColor} />
-            <circle cx="18.6" cy="2.9" r="1" fill={feedColor} />
+          <g transform="rotate(16 17 8)">
+            <ellipse cx="17" cy="9" rx="4.2" ry="5.6" fill={feedColor} />
+            <circle cx="13.4" cy="2.8" r="1.7" fill={feedColor} />
+            <circle cx="17" cy="1.4" r="1.7" fill={feedColor} />
+            <circle cx="20.6" cy="2.8" r="1.7" fill={feedColor} />
           </g>
         </svg>
         <span style={{ fontSize: 11, fontWeight: 700, color: feedColor }}>피드</span>
@@ -67,7 +69,7 @@ export default function TabBar({
             width: 56,
             height: 56,
             borderRadius: "50%",
-            background: "#E8927C",
+            background: "linear-gradient(135deg,#F0A28C,#D97BA0)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

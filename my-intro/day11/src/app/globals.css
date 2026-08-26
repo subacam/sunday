@@ -40,6 +40,10 @@ textarea {
   max-width: 480px;
   margin: 0 auto;
   position: relative;
-  background: #faf6ec;
+  background:
+    radial-gradient(120% 100% at 10% 0%, #fde7e0 0%, transparent 55%),
+    radial-gradient(100% 90% at 100% 10%, #e7f2e4 0%, transparent 50%),
+    radial-gradient(90% 85% at 50% 105%, #f0e8fb 0%, transparent 55%),
+    #faf6ec;
   overflow: hidden;
 }
