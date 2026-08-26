@@ -1,6 +1,25 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { Map as MaplibreMap, Marker, LngLatBounds, type StyleSpecification } from "maplibre-gl";
+import mapStyle from "@/lib/mapStyle.json";
 import { MOOD_COLOR } from "@/lib/mood";
-import { projectRecordsToMap } from "@/lib/dashboard";
 import type { WalkRecord } from "@/types/walk";
+
+// 사용자가 실제로 걸은 곳이 없을 때 보여줄 기본 중심 — 서울시청.
+const DEFAULT_CENTER: [number, number] = [126.978, 37.5665];
+
+function pinElement(record: WalkRecord) {
+  const el = document.createElement("div");
+  el.style.cursor = "pointer";
+  el.innerHTML = `
+    <svg width="26" height="34" viewBox="0 0 20 26">
+      <path d="M10 0C4.5 0 0 4.5 0 10c0 7 10 16 10 16s10-9 10-16C20 4.5 15.5 0 10 0z" fill="${MOOD_COLOR[record.ai_mood]}"></path>
+      <circle cx="10" cy="10" r="4" fill="#fff"></circle>
+    </svg>
+  `;
+  return el;
+}
 
 export default function MapTab({
   records,
@@ -9,7 +28,66 @@ export default function MapTab({
   records: WalkRecord[];
   onSelectPin: (record: WalkRecord) => void;
 }) {
-  const pins = projectRecordsToMap(records);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<MaplibreMap | null>(null);
+  const markersRef = useRef<Marker[]>([]);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = new MaplibreMap({
+      container: containerRef.current,
+      style: mapStyle as StyleSpecification,
+      center: DEFAULT_CENTER,
+      zoom: 13,
+      attributionControl: { compact: true },
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
+    });
+    map.touchZoomRotate.disableRotation();
+    mapRef.current = map;
+
+    // 컨테이너 크기가 마운트 시점 레이아웃과 어긋나거나(탭 전환 애니메이션,
+    // 카드 접힘 등) 이후 바뀌는 경우를 대비해 캔버스를 계속 동기화한다 —
+    // 그렇지 않으면 MapLibre가 최초 크기로 캔버스를 고정해버려 타일이
+    // 실제 표시 영역과 다른 스케일로 잘못 계산될 수 있다.
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // 기록이 바뀔 때마다 핀을 다시 그리고, 있으면 그 범위에 맞춰 카메라를 옮긴다.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    function render() {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = records.map((rec) => {
+        const el = pinElement(rec);
+        el.addEventListener("click", () => onSelectPin(rec));
+        return new Marker({ element: el, anchor: "bottom" })
+          .setLngLat([rec.longitude, rec.latitude])
+          .addTo(map!);
+      });
+
+      if (records.length > 0) {
+        const bounds = new LngLatBounds();
+        records.forEach((r) => bounds.extend([r.longitude, r.latitude]));
+        map!.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 0 });
+      }
+    }
+
+    if (map.isStyleLoaded()) render();
+    else map.once("load", render);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records]);
 
   return (
     <div>
@@ -29,54 +107,28 @@ export default function MapTab({
           background: "#EEEDE1",
         }}
       >
-        <svg
-          width="100%"
-          height="100%"
-          viewBox="0 0 300 400"
-          preserveAspectRatio="none"
-          style={{ position: "absolute", inset: 0 }}
-        >
-          <ellipse cx="70" cy="90" rx="65" ry="48" fill="#DCE6D6" />
-          <ellipse cx="235" cy="300" rx="55" ry="70" fill="#DCE6D6" />
-          <path d="M0 150 C 90 130, 130 200, 300 190" stroke="#DAD5C4" strokeWidth="7" fill="none" />
-          <path d="M20 0 C 60 90, 40 220, 90 400" stroke="#DAD5C4" strokeWidth="6" fill="none" />
-          <path d="M300 60 C 220 100, 210 260, 260 400" stroke="#DAD5C4" strokeWidth="6" fill="none" />
-        </svg>
+        <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
 
         {records.length === 0 && (
           <div
             style={{
               position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              left: 16,
+              right: 16,
+              bottom: 16,
+              padding: "10px 14px",
+              borderRadius: 14,
+              background: "rgba(255,255,255,0.88)",
               fontSize: 13,
               color: "#8B8578",
               fontWeight: 600,
               textAlign: "center",
-              padding: "0 40px",
+              pointerEvents: "none",
             }}
           >
             아직 발자취가 없어요
           </div>
         )}
-
-        {pins.map(({ record, left, top }) => (
-          <div
-            key={record.id}
-            onClick={() => onSelectPin(record)}
-            style={{ position: "absolute", left: `${left}%`, top: `${top}%`, transform: "translate(-50%,-100%)", cursor: "pointer" }}
-          >
-            <svg width="26" height="34" viewBox="0 0 20 26">
-              <path
-                d="M10 0C4.5 0 0 4.5 0 10c0 7 10 16 10 16s10-9 10-16C20 4.5 15.5 0 10 0z"
-                fill={MOOD_COLOR[record.ai_mood]}
-              />
-              <circle cx="10" cy="10" r="4" fill="#fff" />
-            </svg>
-          </div>
-        ))}
       </div>
     </div>
   );

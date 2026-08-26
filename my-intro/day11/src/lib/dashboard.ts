@@ -56,21 +56,3 @@ export function computeDonutGradient(moodLegend: { color: string; pct: number }[
   });
   return parts.length ? `conic-gradient(${parts.join(", ")})` : "#F3EFE4";
 }
-
-// 지도: 실지도 SDK 없이, 사용자의 기록 위경도 범위를 15%~85% 캔버스에 정규화해 핀을 뿌린다.
-export function projectRecordsToMap(records: WalkRecord[]) {
-  if (records.length === 0) return [];
-  const lats = records.map((r) => r.latitude);
-  const lngs = records.map((r) => r.longitude);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const latRange = maxLat - minLat;
-  const lngRange = maxLng - minLng;
-
-  return records.map((r) => {
-    const left = lngRange === 0 ? 50 : 15 + ((r.longitude - minLng) / lngRange) * 70;
-    // 위도는 위로 갈수록 커지므로 화면 top 기준으로 뒤집는다.
-    const top = latRange === 0 ? 50 : 15 + ((maxLat - r.latitude) / latRange) * 70;
-    return { record: r, left, top };
-  });
-}

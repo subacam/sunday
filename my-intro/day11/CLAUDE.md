@@ -11,7 +11,7 @@
 - **프론트엔드**: Next.js 16 (App Router) + TypeScript + React 19, 전부 클라이언트 컴포넌트(`src/app/page.tsx`가 스플래시/온보딩/로그인/앱 4단계 상태 머신을 직접 관리). Tailwind 없음 — `prd/project/산책기록.dc.html`의 인라인 스타일 값을 `src/components/*.tsx`에 그대로 옮겨적는 방식이 픽셀 일치를 보장하기 가장 쉬웠다.
 - **인증/DB/스토리지**: Supabase, day4/day8과 같은 공유 프로젝트("subacam's Project", id `srhnwzcnimadmoyfukwd`). URL과 publishable(anon) 키는 `src/lib/supabase.ts`에 하드코딩되어 있다 — day4/day8과 같은 이유로 비밀값이 아니다(RLS가 실제 접근을 통제).
 - **AI**: Gemini Vision, 이 폴더의 소스가 아니라 Supabase Edge Function(`supabase/functions/gemini-vision/index.ts`) 안에서만 호출된다. `GEMINI_API_KEY`는 Edge Function 시크릿으로만 존재하고 클라이언트에는 절대 내려가지 않는다.
-- **지도**: 실지도 SDK 없음 (아래 "지도가 실지도가 아닌 이유" 참고).
+- **지도**: MapLibre GL JS **v4**(v6 아님 — 이유는 아래 "지도" 절의 워커 버그 참고) + OpenFreeMap 벡터 타일(무료, 키 불필요).
 
 ## 데이터 모델 (Supabase 프로젝트 `srhnwzcnimadmoyfukwd`)
 
@@ -27,9 +27,25 @@
 - **`MOCK_GEMINI` 플래그(Edge Function 시크릿, 기본값 없으면 "1"로 간주) — 지금은 mock 상태다.** `GEMINI_API_KEY` 시크릿이 아직 등록되지 않았거나 `MOCK_GEMINI`가 "0"이 아니면 PRD의 `AI_POOL` 예시 3종 중 하나를 `(mock)` 접미사와 함께 그대로 반환한다. 실제 Gemini 호출이 실패해도(401/429/기타) mock으로 자동 폴백하고 응답에 `fallback:true`를 얹는다 — 사용자 경험이 절대 끊기지 않도록.
 - **실제 키로 전환하는 법(사용자가 직접 해야 함 — Supabase MCP 도구셋에는 Edge Function 시크릿을 설정하는 도구가 없다)**: Supabase 대시보드 → Edge Functions → `gemini-vision` → Secrets에서 `GEMINI_API_KEY`(Google AI Studio, `AIzaSy...`로 시작하는 키)와 `MOCK_GEMINI=0`을 등록하거나, CLI로 `supabase secrets set GEMINI_API_KEY=... MOCK_GEMINI=0 --project-ref srhnwzcnimadmoyfukwd`. 이 세션에서 사용자가 붙여넣은 값(`AQ.`로 시작)은 Google AI Studio 키 형식(`AIzaSy...`)이 아니라 OAuth 액세스 토큰처럼 보여 사용하지 않았다 — 실제 키인지 `aistudio.google.com/apikey`에서 재확인 필요.
 
-## 지도가 실지도가 아닌 이유
+## 지도
 
-PRD 문서 자체는 Kakao/Mapbox 같은 실지도 SDK를 "추가로 필요"하다고 제안했지만, Claude Design 대화 기록을 확인한 결과 사용자가 초기 설정 질문에서 지도 스타일을 **"심플/미니멀 지도"**로 명시적으로 선택했다(실지도 스타일 옵션이 따로 있었는데 고르지 않음). 그래서 `산책기록.dc.html`에 이미 그려진 추상 블롭 2개 + 경로 3개짜리 SVG가 placeholder가 아니라 최종 디자인이라고 판단해 그대로 구현했다(`src/components/MapTab.tsx`). 실제 위경도는 그 사용자의 기록 범위(min/max lat/lng)에 맞춰 15%~85% 캔버스 좌표로 정규화한다(`src/lib/dashboard.ts`의 `projectRecordsToMap`) — 기록이 1개뿐이거나 위경도 범위가 0이면 중앙(50%,50%)으로 fallback.
+**1차 구현(추상 SVG) → 2차 구현(실지도)으로 교체됐다.** 처음엔 Claude Design 대화 기록에서 사용자가 지도 스타일로 "심플/미니멀 지도"를 골랐던 것을 근거로, `산책기록.dc.html`의 추상 블롭+경로 SVG를 그대로 구현했다. 이후 사용자가 "지금 컨셉(미니멀 톤)은 유지하되 실제 지도 형태와 동일하게 해달라"고 요청해, **MapLibre GL JS + OpenFreeMap 벡터 타일**로 다시 구현했다(`src/components/MapTab.tsx`).
+
+- **왜 OpenFreeMap인가**: Kakao/Mapbox 같은 다른 실지도 SDK는 키 발급(사용자 액션 필요)이 걸리거나(Kakao), 스타일을 도로/땅/물 색까지 자유롭게 재색칠하기 어렵다. OpenFreeMap(openfreemap.org)은 회원가입·키 없이 벡터 타일을 무료로 제공하고, MapLibre 스타일 스펙(레이어별 `paint` 오버라이드)을 그대로 쓸 수 있어 "실제 도로/건물/물 모양은 유지하되 색은 앱 팔레트로" 요구를 정확히 만족한다.
+- **컨셉을 유지하는 방법**: 색칠은 지도를 움직이거나 다시 열 때마다 다시 계산하지 않는다 — `src/lib/mapStyle.json`이 OpenFreeMap의 "positron" 베이스 스타일에서 라벨/POI/철도/공항/행정경계 레이어를 전부 제거하고, 남은 13개 레이어(배경/공원/물/주거지/숲/수로/건물/도로 각급)만 앱 팔레트(`#EEEDE1`/`#DCE6D6`/`#DAD5C4` 등, 목업의 블롭·경로 색과 동일 계열)로 미리 재색칠해둔 정적 파일이다. 지도를 열 때마다 실시간으로 바뀌는 건 그 위치의 실제 지형 **데이터**(도로·건물 모양)뿐이고, 그건 사용자가 어디를 걷든 대응해야 하므로 라이브로 받아올 수밖에 없다(전 세계를 미리 구워둘 수 없음). `mapStyle.json`은 `scratchpad/build-map-style.js`(세션 임시 스크립트, 저장소에는 없음) 같은 방식으로 OpenFreeMap의 positron 스타일을 한 번 내려받아 레이어를 골라 재색칠해 만들었다 — 다시 만들 땐 `https://tiles.openfreemap.org/styles/positron`을 기준으로 삼으면 된다.
+- **핀/카메라**: 기록의 실제 위경도로 `LngLatBounds` + `fitBounds`를 써서 사용자의 기록 범위에 자동으로 맞춘다(예전의 `projectRecordsToMap` 수동 정규화는 제거). 핀은 기존 mood-color teardrop SVG를 MapLibre `Marker`의 커스텀 DOM 엘리먼트로 그대로 재사용한다.
+- **전국 미리 캡처는 하지 않기로 함**: 사용자가 "한국 전체를 미리 캡처해두면 어떤가" 물어봐서, 골목 단위 상세도로 전국을 정적 타일로 구우면 파일 수가 감당 안 된다는 점(전국 × z16~18은 수백만 타일)과, PMTiles(단일 파일 오프라인 타일 아카이브)로 하면 가능은 하지만 빌드 파이프라인이 훨씬 무거워진다는 점을 설명했다. 개인 프로젝트 규모라 지금의 라이브 OpenFreeMap 방식(브라우저가 사용자가 실제로 다니는 지역만 자연히 캐싱)을 유지하기로 결정했다.
+- **트레이드오프**: 지도 화면은 이제 네트워크가 필요하다(추상 SVG일 때는 완전 오프라인이었음) — PWA의 다른 화면(피드/대시보드/내정보)은 여전히 오프라인에서 캐시된 데이터로 보이지만, 지도 탭은 타일을 못 받으면 배경색만 보이고 빈 상태가 된다. 별도 오프라인 폴백은 아직 안 만들었다.
+
+### 배포 후 실제로 겪은 버그 3개 — 순서대로
+
+지도를 실지도로 바꾼 뒤 배포했더니 실사용자(이 프로젝트 소유자)가 "지도가 안 보인다"고 보고했다. 원인이 세 개 겹쳐 있었고, 하나씩 벗겨내며 고쳤다:
+
+1. **서비스워커가 배포를 아예 감지하지 못함.** `public/sw.js`가 v1에서 순수 캐시 우선(cache-first, 재검증 없음)이었다. `sw.js` 파일 자체의 바이트가 바뀌지 않으면 브라우저는 새 서비스워커 설치 자체를 시도하지 않는다 — 그래서 코드를 아무리 재배포해도 최초에 캐싱해둔 예전 HTML/JS(당시엔 추상 SVG 지도였던 버전)를 브라우저가 영원히 계속 서빙했다. `CACHE_VERSION`을 올리고 fetch 전략을 네트워크 우선(성공하면 그걸 쓰고 캐시에 저장, 실패하면 캐시 폴백)으로 바꿔서 해결(`v2`). `skipWaiting`/`clients.claim`은 원래 있었지만 그건 "새 SW가 설치될 때" 취하는 조치라,애초에 새 SW 설치 자체가 트리거되지 않으면 무용지물이라는 걸 이번에 체감했다.
+2. **지도 캔버스 크기가 마운트 시점에 잘못 고정됨.** 로컬에서 캔버스 내부 버퍼가 스타일 크기의 정확히 절반(224×270 vs 448×540)으로 굳어있는 걸 발견 — MapLibre가 컨테이너를 실제 최종 레이아웃 이전 시점 크기로 한 번만 읽고 고정해버린 것으로 추정. `MapTab.tsx`에 `ResizeObserver`를 달아 컨테이너 크기가 바뀔 때마다 `map.resize()`를 호출하도록 고쳤다.
+3. **(진짜 원인) MapLibre GL JS v6가 타일 워커를 ES 모듈 blob URL로 띄우는데, 그 워커 스크립트 로드 자체가 이 환경에서 영원히 멈춤.** `window.Worker`를 몽키패치해 관찰한 결과 워커가 아예 생성되지 않았고, 네트워크 탭에는 `blob:https://.../<uuid>` 요청 하나가 `pending` 상태로 영원히 걸려 있었다 — `.pbf` 타일 요청은 단 하나도 나가지 않았다(`map.isStyleLoaded()`가 계속 `false`). v6는 `new Worker(url, {type:'module'})`로 워커를 띄우는데(`node_modules/maplibre-gl/dist/maplibre-gl.mjs`에서 `new Worker(e,{type:` 검색하면 확인 가능), v4.7.1은 `new Worker(e.a.WORKER_URL)`처럼 classic(비-모듈) 워커를 쓴다. **`maplibre-gl`을 `^6.6.0` → `4.7.1`로 다운그레이드하니 즉시 해결됐다** (`map.loaded()`/`isStyleLoaded()`가 `true`로 바뀌고 실제 타일이 렌더링됨 — Vercel 프리뷰 배포로 직접 확인). API(named export `Map`/`Marker`/`LngLatBounds`/`StyleSpecification`)는 v4도 동일해서 `MapTab.tsx` 코드 변경은 필요 없었다. **v6로 다시 올리지 말 것** — 최소한 이 워커 이슈가 업스트림에서 고쳐졌는지 확인 후에.
+
+디버깅 과정에서 `npm run dev`(Turbopack)의 Fast Refresh가 여러 번 코드 변경을 반영하지 못하고 멈추는 것도 겪었다 — 파일을 고친 뒤 콘솔 로그가 안 보이면 HMR을 의심하지 말고 그냥 `node` 프로세스를 전부 죽이고 `npm run dev`를 재시작할 것. 최종 확인은 로컬이 아니라 **Vercel 프리뷰 배포**(`vercel deploy`, prod 아님)로 했다 — 실제 배포 환경과 최대한 가깝게 재현하려는 목적.
 
 ## 온보딩/로그인 순서
 
@@ -40,16 +56,17 @@ PRD 5.1(스플래시 → 온보딩 최초 1회 → 로그인)을 그대로 따�
 - `npm run build` / `npm run lint` 통과 (TypeScript strict, ESLint 0 errors — `prd/**`는 Claude Design 원본 소스라 lint 대상에서 제외).
 - Supabase REST를 직접 호출해 실제 유저(`signup` → JWT)로 `walk_profiles`/`walk_records` insert·select 확인, **RLS가 실제로 타인 접근을 막는 것**(무토큰 조회 시 빈 배열)까지 확인. Storage도 본인 경로 업로드는 성공, 남의 경로 업로드는 403으로 막히는 것 확인, 서명 URL 발급도 확인.
 - `gemini-vision` Edge Function을 실제 유저 JWT로 호출해 mock 응답(`(mock)` 접미사) 정상 수신 확인.
-- **`npm run dev` + 실제 Chrome 브라우저 자동화로 골든 패스 전체를 실행**: 스플래시 → 온보딩 3장(건너뛰기/다음/시작하기) → 회원가입(Supabase Auth 실호출) → 4탭(피드/지도/대시보드/내정보) 렌더링 → FAB로 캡처 시트 열기 → 갤러리에서 실제 파일 업로드 → (지오로케이션은 자동화 브라우저에 위치 권한이 없어 최초 시도는 8초 타임아웃 후 토스트+`choose` 화면으로 정상 복귀하는 것까지 확인 — GPS 실패 시 앱이 멈추지 않고 우아하게 처리됨을 검증) → 위치를 모킹해 재시도 → `gemini-vision` mock 응답 수신 → 결과 화면(`(mock)` 캡션/태그/무드) → 저장 → **Storage 업로드 + `walk_records` insert 실제 성공** → 피드에 새 카드로 반영 → 지도 핀 1개(`projectRecordsToMap`) · 대시보드 태그클라우드/요일막대/무드도넛(100% 설렘)까지 전부 실데이터로 정확히 반영되는 것을 확인. 테스트로 만든 계정/행/파일은 전부 정리(cascade delete)했다.
+- **`npm run dev` + 실제 Chrome 브라우저 자동화로 골든 패스 전체를 실행**: 스플래시 → 온보딩 3장(건너뛰기/다음/시작하기) → 회원가입(Supabase Auth 실호출) → 4탭(피드/지도/대시보드/내정보) 렌더링 → FAB로 캡처 시트 열기 → 갤러리에서 실제 파일 업로드 → (지오로케이션은 자동화 브라우저에 위치 권한이 없어 최초 시도는 8초 타임아웃 후 토스트+`choose` 화면으로 정상 복귀하는 것까지 확인 — GPS 실패 시 앱이 멈추지 않고 우아하게 처리됨을 검증) → 위치를 모킹해 재시도 → `gemini-vision` mock 응답 수신 → 결과 화면(`(mock)` 캡션/태그/무드) → 저장 → **Storage 업로드 + `walk_records` insert 실제 성공** → 피드에 새 카드로 반영 → 지도 핀 · 대시보드 태그클라우드/요일막대/무드도넛까지 전부 실데이터로 정확히 반영되는 것을 확인. 테스트로 만든 계정/행/파일은 전부 정리(cascade delete)했다.
 - **이 브라우저 검증에서 실제 버그 하나 발견·수정**: `AuthScreen.tsx`가 `const fn = mode==='login' ? supabase.auth.signInWithPassword : supabase.auth.signUp; await fn(...)`처럼 메서드를 변수로 분리해서 호출하고 있었는데, 이러면 `this` 바인딩이 깨져 supabase-js 내부에서 `Cannot read properties of undefined (reading 'storage')`로 즉시 실패했다(회원가입 버튼이 "처리 중..."에서 영원히 멈춤). `mode`에 따라 두 갈래로 직접 호출하도록 고쳐서 해결 — 콘솔에서 실제로 예외를 잡아서 재현·수정까지 한 것이라 실사용 검증의 가치가 컸다.
+- **`GEMINI_API_KEY`가 실제로 등록되어 실제 Gemini 응답 경로가 라이브다.** 사용자가 직접 키를 등록해 캡션에 더 이상 `(mock)`이 붙지 않는 실제 AI 응답(예: "길가 작은 화단 구석에서 수줍게 피어난 분홍빛 꽃송이들")으로 저장된 기록을 프로덕션에서 확인했다 — Edge Function 절의 "mock 상태" 서술은 이제 지나간 얘기다.
+- 지도를 실지도로 바꾼 뒤 실제로 겪은 버그 3개(서비스워커 캐시, 캔버스 리사이즈, MapLibre v6 워커 행)와 각각의 수정은 위 "지도 → 배포 후 실제로 겪은 버그 3개" 절 참고.
 
 ## 아직 안 된 것
 
-- **실제 Gemini 응답으로 전체 플로우(촬영→분석→저장) 실사용 검증** — `GEMINI_API_KEY`가 아직 mock 상태라 캡션/태그/무드는 항상 `AI_POOL` 예시 중 하나. 사용자가 실제 키를 등록하면 즉시 실제 경로로 전환된다(코드 변경 불필요).
-- 실제 기기 카메라로 촬영해 GPS 권한 프롬프트까지 포함한 전체 캡처 플로우의 실기기 검증(자동화 브라우저는 위치 권한 자체가 없어 GPS 성공 경로는 `getCurrentPosition`을 런타임에 모킹해서만 확인했다).
+- 실제 기기 카메라로 촬영해 GPS 권한 프롬프트까지 포함한 전체 캡처 플로우의 실기기 검증(자동화 브라우저는 위치 권한 자체가 없어 GPS 성공 경로는 `getCurrentPosition`을 런타임에 모킹해서만 확인했다). 사용자가 실제 브라우저로 촬영→저장까지는 이미 여러 번 직접 확인함(피드에 실데이터 존재).
 - PWA 설치(홈 화면 추가) 실기기 검증 — `manifest.json`/`sw.js`는 `day10`(물 한잔) 패턴을 그대로 따랐다. 아이콘(`public/icon.svg`, `public/icon-192.png`, `public/icon-512.png`)은 `TabBar.tsx`의 피드 탭 발자국 마크를 그대로 확대해 브랜드 컬러(`#E8927C`) 배경에 얹은 것(사용자 요청) — 실배포 전 재검토 대상.
-- `project-hub` 카드 등록, Vercel 배포(별도 프로젝트, Root Directory `day11`로 설정 필요 — `day6/shopping/server`와 같은 방식).
 - 소셜 로그인(PRD가 "선택"으로 언급) — 이메일/비밀번호만 구현, OAuth 앱 등록이 필요해 이번 범위에서 제외.
+- 지도 탭이 오프라인일 때의 폴백 UI(현재는 타일을 못 받으면 배경색만 보이는 빈 상태) — 위 "지도 → 트레이드오프" 참고.
 
 ## 실행
 
