@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+  <style>
+    body { margin: 0; background: #EDEAE4; font-family: 'Pretendard', -apple-system, system-ui, sans-serif; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 48px 16px; box-sizing: border-box;">
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ deviceDark }}" hint-size="402,874">
+
+    <sc-if value="{{ showOnboarding }}" hint-placeholder-val="{{ true }}">
+      <div style="height: 100%; display: flex; flex-direction: column; background: #F6F4EF; position: relative;">
+        <div style="position: absolute; top: 58px; right: 20px; z-index: 5;">
+          <div onClick="{{ obSkip }}" style="font-size: 14px; color: rgba(28,30,29,0.45); padding: 8px; cursor: pointer;">건너뛰기</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 32px; gap: 22px; text-align: center;">
+          <sc-if value="{{ obStep0 }}">
+            <div style="width: 96px; height: 96px; border-radius: 28px; background: #2B5A4C; display: flex; align-items: center; justify-content: center;">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M6 2h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3V2z" stroke="#F6F4EF" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 7h7M8.5 10.5h7M8.5 14h4.5" stroke="#F6F4EF" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+            <div style="font-size: 24px; font-weight: 700; color: #1C1E1D; line-height: 1.4;">영수증만 찍으면<br/>가계부 완성</div>
+            <div style="font-size: 15px; color: rgba(28,30,29,0.55); line-height: 1.6;">촬영, 입력, 분류까지<br/>AI가 대신 해드려요</div>
+          </sc-if>
+          <sc-if value="{{ obStep1 }}">
+            <div style="width: 96px; height: 96px; border-radius: 28px; background: #2B5A4C; display: flex; align-items: center; justify-content: center;">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" stroke="#F6F4EF" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#F6F4EF" stroke-width="1.6"/></svg>
+            </div>
+            <div style="font-size: 24px; font-weight: 700; color: #1C1E1D; line-height: 1.4;">AI 인식 → 자동 분류<br/>→ 대시보드</div>
+            <div style="font-size: 15px; color: rgba(28,30,29,0.55); line-height: 1.6;">지출 패턴을 한눈에<br/>확인할 수 있어요</div>
+          </sc-if>
+          <sc-if value="{{ obStep2 }}">
+            <div style="width: 96px; height: 96px; border-radius: 28px; background: #2B5A4C; display: flex; align-items: center; justify-content: center;">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M4 7l1.2-2.4A2 2 0 0 1 7 3.5h10a2 2 0 0 1 1.8 1.1L20 7" stroke="#F6F4EF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3.5" y="7" width="17" height="12.5" rx="3" stroke="#F6F4EF" stroke-width="1.6"/><circle cx="12" cy="13" r="3.4" stroke="#F6F4EF" stroke-width="1.6"/></svg>
+            </div>
+            <div style="font-size: 24px; font-weight: 700; color: #1C1E1D; line-height: 1.4;">카메라 권한이<br/>필요해요</div>
+            <div style="font-size: 15px; color: rgba(28,30,29,0.55); line-height: 1.6;">영수증 촬영을 위해서만 사용하고<br/>다른 목적에는 쓰지 않아요</div>
+          </sc-if>
+          <sc-if value="{{ obStep3 }}">
+            <div style="font-size: 24px; font-weight: 700; color: #1C1E1D;">지금 시작해볼까요?</div>
+            <div style="font-size: 15px; color: rgba(28,30,29,0.55); line-height: 1.6;">계정 없이도 먼저 둘러볼 수 있어요</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 8px;">
+              <div onClick="{{ obStart }}" style="height: 52px; border-radius: 14px; background: #1C1E1D; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; cursor: pointer;">Google로 계속하기</div>
+              <div onClick="{{ obStart }}" style="height: 52px; border-radius: 14px; background: #FEE500; color: #1C1E1D; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; cursor: pointer;">카카오로 계속하기</div>
+              <div onClick="{{ obStart }}" style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(28,30,29,0.5); cursor: pointer;">게스트로 둘러보기</div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="padding: 0 0 40px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+          <div style="display: flex; gap: 7px;">
+            <sc-for list="{{ obDots }}" as="d" hint-placeholder-count="4">
+              <div style="{{ d.style }}"></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ obShowNext }}">
+            <div onClick="{{ obNext }}" style="width: 200px; height: 52px; border-radius: 14px; background: #2B5A4C; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; cursor: pointer;">다음</div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showMain }}" hint-placeholder-val="{{ false }}">
+      <div style="height: 100%; display: flex; flex-direction: column; background: #EDEAE4;">
+        <div style="flex: 1; overflow: auto;">
+
+          <sc-if value="{{ tabFeed }}">
+            <div style="padding: 58px 20px 12px;">
+              <div style="font-size: 22px; font-weight: 700; color: #1C1E1D;">안녕하세요, 지수님</div>
+              <div style="font-size: 14px; color: rgba(28,30,29,0.5); margin-top: 4px;">오늘도 지출을 잘 챙겨봐요</div>
+            </div>
+            <div style="margin: 8px 20px 18px; background: #1C1E1D; border-radius: 20px; padding: 20px; color: #fff;">
+              <div style="font-size: 13px; color: rgba(255,255,255,0.55);">8월 총 지출</div>
+              <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 6px;">
+                <div style="font-size: 28px; font-weight: 700;">{{ monthTotalLabel }}</div>
+                <div style="font-size: 13px; color: #E7A94E; font-weight: 600;">{{ changeLabel }}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; padding: 0 20px 16px; overflow-x: auto;">
+              <sc-for list="{{ feedFilters }}" as="f" hint-placeholder-count="4">
+                <div style="{{ f.style }}">{{ f.label }}</div>
+              </sc-for>
+            </div>
+            <div style="padding: 0 20px 100px;">
+              <sc-for list="{{ feedGroups }}" as="grp" hint-placeholder-count="3">
+                <div style="margin-bottom: 22px;">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                    <div style="font-size: 13px; font-weight: 600; color: rgba(28,30,29,0.45);">{{ grp.label }}</div>
+                    <div style="font-size: 13px; color: rgba(28,30,29,0.4);">{{ grp.subtotalLabel }}</div>
+                  </div>
+                  <div style="background: #fff; border-radius: 18px; overflow: hidden;">
+                    <sc-for list="{{ grp.items }}" as="it" hint-placeholder-count="2">
+                      <div onClick="{{ it.open }}" style="{{ it.rowStyle }}">
+                        <div style="width: 38px; height: 38px; border-radius: 12px; background: {{ it.color }}; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0;">{{ it.short }}</div>
+                        <div style="flex: 1; min-width: 0;">
+                          <div style="font-size: 15px; font-weight: 600; color: #1C1E1D; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ it.merchant }}</div>
+                          <div style="font-size: 12.5px; color: rgba(28,30,29,0.45); margin-top: 2px;">{{ it.categoryName }} · {{ it.method }}</div>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 700; color: #1C1E1D; flex-shrink: 0;">{{ it.amountLabel }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabDashboard }}">
+            <div style="padding: 58px 20px 6px;">
+              <div style="font-size: 22px; font-weight: 700; color: #1C1E1D;">대시보드</div>
+              <div style="display: flex; gap: 6px; margin-top: 12px;">
+                <sc-for list="{{ periodTabs }}" as="p" hint-placeholder-count="3">
+                  <div style="{{ p.style }}">{{ p.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="margin: 14px 20px; background: #fff; border-radius: 18px; padding: 20px;">
+              <div style="font-size: 13px; color: rgba(28,30,29,0.5);">이번 달 총 지출</div>
+              <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 6px;">
+                <div style="font-size: 26px; font-weight: 700; color: #1C1E1D;">{{ monthTotalLabel }}</div>
+                <div style="font-size: 13px; color: #C1663F; font-weight: 600;">{{ changeLabel }} (전월 대비)</div>
+              </div>
+            </div>
+            <div style="margin: 0 20px 14px; background: #fff; border-radius: 18px; padding: 20px; display: flex; align-items: center; gap: 22px;">
+              <div style="width: 128px; height: 128px; border-radius: 50%; background: {{ donutGradient }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <div style="width: 82px; height: 82px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <div style="font-size: 11px; color: rgba(28,30,29,0.45);">카테고리</div>
+                  <div style="font-size: 11px; color: rgba(28,30,29,0.45);">{{ categoryCount }}개</div>
+                </div>
+              </div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                <sc-for list="{{ categoryBreakdown }}" as="c" hint-placeholder-count="4">
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px;">
+                    <div style="{{ c.dotStyle }}"></div>
+                    <div style="flex: 1; color: #1C1E1D;">{{ c.name }}</div>
+                    <div style="color: rgba(28,30,29,0.5); font-weight: 600;">{{ c.pctLabel }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="margin: 0 20px 14px; background: #fff; border-radius: 18px; padding: 20px;">
+              <div style="font-size: 14px; font-weight: 700; color: #1C1E1D; margin-bottom: 14px;">월별 추이</div>
+              <div style="display: flex; align-items: flex-end; gap: 10px; height: 90px;">
+                <sc-for list="{{ trendBars }}" as="t" hint-placeholder-count="6">
+                  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px;">
+                    <div style="{{ t.barStyle }}"></div>
+                    <div style="font-size: 10.5px; color: rgba(28,30,29,0.45);">{{ t.label }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="margin: 0 20px 14px; background: #fff; border-radius: 18px; padding: 20px;">
+              <div style="font-size: 14px; font-weight: 700; color: #1C1E1D; margin-bottom: 12px;">이번 달 지출 top 5</div>
+              <sc-for list="{{ topMerchants }}" as="m" hint-placeholder-count="5">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+                  <div style="width: 22px; font-size: 13px; font-weight: 700; color: rgba(28,30,29,0.35);">{{ m.rank }}</div>
+                  <div style="flex: 1; font-size: 14px; color: #1C1E1D;">{{ m.name }}</div>
+                  <div style="font-size: 14px; font-weight: 600; color: #1C1E1D;">{{ m.amountLabel }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin: 0 20px 14px; background: #fff; border-radius: 18px; padding: 20px;">
+              <div style="font-size: 14px; font-weight: 700; color: #1C1E1D; margin-bottom: 12px;">예산 진행률</div>
+              <sc-for list="{{ budgetRows }}" as="b" hint-placeholder-count="3">
+                <div style="margin-bottom: 14px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                    <div style="color: #1C1E1D; font-weight: 600;">{{ b.name }}</div>
+                    <div style="{{ b.labelStyle }}">{{ b.spentLabel }} / {{ b.budgetLabel }}</div>
+                  </div>
+                  <div style="height: 8px; border-radius: 5px; background: rgba(28,30,29,0.08); overflow: hidden;">
+                    <div style="{{ b.barStyle }}"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin: 0 20px 100px; background: #2B5A4C; border-radius: 18px; padding: 20px;">
+              <div style="font-size: 12px; color: rgba(255,255,255,0.65); font-weight: 700; margin-bottom: 6px;">AI 인사이트</div>
+              <div style="font-size: 14px; color: #fff; line-height: 1.6;">{{ insightText }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabTrend }}">
+            <div style="padding: 58px 20px 6px;">
+              <div style="font-size: 22px; font-weight: 700; color: #1C1E1D;">트렌드</div>
+              <div style="font-size: 13px; color: rgba(28,30,29,0.5); margin-top: 4px;">다른 사람들은 얼마나 쓸까요? (전체 사용자 익명 데이터 기반)</div>
+            </div>
+            <div style="margin: 12px 20px 14px; background: #fff; border-radius: 18px; padding: 20px;">
+              <div style="font-size: 14px; font-weight: 700; color: #1C1E1D; margin-bottom: 14px;">또래 평균과 비교</div>
+              <sc-for list="{{ peerCompare }}" as="p" hint-placeholder-count="3">
+                <div style="margin-bottom: 16px;">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                    <div style="font-size: 13.5px; font-weight: 600; color: #1C1E1D;">{{ p.name }}</div>
+                    <div style="{{ p.diffStyle }}">{{ p.diffLabel }}</div>
+                  </div>
+                  <div style="display: flex; gap: 4px; align-items: center;">
+                    <div style="flex: 1; height: 8px; border-radius: 5px; background: rgba(28,30,29,0.08); overflow: hidden;"><div style="{{ p.mineBarStyle }}"></div></div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 11.5px; color: rgba(28,30,29,0.4);">
+                    <div>내 지출 {{ p.mineLabel }}</div>
+                    <div>또래 평균 {{ p.avgLabel }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin: 0 20px 100px; background: #fff; border-radius: 18px; padding: 20px;">
+              <div style="font-size: 14px; font-weight: 700; color: #1C1E1D; margin-bottom: 12px;">이번 주 인기 소비 카테고리 · 전체 사용자</div>
+              <sc-for list="{{ popularCategories }}" as="c" hint-placeholder-count="5">
+                <div style="margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px;">
+                    <div style="color: #1C1E1D; font-weight: 600;">{{ c.name }}</div>
+                    <div style="color: rgba(28,30,29,0.45);">{{ c.pctLabel }}</div>
+                  </div>
+                  <div style="height: 8px; border-radius: 5px; background: rgba(28,30,29,0.08); overflow: hidden;"><div style="{{ c.barStyle }}"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabMai }}">
+            <div style="padding: 58px 20px 6px;">
+              <div style="font-size: 22px; font-weight: 700; color: #1C1E1D;">마이</div>
+            </div>
+            <div style="margin: 14px 20px; background: #fff; border-radius: 18px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: #2B5A4C; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; font-weight: 700;">지</div>
+              <div>
+                <div style="font-size: 15px; font-weight: 700; color: #1C1E1D;">지수님</div>
+                <div style="font-size: 12.5px; color: rgba(28,30,29,0.45); margin-top: 2px;">jisoo@gmail.com</div>
+              </div>
+            </div>
+            <div style="margin: 14px 20px 100px; background: #fff; border-radius: 18px; overflow: hidden;">
+              <div onClick="{{ openCategoryBudget }}" style="padding: 16px 18px; font-size: 15px; color: #1C1E1D; border-bottom: 0.5px solid rgba(28,30,29,0.08); display: flex; justify-content: space-between; cursor: pointer;"><span>카테고리 · 예산 관리</span><span style="color: rgba(28,30,29,0.3);">›</span></div>
+              <div style="padding: 16px 18px; font-size: 15px; color: #1C1E1D; border-bottom: 0.5px solid rgba(28,30,29,0.08); display: flex; justify-content: space-between;"><span>알림 설정</span><span style="color: rgba(28,30,29,0.3);">›</span></div>
+              <div style="padding: 16px 18px; font-size: 15px; color: #1C1E1D; border-bottom: 0.5px solid rgba(28,30,29,0.08); display: flex; justify-content: space-between;"><span>결제수단 관리</span><span style="color: rgba(28,30,29,0.3);">›</span></div>
+              <div style="padding: 16px 18px; font-size: 15px; color: #1C1E1D; display: flex; justify-content: space-between;"><span>데이터 내보내기</span><span style="color: rgba(28,30,29,0.3);">›</span></div>
+            </div>
+          </sc-if>
+
+        </div>
+
+        <div style="flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: space-around; padding: 10px 12px 24px; background: rgba(246,244,239,0.92); backdrop-filter: blur(10px); border-top: 0.5px solid rgba(28,30,29,0.08);">
+          <div onClick="{{ selectFeedTab }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; width: 52px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="{{ navFeedColor }}" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div style="font-size: 11px; color: {{ navFeedColor }}; font-weight: 600;">피드</div>
+          </div>
+          <div onClick="{{ selectTrendTab }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; width: 52px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8.5" cy="9" r="3" stroke="{{ navTrendColor }}" stroke-width="1.8"/><circle cx="16" cy="10.5" r="2.3" stroke="{{ navTrendColor }}" stroke-width="1.8"/><path d="M2.5 19c0.8-3.2 3.2-5 6-5s5.2 1.8 6 5" stroke="{{ navTrendColor }}" stroke-width="1.8" stroke-linecap="round"/><path d="M14.8 15c2 0.2 3.6 1.7 4.2 4" stroke="{{ navTrendColor }}" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div style="font-size: 11px; color: {{ navTrendColor }}; font-weight: 600;">트렌드</div>
+          </div>
+          <div onClick="{{ openCapture }}" style="width: 56px; height: 56px; border-radius: 50%; background: #2B5A4C; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-top: -26px; box-shadow: 0 8px 18px rgba(43,90,76,0.35);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 7l1.2-2.4A2 2 0 0 1 7 3.5h10a2 2 0 0 1 1.8 1.1L20 7" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><rect x="3.5" y="7" width="17" height="12.5" rx="3" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="13" r="3.4" stroke="#fff" stroke-width="1.7"/></svg>
+          </div>
+          <div onClick="{{ selectDashboardTab }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; width: 52px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 20V10M12 20V4M19 20v-7" stroke="{{ navDashboardColor }}" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div style="font-size: 11px; color: {{ navDashboardColor }}; font-weight: 600;">대시보드</div>
+          </div>
+          <div onClick="{{ selectMaiTab }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; width: 52px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="{{ navMaiColor }}" stroke-width="1.8"/><path d="M5 20c1-3.8 4-6 7-6s6 2.2 7 6" stroke="{{ navMaiColor }}" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div style="font-size: 11px; color: {{ navMaiColor }}; font-weight: 600;">마이</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; left: 20px; right: 20px; bottom: 96px; background: #1C1E1D; color: #fff; border-radius: 12px; padding: 13px 16px; font-size: 14px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.25);">{{ toast }}</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showCapture }}">
+      <div style="height: 100%; display: flex; flex-direction: column; background: #111311; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 58px 20px 12px;">
+          <div onClick="{{ closeOverlay }}" style="color: #fff; font-size: 22px; cursor: pointer;">✕</div>
+          <div style="color: #fff; font-size: 14px; font-weight: 600;">영수증 촬영</div>
+          <div style="width: 22px;"></div>
+        </div>
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 10px 24px;">
+          <div style="position: relative; width: 100%; max-width: 300px; aspect-ratio: 3/4; border: 1.5px dashed rgba(255,255,255,0.35); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; top: -1px; left: -1px; width: 28px; height: 28px; border-top: 3px solid #fff; border-left: 3px solid #fff; border-radius: 12px 0 0 0;"></div>
+            <div style="position: absolute; top: -1px; right: -1px; width: 28px; height: 28px; border-top: 3px solid #fff; border-right: 3px solid #fff; border-radius: 0 12px 0 0;"></div>
+            <div style="position: absolute; bottom: -1px; left: -1px; width: 28px; height: 28px; border-bottom: 3px solid #fff; border-left: 3px solid #fff; border-radius: 0 0 0 12px;"></div>
+            <div style="position: absolute; bottom: -1px; right: -1px; width: 28px; height: 28px; border-bottom: 3px solid #fff; border-right: 3px solid #fff; border-radius: 0 0 12px 0;"></div>
+            <div style="color: rgba(255,255,255,0.4); font-size: 13px; text-align: center; padding: 0 20px;">영수증 전체가<br/>보이도록 맞춰주세요</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-around; padding: 10px 32px 48px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#fff" stroke-width="1.6"/><circle cx="8.5" cy="11" r="1.6" fill="#fff"/><path d="M3 16l5-4 4 3 3-2 6 5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div onClick="{{ takePhoto }}" style="width: 74px; height: 74px; border-radius: 50%; background: #fff; border: 4px solid rgba(255,255,255,0.3); cursor: pointer;"></div>
+          <div style="width: 44px; height: 44px;"></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showLoading }}">
+      <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #111311; gap: 26px; padding: 0 40px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.15); border-top-color: #E7A94E; animation: spin 0.9s linear infinite;"></div>
+        <div style="color: #fff; font-size: 16px; font-weight: 600; text-align: center;">영수증을 읽는 중이에요</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 220px;">
+          <sc-for list="{{ loadingSteps }}" as="s" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: {{ s.color }};">
+              <div style="{{ s.dotStyle }}"></div>
+              <div>{{ s.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showReview }}">
+      <div style="height: 100%; display: flex; flex-direction: column; background: #EDEAE4;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 58px 20px 10px;">
+          <div onClick="{{ closeOverlay }}" style="font-size: 20px; color: #1C1E1D; cursor: pointer;">‹</div>
+          <div style="font-size: 15px; font-weight: 700; color: #1C1E1D;">확인 및 수정</div>
+          <div style="width: 20px;"></div>
+        </div>
+        <div style="flex: 1; overflow: auto; padding: 8px 20px 24px;">
+          <div style="background: #fff; border-radius: 16px; padding: 16px; display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+            <div style="width: 52px; height: 68px; border-radius: 8px; background: repeating-linear-gradient(#fff, #fff 6px, #e6e2d8 7px); border: 1px solid rgba(28,30,29,0.12); flex-shrink: 0;"></div>
+            <div style="flex: 1; font-size: 12.5px; color: rgba(28,30,29,0.5); line-height: 1.5;">원본 영수증 이미지<br/>탭하면 확대해서 볼 수 있어요</div>
+          </div>
+
+          <div style="background: #fff; border-radius: 16px; padding: 4px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 0.5px solid rgba(28,30,29,0.08);">
+              <div style="font-size: 13px; color: rgba(28,30,29,0.5);">상호명</div>
+              <div style="font-size: 15px; font-weight: 600; color: #1C1E1D;">{{ reviewDraft.merchant }}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 0.5px solid rgba(28,30,29,0.08); background: #FBF3E4; margin: 0 -16px; padding-left: 16px; padding-right: 16px; border-radius: 0;">
+              <div style="font-size: 13px; color: #9A6B1E; font-weight: 600;">날짜 · 확인 필요</div>
+              <div style="font-size: 15px; font-weight: 600; color: #1C1E1D;">{{ reviewDraft.date }}</div>
+            </div>
+            <div onClick="{{ cycleReviewCategory }}" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 0.5px solid rgba(28,30,29,0.08); cursor: pointer;">
+              <div style="font-size: 13px; color: rgba(28,30,29,0.5);">카테고리</div>
+              <div style="display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 100px; background: {{ reviewDraft.categoryColor }};">
+                <div style="font-size: 13px; font-weight: 700; color: #fff;">{{ reviewDraft.categoryName }}</div>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 0.5px solid rgba(28,30,29,0.08);">
+              <div style="font-size: 13px; color: rgba(28,30,29,0.5);">총 금액</div>
+              <div style="font-size: 17px; font-weight: 700; color: #1C1E1D;">{{ reviewDraft.amountLabel }}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0;">
+              <div style="font-size: 13px; color: rgba(28,30,29,0.5);">결제 수단</div>
+              <div style="font-size: 15px; font-weight: 600; color: #1C1E1D;">{{ reviewDraft.method }}</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; background: #fff; border-radius: 16px; padding: 16px;">
+            <div style="font-size: 13px; color: rgba(28,30,29,0.5); margin-bottom: 10px;">품목</div>
+            <sc-for list="{{ reviewDraft.items }}" as="it" hint-placeholder-count="1">
+              <div style="display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0;">
+                <div style="color: #1C1E1D;">{{ it.name }} × {{ it.qty }}</div>
+                <div style="color: #1C1E1D; font-weight: 600;">{{ it.priceLabel }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="margin-top: 14px; background: #fff; border-radius: 16px; padding: 14px 16px; font-size: 14px; color: rgba(28,30,29,0.4);">메모 추가하기</div>
+        </div>
+        <div style="display: flex; gap: 10px; padding: 12px 20px 40px; background: #EDEAE4;">
+          <div onClick="{{ retake }}" style="flex: 1; height: 52px; border-radius: 14px; background: #fff; color: #1C1E1D; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; cursor: pointer;">다시 촬영</div>
+          <div onClick="{{ saveExpense }}" style="flex: 2; height: 52px; border-radius: 14px; background: #2B5A4C; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; cursor: pointer;">저장</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showDetail }}">
+      <div style="height: 100%; display: flex; flex-direction: column; background: #EDEAE4;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 58px 20px 10px;">
+          <div onClick="{{ closeOverlay }}" style="font-size: 20px; color: #1C1E1D; cursor: pointer;">‹</div>
+          <div style="font-size: 15px; font-weight: 700; color: #1C1E1D;">지출 상세</div>
+          <div style="font-size: 13px; color: #C1663F; cursor: pointer;">삭제</div>
+        </div>
+        <div style="flex: 1; overflow: auto; padding: 8px 20px 24px;">
+          <div style="background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 14px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="width: 46px; height: 46px; border-radius: 14px; background: {{ selected.color }}; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; font-weight: 700;">{{ selected.short }}</div>
+            <div style="font-size: 17px; font-weight: 700; color: #1C1E1D;">{{ selected.merchant }}</div>
+            <div style="font-size: 24px; font-weight: 700; color: #1C1E1D;">{{ selected.amountLabel }}</div>
+          </div>
+          <div style="background: #fff; border-radius: 16px; padding: 4px 16px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 0.5px solid rgba(28,30,29,0.08);"><div style="font-size: 13px; color: rgba(28,30,29,0.5);">카테고리</div><div style="font-size: 14px; font-weight: 600; color: #1C1E1D;">{{ selected.categoryName }}</div></div>
+            <div style="display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 0.5px solid rgba(28,30,29,0.08);"><div style="font-size: 13px; color: rgba(28,30,29,0.5);">일시</div><div style="font-size: 14px; font-weight: 600; color: #1C1E1D;">{{ selected.dateLabel }}</div></div>
+            <div style="display: flex; justify-content: space-between; padding: 14px 0;"><div style="font-size: 13px; color: rgba(28,30,29,0.5);">결제 수단</div><div style="font-size: 14px; font-weight: 600; color: #1C1E1D;">{{ selected.method }}</div></div>
+          </div>
+          <div style="background: #fff; border-radius: 16px; padding: 16px;">
+            <div style="font-size: 13px; color: rgba(28,30,29,0.5); margin-bottom: 10px;">품목</div>
+            <sc-for list="{{ selected.items }}" as="it" hint-placeholder-count="1">
+              <div style="display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0;">
+                <div style="color: #1C1E1D;">{{ it.name }} × {{ it.qty }}</div>
+                <div style="color: #1C1E1D; font-weight: 600;">{{ it.priceLabel }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showCategoryBudget }}">
+      <div style="height: 100%; display: flex; flex-direction: column; background: #EDEAE4;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 58px 20px 10px;">
+          <div onClick="{{ closeOverlay }}" style="font-size: 20px; color: #1C1E1D; cursor: pointer;">‹</div>
+          <div style="font-size: 15px; font-weight: 700; color: #1C1E1D;">카테고리 · 예산</div>
+          <div style="width: 20px;"></div>
+        </div>
+        <div style="flex: 1; overflow: auto; padding: 8px 20px 24px;">
+          <div style="background: #fff; border-radius: 16px; padding: 4px 16px;">
+            <sc-for list="{{ categoryRows }}" as="c" hint-placeholder-count="8">
+              <div style="{{ c.rowStyle }}">
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: {{ c.color }}; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0;">{{ c.short }}</div>
+                <div style="flex: 1; font-size: 14.5px; color: #1C1E1D; font-weight: 600;">{{ c.name }}</div>
+                <div style="font-size: 13px; color: rgba(28,30,29,0.45);">{{ c.budgetText }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top: 16px; height: 50px; border-radius: 14px; border: 1.5px dashed rgba(28,30,29,0.2); display: flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(28,30,29,0.5);">+ 카테고리 추가</div>
+        </div>
+      </div>
+    </sc-if>
+
+  </x-import>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+
+const CATEGORIES = [
+  { id: 'food', name: '식비', short: '식', color: '#C1663F' },
+  { id: 'cafe', name: '카페', short: '카', color: '#B08A3E' },
+  { id: 'transport', name: '교통', short: '교', color: '#3E6E8A' },
+  { id: 'shopping', name: '쇼핑', short: '쇼', color: '#7E5C96' },
+  { id: 'health', name: '의료', short: '의', color: '#4C8A6C' },
+  { id: 'culture', name: '문화', short: '문', color: '#B14F79' },
+  { id: 'living', name: '생활', short: '생', color: '#5D7A88' },
+  { id: 'etc', name: '기타', short: '기', color: '#8C8578' },
+];
+const catById = {};
+CATEGORIES.forEach(c => catById[c.id] = c);
+
+const won = n => n.toLocaleString('ko-KR') + '원';
+
+const INITIAL_EXPENSES = [
+  { id: 'e1', merchant: '스타벅스 강남점', categoryId: 'cafe', amount: 6800, method: '신한카드', group: '오늘', time: '14:32', items: [{ name: '아이스 아메리카노 T', qty: 1, price: 6800 }] },
+  { id: 'e2', merchant: 'GS25 학동역점', categoryId: 'living', amount: 4200, method: '신한카드', group: '오늘', time: '09:15', items: [{ name: '삼각김밥', qty: 1, price: 1700 }, { name: '물 500ml', qty: 1, price: 1000 }, { name: '커피우유', qty: 1, price: 1500 }] },
+  { id: 'e3', merchant: '본죽 삼성점', categoryId: 'food', amount: 12000, method: '신한카드', group: '어제', time: '12:04', items: [{ name: '전복죽', qty: 1, price: 12000 }] },
+  { id: 'e4', merchant: '서울교통공사', categoryId: 'transport', amount: 1500, method: '교통카드', group: '어제', time: '08:41', items: [{ name: '지하철 이용', qty: 1, price: 1500 }] },
+  { id: 'e5', merchant: '쿠팡', categoryId: 'shopping', amount: 34900, method: '국민카드', group: '8월 24일', time: '21:10', items: [{ name: '무선 마우스', qty: 1, price: 19900 }, { name: '키보드 커버', qty: 1, price: 15000 }] },
+  { id: 'e6', merchant: 'CGV 강남', categoryId: 'culture', amount: 15000, method: '국민카드', group: '8월 24일', time: '19:30', items: [{ name: '영화 관람권', qty: 1, price: 15000 }] },
+  { id: 'e7', merchant: '이디야커피', categoryId: 'cafe', amount: 4500, method: '신한카드', group: '8월 22일', time: '10:02', items: [{ name: '카페라떼', qty: 1, price: 4500 }] },
+  { id: 'e8', merchant: '온누리약국', categoryId: 'health', amount: 8700, method: '신한카드', group: '8월 22일', time: '17:55', items: [{ name: '감기약', qty: 1, price: 8700 }] },
+];
+
+const TREND = [
+  { label: '3월', value: 980000 }, { label: '4월', value: 1105000 }, { label: '5월', value: 860000 },
+  { label: '6월', value: 1240000 }, { label: '7월', value: 1150000 }, { label: '8월', value: 1284600 },
+];
+const TOP_MERCHANTS = [
+  { name: '쿠팡', amount: 156700 }, { name: '스타벅스', amount: 68400 }, { name: 'GS25', amount: 52100 },
+  { name: 'CGV', amount: 45000 }, { name: '이디야커피', amount: 31500 },
+];
+const BUDGETS = [
+  { categoryId: 'food', budget: 400000, spent: 312000 },
+  { categoryId: 'cafe', budget: 80000, spent: 73800 },
+  { categoryId: 'transport', budget: 100000, spent: 41000 },
+];
+const CATEGORY_BUDGET_MAP = { food: 400000, cafe: 80000, transport: 100000 };
+const PEER_COMPARE = [
+  { name: '카페', mine: 73800, avg: 52000 },
+  { name: '식비', mine: 312000, avg: 340000 },
+  { name: '쇼핑', mine: 156700, avg: 98000 },
+];
+const POPULAR_CATEGORIES = [
+  { name: '식비', pct: 34 }, { name: '카페', pct: 21 }, { name: '쇼핑', pct: 18 },
+  { name: '교통', pct: 14 }, { name: '문화', pct: 13 },
+];
+const BREAKDOWN = [
+  { id: 'food', pct: 32 }, { id: 'shopping', pct: 24 }, { id: 'cafe', pct: 18 },
+  { id: 'transport', pct: 10 }, { id: 'culture', pct: 9 }, { id: 'living', pct: 4 }, { id: 'health', pct: 3 },
+];
+
+class Component extends DCLogic {
+  state = {
+    started: false, obStep: 0,
+    tab: 'feed', screen: null,
+    expenses: INITIAL_EXPENSES, selectedId: null,
+    reviewCategoryIdx: 1, toast: null,
+  };
+
+  goObNext = () => this.setState(s => ({ obStep: Math.min(3, s.obStep + 1) }));
+  obSkip = () => this.setState({ started: true });
+  obStart = () => this.setState({ started: true });
+
+  openCapture = () => this.setState({ screen: 'capture' });
+  closeOverlay = () => this.setState({ screen: null });
+  takePhoto = () => {
+    this.setState({ screen: 'loading' });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ screen: 'review', reviewCategoryIdx: 1 }), 1700);
+  };
+  retake = () => this.setState({ screen: 'capture' });
+
+  cycleReviewCategory = () => this.setState(s => ({ reviewCategoryIdx: (s.reviewCategoryIdx + 1) % CATEGORIES.length }));
+
+  saveExpense = () => {
+    const cat = CATEGORIES[this.state.reviewCategoryIdx];
+    const newExpense = {
+      id: 'new-' + Date.now(), merchant: '스타벅스 강남점', categoryId: cat.id, amount: 6800,
+      method: '신한카드', group: '오늘', time: '14:32', items: [{ name: '아이스 아메리카노 T', qty: 1, price: 6800 }],
+    };
+    this.setState(s => ({ expenses: [newExpense, ...s.expenses], screen: null, tab: 'feed', toast: '저장되었습니다' }));
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => this.setState({ toast: null }), 2200);
+  };
+
+  openDetail = (id) => this.setState({ screen: 'detail', selectedId: id });
+  openCategoryBudget = () => this.setState({ screen: 'categoryBudget' });
+  selectFeedTab = () => this.setState({ tab: 'feed' });
+  selectDashboardTab = () => this.setState({ tab: 'dashboard' });
+  selectTrendTab = () => this.setState({ tab: 'trend' });
+  selectMaiTab = () => this.setState({ tab: 'mai' });
+
+  renderVals() {
+    const s = this.state;
+    const activeColor = '#2B5A4C';
+    const inactiveColor = 'rgba(28,30,29,0.4)';
+
+    const dotStyle = (active) => `width:${active ? 22 : 6}px;height:6px;border-radius:3px;background:${active ? '#2B5A4C' : 'rgba(28,30,29,0.15)'};transition:width .2s;`;
+    const obDots = [0, 1, 2, 3].map(i => ({ style: dotStyle(i === s.obStep) }));
+
+    const groupsMap = {};
+    s.expenses.forEach(e => {
+      if (!groupsMap[e.group]) groupsMap[e.group] = [];
+      groupsMap[e.group].push(e);
+    });
+    const order = ['오늘', '어제', '8월 24일', '8월 22일'];
+    const feedGroups = order.filter(g => groupsMap[g]).map(g => {
+      const items = groupsMap[g];
+      const subtotal = items.reduce((a, b) => a + b.amount, 0);
+      return {
+        label: g, subtotalLabel: won(subtotal),
+        items: items.map((it, idx) => {
+          const c = catById[it.categoryId];
+          return {
+            merchant: it.merchant, categoryName: c.name, color: c.color, short: c.short,
+            method: it.method, amountLabel: won(it.amount),
+            open: () => this.openDetail(it.id),
+            rowStyle: `display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;${idx < items.length - 1 ? 'border-bottom:0.5px solid rgba(28,30,29,0.08);' : ''}`,
+          };
+        }),
+      };
+    });
+
+    const monthTotal = TREND[TREND.length - 1].value;
+    const prevMonth = TREND[TREND.length - 2].value;
+    const changePct = Math.round(((monthTotal - prevMonth) / prevMonth) * 100);
+
+    let acc = 0;
+    const gradientParts = BREAKDOWN.map(b => {
+      const start = acc; acc += b.pct;
+      return `${catById[b.id].color} ${start}% ${acc}%`;
+    });
+    const donutGradient = `conic-gradient(${gradientParts.join(',')})`;
+    const categoryBreakdown = BREAKDOWN.map(b => ({
+      name: catById[b.id].name, pctLabel: b.pct + '%',
+      dotStyle: `width:9px;height:9px;border-radius:3px;background:${catById[b.id].color};`,
+    }));
+
+    const maxTrend = Math.max(...TREND.map(t => t.value));
+    const trendBars = TREND.map((t, i) => ({
+      label: t.label,
+      barStyle: `width:100%;border-radius:5px 5px 2px 2px;background:${i === TREND.length - 1 ? '#2B5A4C' : 'rgba(43,90,76,0.25)'};height:${Math.max(6, Math.round((t.value / maxTrend) * 100))}%;`,
+    }));
+
+    const topMerchants = TOP_MERCHANTS.map((m, i) => ({ rank: i + 1, name: m.name, amountLabel: won(m.amount) }));
+
+    const budgetRows = BUDGETS.map(b => {
+      const c = catById[b.categoryId];
+      const pct = Math.min(100, Math.round((b.spent / b.budget) * 100));
+      const over = pct >= 90;
+      return {
+        name: c.name, spentLabel: won(b.spent), budgetLabel: won(b.budget),
+        labelStyle: `color:${over ? '#C1663F' : 'rgba(28,30,29,0.5)'};font-weight:600;`,
+        barStyle: `height:100%;border-radius:5px;width:${pct}%;background:${over ? '#C1663F' : '#2B5A4C'};`,
+      };
+    });
+
+    const selected = (() => {
+      const e = s.expenses.find(x => x.id === s.selectedId) || s.expenses[0];
+      const c = catById[e.categoryId];
+      return {
+        merchant: e.merchant, color: c.color, short: c.short, categoryName: c.name,
+        amountLabel: won(e.amount), dateLabel: '2026.08.26 ' + e.time, method: e.method,
+        items: e.items.map(it => ({ name: it.name, qty: it.qty, priceLabel: won(it.price) })),
+      };
+    })();
+
+    const reviewCat = CATEGORIES[s.reviewCategoryIdx];
+    const reviewDraft = {
+      merchant: '스타벅스 강남점', date: '2026.08.26 14:32', method: '신한카드',
+      categoryName: reviewCat.name, categoryColor: reviewCat.color,
+      amountLabel: won(6800), items: [{ name: '아이스 아메리카노 T', qty: 1, priceLabel: won(6800) }],
+    };
+
+    const filterChipStyle = (active) => `padding:8px 14px;border-radius:100px;font-size:13px;font-weight:600;white-space:nowrap;background:${active ? '#1C1E1D' : '#fff'};color:${active ? '#fff' : '#1C1E1D'};flex-shrink:0;cursor:pointer;`;
+    const feedFilters = ['전체', '카페', '식비', '쇼핑'].map((label, i) => ({ label, style: filterChipStyle(i === 0) }));
+    const periodTabStyle = (active) => `padding:7px 14px;border-radius:100px;font-size:13px;font-weight:600;background:${active ? '#1C1E1D' : 'rgba(28,30,29,0.06)'};color:${active ? '#fff' : 'rgba(28,30,29,0.55)'};cursor:pointer;`;
+    const periodTabs = ['주', '월', '년'].map((label, i) => ({ label, style: periodTabStyle(i === 1) }));
+
+    const categoryRows = CATEGORIES.map((c, i) => ({
+      name: c.name, color: c.color, short: c.short,
+      budgetText: CATEGORY_BUDGET_MAP[c.id] ? won(CATEGORY_BUDGET_MAP[c.id]) + ' 예산' : '예산 미설정',
+      rowStyle: `display:flex;align-items:center;gap:12px;padding:13px 0;${i < CATEGORIES.length - 1 ? 'border-bottom:0.5px solid rgba(28,30,29,0.08);' : ''}`,
+    }));
+
+    const loadingSteps = [
+      { label: '이미지 정리 중', color: 'rgba(255,255,255,0.85)', dotStyle: 'width:6px;height:6px;border-radius:50%;background:#E7A94E;' },
+      { label: '글자 인식(OCR) 중', color: 'rgba(255,255,255,0.55)', dotStyle: 'width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);animation:pulse 1.2s ease infinite;' },
+      { label: '카테고리 분류 중', color: 'rgba(255,255,255,0.35)', dotStyle: 'width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);' },
+    ];
+
+    return {
+      deviceDark: s.screen === 'capture' || s.screen === 'loading',
+      showOnboarding: !s.started,
+      obStep0: s.obStep === 0, obStep1: s.obStep === 1, obStep2: s.obStep === 2, obStep3: s.obStep === 3,
+      obDots, obShowNext: s.obStep < 3, obNext: this.goObNext, obSkip: this.obSkip, obStart: this.obStart,
+      showMain: s.started && !s.screen,
+      tabFeed: s.tab === 'feed', tabDashboard: s.tab === 'dashboard', tabTrend: s.tab === 'trend', tabMai: s.tab === 'mai',
+      navFeedColor: s.tab === 'feed' ? activeColor : inactiveColor,
+      navDashboardColor: s.tab === 'dashboard' ? activeColor : inactiveColor,
+      navTrendColor: s.tab === 'trend' ? activeColor : inactiveColor,
+      navMaiColor: s.tab === 'mai' ? activeColor : inactiveColor,
+      selectFeedTab: this.selectFeedTab, selectDashboardTab: this.selectDashboardTab, selectTrendTab: this.selectTrendTab, selectMaiTab: this.selectMaiTab,
+      peerCompare: PEER_COMPARE.map(p => {
+        const over = p.mine > p.avg;
+        const diffPct = Math.round(Math.abs(p.mine - p.avg) / p.avg * 100);
+        const ratio = Math.min(100, Math.round((p.mine / Math.max(p.mine, p.avg)) * 100));
+        return {
+          name: p.name, mineLabel: won(p.mine), avgLabel: won(p.avg),
+          diffLabel: (over ? '또래 평균보다 ' : '또래 평균보다 ') + diffPct + '% ' + (over ? '더 써요' : '적게 써요'),
+          diffStyle: `font-size:12px;font-weight:600;color:${over ? '#C1663F' : '#2B5A4C'};`,
+          mineBarStyle: `height:100%;border-radius:5px;width:${ratio}%;background:${over ? '#C1663F' : '#2B5A4C'};`,
+        };
+      }),
+      popularCategories: POPULAR_CATEGORIES.map(c => ({
+        name: c.name, pctLabel: c.pct + '%',
+        barStyle: `height:100%;border-radius:5px;width:${c.pct * 2}%;background:${catById[Object.keys(catById).find(k => catById[k].name === c.name)].color};`,
+      })),
+      openCapture: this.openCapture, openCategoryBudget: this.openCategoryBudget, closeOverlay: this.closeOverlay,
+      monthTotalLabel: won(monthTotal), changeLabel: (changePct >= 0 ? '+' : '') + changePct + '%',
+      feedFilters, feedGroups, periodTabs,
+      donutGradient, categoryBreakdown, categoryCount: BREAKDOWN.length,
+      trendBars, topMerchants, budgetRows,
+      insightText: '카페 지출이 지난달보다 23% 늘어 예산의 92%를 썼어요. 다음 결제부터는 알려드릴게요.',
+      toast: s.toast,
+      showCapture: s.screen === 'capture', takePhoto: this.takePhoto,
+      showLoading: s.screen === 'loading', loadingSteps,
+      showReview: s.screen === 'review', reviewDraft, cycleReviewCategory: this.cycleReviewCategory,
+      retake: this.retake, saveExpense: this.saveExpense,
+      showDetail: s.screen === 'detail', selected,
+      showCategoryBudget: s.screen === 'categoryBudget', categoryRows,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
