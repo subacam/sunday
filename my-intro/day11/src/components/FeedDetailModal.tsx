@@ -1,9 +1,16 @@
+import { useState } from "react";
 import { MOOD_BG, MOOD_COLOR } from "@/lib/mood";
 import type { WalkRecord } from "@/types/walk";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+
+// 가로/세로 촬영 모두 빈 공간 없이 채우도록, 사진의 실제 비율에 맞춰 박스 모양을 맞춘다.
+// 극단적인 파노라마/스크린샷 비율만 완만하게 눌러서 모달이 지나치게 늘어나지 않게 한다.
+function clampAspect(ratio: number) {
+  return Math.min(1.8, Math.max(0.55, ratio));
 }
 
 export default function FeedDetailModal({
@@ -15,6 +22,8 @@ export default function FeedDetailModal({
   photoUrl?: string;
   onClose: () => void;
 }) {
+  const [aspect, setAspect] = useState<number | null>(null);
+
   return (
     <div
       onClick={onClose}
@@ -47,7 +56,8 @@ export default function FeedDetailModal({
           style={{
             position: "relative",
             width: "100%",
-            aspectRatio: "4/3",
+            aspectRatio: aspect ? String(aspect) : "4/3",
+            maxHeight: 420,
             background: photoUrl ? `${MOOD_BG[record.ai_mood]} center/cover` : MOOD_BG[record.ai_mood],
             flexShrink: 0,
           }}
@@ -57,6 +67,10 @@ export default function FeedDetailModal({
             <img
               src={photoUrl}
               alt={record.ai_caption}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                setAspect(clampAspect(img.naturalWidth / img.naturalHeight));
+              }}
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
             />
           )}

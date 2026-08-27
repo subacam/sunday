@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { GEMINI_VISION_FUNCTION_URL, WALK_PHOTOS_BUCKET, supabase } from "@/lib/supabase";
-import { fileToBase64, getCurrentPosition } from "@/lib/capture";
+import { fileToBase64, getCurrentPosition, resizeImage } from "@/lib/capture";
 import { isMood, type Mood } from "@/lib/mood";
 import type { PendingAnalysis, WalkRecord } from "@/types/walk";
 
@@ -86,6 +86,8 @@ export default function Page() {
 
       let seenOnboarding = false;
       if (currentSession) {
+        // 온보딩 조회와 겹쳐서 미리 시작 — 두 요청을 순차로 기다리지 않아 피드 체감 로딩이 줄어든다.
+        loadRecords();
         const { data: profile } = await supabase
           .from("walk_profiles")
           .select("onboarding_seen")
@@ -104,7 +106,6 @@ export default function Page() {
         setStage("auth");
       } else {
         setStage("app");
-        loadRecords();
       }
     }
 
@@ -168,13 +169,16 @@ export default function Page() {
 
   async function handleFileSelected(file: File) {
     const previewUrl = URL.createObjectURL(file);
-    setCaptureFile(file);
     setCapturePreviewUrl(previewUrl);
     setCaptureStep("loading");
 
     try {
-      const [position, base64] = await Promise.all([getCurrentPosition(), fileToBase64(file)]);
-      const mimeType = file.type || "image/jpeg";
+      // 원본(수 MB) 대신 리사이즈본을 AI 분석과 업로드 양쪽에 쓴다 — Storage 용량과
+      // 이후 피드가 내려받는 바이트를 동시에 줄인다. GPS 획득과 겹쳐서 지연을 숨긴다.
+      const [position, resized] = await Promise.all([getCurrentPosition(), resizeImage(file)]);
+      setCaptureFile(resized);
+      const base64 = await fileToBase64(resized);
+      const mimeType = resized.type || "image/jpeg";
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
