@@ -384,6 +384,15 @@
     will-change: transform;
   }
 
+  /* GSAP CDN을 못 불러왔을 때(FR-2.5 폴백)를 위한 순수 CSS 페이드인.
+     transform은 건드리지 않는다 — 곧이어 startFloat()이 그 자리를 쓴다 */
+  .card-float.css-fade {
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+  .card-float.css-fade.css-fade-hidden {
+    opacity: 0;
+  }
+
   /* 카드 — 반투명 유리 */
   .card {
     position: relative;
@@ -1277,8 +1286,29 @@
       if (after) after();
     };
 
-    /* FR-2.5 / FR-2.7 — GSAP이 없거나 모션 최소화면 전환 없이 즉시 교체한다 */
-    if (!hasGsap || reduceMotion) { settle(); return; }
+    /* FR-2.7 — 모션을 줄이길 원하면 애니메이션 없이 즉시 교체한다 */
+    if (reduceMotion) { settle(); return; }
+
+    /* FR-2.5 — GSAP CDN이 느리거나 막혀 hasGsap이 꺼져 있어도, 카드가
+       트랜지션 없이 "뚝" 나타나지 않도록 순수 CSS로 페이드인시킨다 */
+    if (!hasGsap) {
+      var cssFloats = document.querySelectorAll('.card-float');
+      cssFloats.forEach(function (el) {
+        el.classList.add('css-fade', 'css-fade-hidden');
+      });
+      /* 클래스를 붙인 프레임에 바로 떼면 트랜지션이 씹힌다 — 한 프레임 쉬어
+         브라우저가 opacity: 0 상태를 먼저 그리게 한다 */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          cssFloats.forEach(function (el) { el.classList.remove('css-fade-hidden'); });
+        });
+      });
+      setTimeout(function () {
+        cssFloats.forEach(function (el) { el.classList.remove('css-fade'); });
+        settle();
+      }, 500);
+      return;
+    }
 
     animating = true;
     intro.classList.add('screen-over');
