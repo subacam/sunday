@@ -1,0 +1,203 @@
+/* ===== MBTI 공부법 연구소 — index.html + 그룹 페이지(nt/nf/sj/sp) 전용 컴포넌트 =====
+   base.css 다음에 로드한다. */
+
+/* ---------- 그룹 카드 (index) ---------- */
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  padding: 10px 0 50px;
+  margin-top: 10px;
+}
+
+.group-card {
+  background: var(--bg-layer);
+  padding: 26px 20px;
+  text-align: center;
+  transition: background-color 0.15s ease;
+}
+
+.group-card:hover {
+  background: var(--bg-layer-hover);
+}
+
+.group-card .emoji {
+  font-size: 2.2rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.group-card .code {
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.group-card .name {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 4px 0 12px;
+}
+
+.group-card .tagline {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+.group-card .more {
+  font-weight: 600;
+  color: var(--blue);
+  font-size: 0.9rem;
+}
+
+/* ---------- 섹션 공통 ---------- */
+
+section.block {
+  padding: 34px 0;
+  border-top: 1px solid var(--border);
+  transition: border-color 0.2s ease;
+}
+
+section.block:first-of-type {
+  border-top: none;
+}
+
+section.block h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+section.block > .lead {
+  color: var(--text-secondary);
+  margin: 0 0 22px;
+}
+
+/* 특징/강점/주의점 3분할 */
+
+.trait-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.trait-card {
+  background: var(--bg-layer);
+  padding: 20px;
+}
+
+.trait-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--blue);
+}
+
+.trait-card p,
+.trait-card ul {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--text);
+}
+
+.trait-card ul {
+  padding-left: 18px;
+}
+
+/* 유형별 공부법 카드 */
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.type-card {
+  background: var(--bg-layer);
+  border-left: 3px solid var(--blue);
+  padding: 20px;
+}
+
+.type-card .type-name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.type-card .type-name .code {
+  color: var(--blue);
+}
+
+.type-card p {
+  margin: 8px 0 0;
+  font-size: 0.94rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .type-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 시험 꿀팁 */
+
+.tip-list {
+  display: grid;
+  gap: 1px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: tip;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.tip-list li {
+  counter-increment: tip;
+  background: var(--bg-layer);
+  padding: 16px 18px 16px 56px;
+  position: relative;
+  font-size: 0.95rem;
+}
+
+.tip-list li::before {
+  content: counter(tip);
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 그룹 페이지 하단 CTA */
+
+.page-cta {
+  text-align: center;
+  padding: 44px 0 56px;
+}
+
+.page-cta h2 {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.page-cta p {
+  color: var(--text-secondary);
+  margin: 0 0 18px;
+}

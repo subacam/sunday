@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-X9K07W0RCC"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-X9K07W0RCC');
+</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>공부 습관 자가진단 — MBTI 공부법 연구소</title>
+<meta name="description" content="10개의 공부 습관 질문에 답하고 점수를 합산해 나의 공부 유형(NT·NF·SJ·SP)을 확인한 뒤, 해당 유형의 맞춤 공부법 페이지로 바로 이동해보세요." />
+<meta property="og:title" content="공부 습관 자가진단 — MBTI 공부법 연구소" />
+<meta property="og:description" content="10개의 공부 습관 질문에 답하고 점수를 합산해 나의 공부 유형(NT·NF·SJ·SP)을 확인한 뒤, 해당 유형의 맞춤 공부법 페이지로 바로 이동해보세요." />
+<meta property="og:image" content="https://mbti-five-indol.vercel.app/og-image.png" />
+<meta property="og:url" content="https://mbti-five-indol.vercel.app/test.html" />
+<meta property="og:type" content="website" />
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("mbti-theme");
+    if (t !== "light" && t !== "dark") {
+      t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" />
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/test.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="index.html">MBTI 공부법<span class="dot">.</span>연구소</a>
+    <div class="header-actions">
+      <nav class="site-nav">
+        <a href="index.html">홈</a>
+        <a href="nt.html">NT</a>
+        <a href="nf.html">NF</a>
+        <a href="sj.html">SJ</a>
+        <a href="sp.html">SP</a>
+        <a href="test.html" aria-current="page">자가진단</a>
+      </nav>
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">
+        <span class="theme-toggle-icon" aria-hidden="true">🌙</span><span class="theme-toggle-label">다크 모드</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <span class="eyebrow">SELF TEST</span>
+    <h1>나에게 맞는 공부 유형 찾기</h1>
+    <p class="progress-hint">아래 10개의 질문에 가장 나와 가까운 보기를 하나씩 골라주세요. 정답은 없으니 편하게, 평소 습관 그대로 선택하면 됩니다.</p>
+  </section>
+
+  <form class="wrap" id="mbti-form" novalidate>
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q1.</span> 새로운 개념을 배울 때 나는…</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q1" value="NT" required /><span>원리와 이유부터 파고든다</span></label>
+        <label class="option"><input type="radio" name="q1" value="NF" /><span>나에게 어떤 의미가 있는지 먼저 생각한다</span></label>
+        <label class="option"><input type="radio" name="q1" value="SJ" /><span>정해진 순서와 교재를 따라 차근차근 학습한다</span></label>
+        <label class="option"><input type="radio" name="q1" value="SP" /><span>일단 문제를 풀어보면서 감을 잡는다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q2.</span> 시험 공부 계획을 세울 때 나는…</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q2" value="NT" required /><span>전체 구조를 먼저 파악하고 효율적인 전략을 짠다</span></label>
+        <label class="option"><input type="radio" name="q2" value="NF" /><span>함께 공부할 사람이나 목표를 떠올리며 동기부여한다</span></label>
+        <label class="option"><input type="radio" name="q2" value="SJ" /><span>세부 일정표를 만들고 꼼꼼히 지킨다</span></label>
+        <label class="option"><input type="radio" name="q2" value="SP" /><span>계획보다는 그때그때 집중되는 대로 움직인다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q3.</span> 어려운 문제를 만났을 때 나는…</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q3" value="NT" required /><span>원리를 다시 분석해서 스스로 답을 찾으려 한다</span></label>
+        <label class="option"><input type="radio" name="q3" value="NF" /><span>왜 이 문제가 중요한지 의미를 찾으며 접근한다</span></label>
+        <label class="option"><input type="radio" name="q3" value="SJ" /><span>참고서의 풀이 예시를 찾아 패턴을 따라간다</span></label>
+        <label class="option"><input type="radio" name="q3" value="SP" /><span>일단 여러 방법으로 시도해보며 몸으로 부딪힌다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q4.</span> 나의 노트 필기 스타일은?</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q4" value="NT" required /><span>개념 간 연결과 논리 구조를 도식화한다</span></label>
+        <label class="option"><input type="radio" name="q4" value="NF" /><span>색깔과 그림을 활용해 감성적으로 꾸민다</span></label>
+        <label class="option"><input type="radio" name="q4" value="SJ" /><span>목차와 소제목을 정확히 나눠 정리한다</span></label>
+        <label class="option"><input type="radio" name="q4" value="SP" /><span>필기보다는 문제 풀이 흔적을 남기는 편이다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q5.</span> 공부가 가장 잘 되는 환경은?</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q5" value="NT" required /><span>혼자 조용히 깊게 몰입할 수 있는 곳</span></label>
+        <label class="option"><input type="radio" name="q5" value="NF" /><span>좋아하는 사람들과 함께 있는 편안한 분위기</span></label>
+        <label class="option"><input type="radio" name="q5" value="SJ" /><span>정돈되고 익숙한, 늘 똑같은 자리</span></label>
+        <label class="option"><input type="radio" name="q5" value="SP" /><span>카페든 도서관이든 자유롭게 움직일 수 있는 곳</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q6.</span> 무언가를 암기할 때 나는…</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q6" value="NT" required /><span>왜 그런지 이해가 되어야 외워진다</span></label>
+        <label class="option"><input type="radio" name="q6" value="NF" /><span>이야기나 이미지로 연결지어 외운다</span></label>
+        <label class="option"><input type="radio" name="q6" value="SJ" /><span>반복해서 쓰고 소리 내어 읽으며 외운다</span></label>
+        <label class="option"><input type="radio" name="q6" value="SP" /><span>몸으로 직접 해보면서 저절로 외워진다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q7.</span> 모의고사 결과가 안 좋았을 때 나는…</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q7" value="NT" required /><span>오답 원인을 논리적으로 분석해 전략을 수정한다</span></label>
+        <label class="option"><input type="radio" name="q7" value="NF" /><span>속상한 감정을 먼저 추스르고 스스로를 다독인다</span></label>
+        <label class="option"><input type="radio" name="q7" value="SJ" /><span>시간표와 계획을 다시 촘촘히 재정비한다</span></label>
+        <label class="option"><input type="radio" name="q7" value="SP" /><span>크게 신경 쓰지 않고 바로 다음 문제로 넘어간다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q8.</span> 그룹 스터디에 대한 내 생각은?</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q8" value="NT" required /><span>각자 논리를 검증받는 토론이면 즐겁다</span></label>
+        <label class="option"><input type="radio" name="q8" value="NF" /><span>서로 응원하고 격려하는 분위기가 좋다</span></label>
+        <label class="option"><input type="radio" name="q8" value="SJ" /><span>역할과 규칙이 명확하면 믿고 참여한다</span></label>
+        <label class="option"><input type="radio" name="q8" value="SP" /><span>정해진 형식 없이 자유롭게 오가는 게 좋다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q9.</span> 새로운 공부법이나 앱을 발견하면 나는…</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q9" value="NT" required /><span>원리가 타당한지 먼저 따져보고 취사선택한다</span></label>
+        <label class="option"><input type="radio" name="q9" value="NF" /><span>나와 잘 맞을 것 같은 느낌이 들면 바로 써본다</span></label>
+        <label class="option"><input type="radio" name="q9" value="SJ" /><span>검증된 후기가 많은 것만 신중하게 도입한다</span></label>
+        <label class="option"><input type="radio" name="q9" value="SP" /><span>일단 써보고 재미없으면 바로 접는다</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <p class="q-title"><span class="q-num">Q10.</span> 장기 목표(수능, 자격증 등)를 대할 때 나는…</p>
+      <div class="options">
+        <label class="option"><input type="radio" name="q10" value="NT" required /><span>최적의 루트를 설계하는 것 자체가 흥미롭다</span></label>
+        <label class="option"><input type="radio" name="q10" value="NF" /><span>목표 너머의 의미와 미래를 자주 그려본다</span></label>
+        <label class="option"><input type="radio" name="q10" value="SJ" /><span>하루하루 해야 할 일을 쌓아가는 게 안정감을 준다</span></label>
+        <label class="option"><input type="radio" name="q10" value="SP" /><span>눈앞의 실전 감각을 키우는 데 집중한다</span></label>
+      </div>
+    </div>
+
+    <div class="test-actions">
+      <button type="submit" class="btn btn-primary">결과 보기</button>
+    </div>
+  </form>
+
+  <section class="wrap" id="result">
+    <div class="result-card">
+      <span class="eyebrow">RESULT</span>
+      <h2 id="result-title">결과가 여기에 표시됩니다</h2>
+      <p class="result-desc" id="result-desc"></p>
+      <div class="score-bars" id="score-bars"></div>
+      <div class="result-actions" id="detail-links"></div>
+      <div class="result-actions" style="margin-top:12px">
+        <button type="button" class="btn btn-outline" id="share-btn">친구에게 공유하기</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">MBTI 공부법 연구소 · 이 사이트의 진단은 재미를 위한 참고용이며, 공식 심리검사가 아닙니다.</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/theme.js"></script>
+<script src="js/test.js"></script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+/* ===== MBTI 공부법 연구소 — 기본(리셋/토큰/헤더/히어로/버튼/푸터) =====
+   IBM(ibm.com/kr-ko)의 Carbon 디자인 시스템을 참고: IBM Plex Sans,
+   Blue 60(#0f62fe) 액센트, 각진 사각형(border-radius: 0), 라이트/다크 테마 토큰. */
+
+:root {
+  --bg: #ffffff;
+  --bg-layer: #f4f4f4;
+  --bg-layer-hover: #e8e8e8;
+  --text: #161616;
+  --text-secondary: #525252;
+  --border: #e0e0e0;
+  --blue: #0f62fe;
+  --blue-hover: #0043ce;
+  --blue-active: #002d9c;
+  --focus: #0f62fe;
+  --font-sans: "IBM Plex Sans KR", "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+  --max-width: 960px;
+}
+
+:root[data-theme="dark"] {
+  --bg: #161616;
+  --bg-layer: #262626;
+  --bg-layer-hover: #333333;
+  --text: #f4f4f4;
+  --text-secondary: #c6c6c6;
+  --border: #393939;
+  --focus: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  word-break: keep-all;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+img {
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.wrap {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ---------- 헤더 ---------- */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.site-header .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.logo {
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.logo .dot {
+  color: var(--blue);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.site-nav {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.site-nav a {
+  padding: 8px 12px;
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+}
+
+.site-nav a:hover {
+  color: var(--blue);
+}
+
+.site-nav a[aria-current="page"] {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--blue);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-layer);
+}
+
+/* ---------- 히어로 ---------- */
+
+.hero {
+  padding: 56px 0 40px;
+}
+
+.hero.center {
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+  color: var(--blue);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+
+.hero h1 {
+  font-size: clamp(1.9rem, 4.2vw, 3rem);
+  font-weight: 300;
+  margin: 0 0 16px;
+  letter-spacing: -0.01em;
+}
+
+.hero p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  max-width: 620px;
+}
+
+.hero.center p {
+  margin: 0 auto;
+}
+
+/* ---------- 버튼 ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.11s ease, color 0.11s ease, border-color 0.11s ease;
+}
+
+.btn-primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--blue-hover);
+  border-color: var(--blue-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.btn-outline:hover {
+  background: var(--blue);
+  color: #fff;
+}
+
+.btn-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.hero.center .btn-row {
+  justify-content: center;
+}
+
+/* ---------- 푸터 ---------- */
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 26px 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  transition: border-color 0.2s ease;
+}
+
+/* ---------- 모바일 ---------- */
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 40px 0 28px;
+  }
+}

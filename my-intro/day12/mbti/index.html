@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-X9K07W0RCC"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-X9K07W0RCC');
+</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MBTI 공부법 연구소 — 성격 유형에 맞는 나만의 공부법</title>
+<meta name="description" content="MBTI 기질 그룹(NT·NF·SJ·SP)별 공부법과 시험 꿀팁을 정리하고, 10문항 자가진단으로 나에게 맞는 공부 유형을 찾아주는 사이트." />
+<meta property="og:title" content="MBTI 공부법 연구소 — 성격 유형에 맞는 나만의 공부법" />
+<meta property="og:description" content="MBTI 기질 그룹(NT·NF·SJ·SP)별 공부법과 시험 꿀팁을 정리하고, 10문항 자가진단으로 나에게 맞는 공부 유형을 찾아주는 사이트." />
+<meta property="og:image" content="https://mbti-five-indol.vercel.app/og-image.png" />
+<meta property="og:url" content="https://mbti-five-indol.vercel.app/" />
+<meta property="og:type" content="website" />
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("mbti-theme");
+    if (t !== "light" && t !== "dark") {
+      t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" />
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/components.css" />
+<meta name="naver-site-verification" content="d7921de87f1262d4676c389da92b600e5067214f" />
+<meta name="google-site-verification" content="uL0vCKq7i__jSp71YmJNjfRGEcxN8K9XanHmpD6DwnE" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="index.html">MBTI 공부법<span class="dot">.</span>연구소</a>
+    <div class="header-actions">
+      <nav class="site-nav">
+        <a href="index.html" aria-current="page">홈</a>
+        <a href="nt.html">NT</a>
+        <a href="nf.html">NF</a>
+        <a href="sj.html">SJ</a>
+        <a href="sp.html">SP</a>
+        <a href="test.html">자가진단</a>
+      </nav>
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">
+        <span class="theme-toggle-icon" aria-hidden="true">🌙</span><span class="theme-toggle-label">다크 모드</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero center wrap">
+    <span class="eyebrow">STUDY × MBTI</span>
+    <h1>같은 시간을 공부해도, 잘 맞는 방법은 사람마다 다릅니다</h1>
+    <p>
+      MBTI 공부법 연구소는 16가지 성격 유형을 기질(Temperament) 4그룹 — NT · NF · SJ · SP — 으로 나눠,
+      그룹별로 정보를 받아들이고 몰입하는 방식이 어떻게 다른지, 그래서 어떤 공부 전략이 가장 잘 맞는지를 정리한 사이트입니다.
+      내 성향에 맞는 공부법을 찾으면 같은 노력으로 더 오래, 더 편하게 몰입할 수 있어요.
+    </p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="test.html">내 공부 유형 찾기</a>
+      <a class="btn btn-outline" href="#groups">기질 그룹 둘러보기</a>
+    </div>
+  </section>
+
+  <section class="wrap" id="groups">
+    <div class="group-grid">
+      <a class="group-card" href="nt.html">
+        <span class="emoji">🧠</span>
+        <div class="code">NT</div>
+        <div class="name">분석가형</div>
+        <p class="tagline">원리를 이해해야 진짜 내 것이 되는 전략가 타입</p>
+        <span class="more">자세히 보기 →</span>
+      </a>
+      <a class="group-card" href="nf.html">
+        <span class="emoji">🌱</span>
+        <div class="code">NF</div>
+        <div class="name">외교관형</div>
+        <p class="tagline">의미와 감정이 연결돼야 몰입하는 공감형 타입</p>
+        <span class="more">자세히 보기 →</span>
+      </a>
+      <a class="group-card" href="sj.html">
+        <span class="emoji">📋</span>
+        <div class="code">SJ</div>
+        <div class="name">관리자형</div>
+        <p class="tagline">꾸준한 루틴과 반복 속에서 실력이 쌓이는 성실 타입</p>
+        <span class="more">자세히 보기 →</span>
+      </a>
+      <a class="group-card" href="sp.html">
+        <span class="emoji">⚡</span>
+        <div class="code">SP</div>
+        <div class="name">탐험가형</div>
+        <p class="tagline">직접 부딪히고 실전을 겪어야 느는 실전형 타입</p>
+        <span class="more">자세히 보기 →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <h2>왜 기질별로 공부법이 달라야 할까요?</h2>
+    <p class="lead">정보를 받아들이고 판단하는 방식이 그룹마다 다르기 때문입니다. MBTI의 두 번째·세 번째 알파벳(N/S, T/F)을 조합하면, 이 방식이 비슷한 사람들이 NT·NF·SJ·SP 네 그룹으로 묶입니다.</p>
+    <div class="trait-grid">
+      <div class="trait-card">
+        <h3>정보를 받아들이는 방식이 다르다</h3>
+        <p>직관형(N)은 원리·의미·큰 그림을 먼저 봐야 이해가 되고, 감각형(S)은 구체적인 사실과 반복된 경험을 통해 확실하게 익힙니다.</p>
+      </div>
+      <div class="trait-card">
+        <h3>몰입하는 조건이 다르다</h3>
+        <p>사고형(T)은 논리와 효율이 맞아떨어질 때, 감정형(F)은 의미와 관계가 느껴질 때 더 오래 집중할 수 있습니다.</p>
+      </div>
+      <div class="trait-card">
+        <h3>그래서 결과가 갈린다</h3>
+        <p>나에게 안 맞는 방식을 억지로 따라 하면 같은 시간을 써도 효율이 떨어집니다. 내 그룹의 강점을 살린 전략이 필요합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page-cta wrap">
+    <h2>내가 어떤 그룹에 가까운지 궁금하다면?</h2>
+    <p>10개의 공부 습관 질문에 답하면 나의 공부 유형을 바로 알려드려요.</p>
+    <a class="btn btn-primary" href="test.html">10문항 자가진단 시작하기</a>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">MBTI 공부법 연구소 · 이 사이트의 진단은 재미를 위한 참고용이며, 공식 심리검사가 아닙니다.</div>
+</footer>
+
+<script src="js/theme.js"></script>
+</body>
+</html>

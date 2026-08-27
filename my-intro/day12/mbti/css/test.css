@@ -1,0 +1,176 @@
+/* ===== MBTI 공부법 연구소 — test.html(자가진단) 전용 스타일 =====
+   base.css 다음에 로드한다. */
+
+.progress-hint {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 26px;
+}
+
+.question {
+  background: var(--bg-layer);
+  border: 1px solid var(--border);
+  padding: 22px;
+  margin-bottom: 16px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.question .q-title {
+  font-weight: 600;
+  margin: 0 0 14px;
+  font-size: 1.02rem;
+}
+
+.question .q-num {
+  color: var(--blue);
+  margin-right: 6px;
+}
+
+.options {
+  display: grid;
+  gap: 8px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  cursor: pointer;
+  background: var(--bg);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.option:hover {
+  border-color: var(--blue);
+}
+
+.option input {
+  accent-color: var(--blue);
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.option span {
+  font-size: 0.94rem;
+}
+
+.option.selected {
+  border-color: var(--blue);
+  background: var(--bg-layer);
+}
+
+.test-actions {
+  text-align: center;
+  padding: 20px 0 50px;
+}
+
+/* 결과 영역 */
+
+#result {
+  display: none;
+  padding: 10px 0 60px;
+}
+
+#result.show {
+  display: block;
+}
+
+.result-card {
+  background: var(--bg-layer);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--blue);
+  padding: 30px;
+  text-align: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.result-card .eyebrow {
+  margin-bottom: 12px;
+}
+
+.result-card h2 {
+  margin: 0 0 10px;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.result-card .result-desc {
+  color: var(--text-secondary);
+  max-width: 520px;
+  margin: 0 auto 24px;
+}
+
+.score-bars {
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  margin: 0 auto 26px;
+  max-width: 420px;
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: 46px 1fr 30px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.score-row .bar-track {
+  background: var(--border);
+  height: 8px;
+  overflow: hidden;
+}
+
+.score-row .bar-fill {
+  height: 100%;
+  background: var(--text-secondary);
+  transition: width 0.5s ease;
+}
+
+.score-row.top .bar-fill {
+  background: var(--blue);
+}
+
+.score-row.top {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translate(-50%, 20px);
+  background: var(--text);
+  color: var(--bg);
+  border-left: 4px solid var(--blue);
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  z-index: 50;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 640px) {
+  .result-card {
+    padding: 22px 18px;
+  }
+}
