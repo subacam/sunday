@@ -322,7 +322,7 @@ export default function Page() {
 
       {stage === "app" && (
         <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
-          <div style={{ flex: 1, position: "relative" }}>
+          <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
             <div
               ref={scrollRef}
               onScroll={handleScroll}
