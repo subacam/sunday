@@ -377,20 +377,24 @@
     .project-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
-  /* 두 겹으로 나눈 이유: 바깥은 둥실거림(y), 안쪽은 마우스 기울기.
-     한 요소에 둘을 걸면 서로 transform을 덮어쓴다 */
+  /* .card-float은 리스트 진입 시 카드 등장(키프레임)과, 진입 후
+     둥실거림(JS로 건 transform)을 함께 쓴다 */
   .card-float {
-    perspective: 1100px;
     will-change: transform;
   }
 
-  /* GSAP CDN을 못 불러왔을 때(FR-2.5 폴백)를 위한 순수 CSS 페이드인.
-     transform은 건드리지 않는다 — 곧이어 startFloat()이 그 자리를 쓴다 */
-  .card-float.css-fade {
-    transition: opacity var(--dur-base) var(--ease-out);
+  /* 카드 등장 — GSAP이 아니라 순수 CSS 키프레임으로 재생한다. GSAP의
+     requestAnimationFrame 타이머는 탭이 백그라운드로 밀리면 완전히
+     멈췄다가, 다시 보일 때 밀린 시간을 한 번에 처리하며 카드가 "뚝"
+     나타나는 문제가 있었다. CSS 애니메이션은 문서 타임라인(실제 경과
+     시간) 기준이라 탭이 다시 보일 때 이미 진행됐어야 할 지점부터
+     자연스럽게 이어진다 */
+  @keyframes ph-card-in {
+    from { opacity: 0; transform: translateY(60px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .card-float.css-fade.css-fade-hidden {
-    opacity: 0;
+  .card-float.ph-card-in {
+    animation: ph-card-in 1.1s var(--ease-out) both;
   }
 
   /* 카드 — 반투명 유리 */
@@ -1061,7 +1065,6 @@
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var hasGsap = typeof window.gsap !== 'undefined';
-  var canHover = window.matchMedia('(hover: hover)').matches;
 
   var intro = document.getElementById('intro');
   var list = document.getElementById('list');
@@ -1172,22 +1175,9 @@
     });
   }
 
-  /* ══ 카드 부유 + 마우스 반응 ═══════════════════════════════
-     바깥 .card-float은 둥실거림(y), 안쪽 .card는 마우스 기울기.
-     한 요소에 둘을 걸면 서로 transform을 덮어쓴다. */
+  /* ══ 카드 부유 ═══════════════════════════════════════════ */
 
   var floatTweens = [];
-  var tilters = [];
-  var tiltX = 0, tiltY = 0;   /* 마지막 포인터 위치 */
-  var tiltPaused = false;     /* 모달이 열린 동안은 기울기를 그대로 얼려둔다 */
-
-  function applyTilt() {
-    tilters.forEach(function (t) {
-      t.ry(tiltX * 3.2 * t.depth);
-      t.rx(-tiltY * 2.4 * t.depth);
-      t.tx(tiltX * 5 * t.depth);
-    });
-  }
 
   function startFloat() {
     if (!hasGsap || reduceMotion || floatTweens.length) return;
@@ -1208,37 +1198,6 @@
     floatTweens.forEach(function (t) { t.kill(); });
     floatTweens = [];
     if (hasGsap) gsap.set('.card-float', { clearProps: 'transform' });
-  }
-
-  function initTilt() {
-    /* 터치 기기는 제외한다 — 포인터가 없으면 기울일 기준도 없다 */
-    if (!hasGsap || reduceMotion || !canHover || tilters.length) return;
-
-    document.querySelectorAll('.card').forEach(function (card, i) {
-      tilters.push({
-        ry: gsap.quickTo(card, 'rotationY', { duration: 0.8, ease: 'power3' }),
-        rx: gsap.quickTo(card, 'rotationX', { duration: 0.8, ease: 'power3' }),
-        tx: gsap.quickTo(card, 'x', { duration: 0.8, ease: 'power3' }),
-        depth: 1 + (i % 2) * 0.35
-      });
-    });
-
-    /* 리스너를 list가 아니라 window에 건다. 모달이 카드를 덮어도
-       list의 mouseleave가 터져 기울기가 0으로 풀리지 않는다 */
-    window.addEventListener('mousemove', function (e) {
-      if (tiltPaused || list.hidden) return;
-      tiltX = (e.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
-      tiltY = (e.clientY - window.innerHeight / 2) / (window.innerHeight / 2);
-      applyTilt();
-    });
-
-    /* 창 밖으로 포인터가 나갔을 때만 가운데로 되돌린다 */
-    document.addEventListener('mouseleave', function () {
-      if (tiltPaused || list.hidden) return;
-      tiltX = 0;
-      tiltY = 0;
-      applyTilt();
-    });
   }
 
   /* ══ 화면 전환 (FR-2) ══════════════════════════════════════
@@ -1274,7 +1233,7 @@
       intro.classList.remove('screen-over');
       if (hasGsap) {
         gsap.set(intro, { clearProps: 'all' });
-        gsap.set(['.list-header', '.list-intro', '.card-float'], { clearProps: 'opacity,transform' });
+        gsap.set(['.list-header', '.list-intro'], { clearProps: 'opacity,transform' });
       }
       document.documentElement.classList.remove('is-switching');
       jumpTop();
@@ -1282,52 +1241,45 @@
          화면 컨테이너로 옮겨 읽는 순서만 새 화면 맨 앞으로 보낸다 */
       list.focus({ preventScroll: true });
       startFloat();
-      initTilt();
       if (after) after();
     };
 
-    /* FR-2.7 — 모션을 줄이길 원하면 애니메이션 없이 즉시 교체한다 */
+    /* FR-2.7 — 모션을 줄이길 원하면 애니메이션 없이 즉시 교체한다 (카드도
+       아래 키프레임을 태우지 않고 바로 보인다) */
     if (reduceMotion) { settle(); return; }
 
-    /* FR-2.5 — GSAP CDN이 느리거나 막혀 hasGsap이 꺼져 있어도, 카드가
-       트랜지션 없이 "뚝" 나타나지 않도록 순수 CSS로 페이드인시킨다 */
-    if (!hasGsap) {
-      var cssFloats = document.querySelectorAll('.card-float');
-      cssFloats.forEach(function (el) {
-        el.classList.add('css-fade', 'css-fade-hidden');
-      });
-      /* 클래스를 붙인 프레임에 바로 떼면 트랜지션이 씹힌다 — 한 프레임 쉬어
-         브라우저가 opacity: 0 상태를 먼저 그리게 한다 */
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          cssFloats.forEach(function (el) { el.classList.remove('css-fade-hidden'); });
-        });
-      });
-      setTimeout(function () {
-        cssFloats.forEach(function (el) { el.classList.remove('css-fade'); });
-        settle();
-      }, 500);
-      return;
-    }
+    /* FR-2.5 / FR-2.6 — 카드 등장은 GSAP 유무·상태와 무관하게 항상 순수
+       CSS 키프레임으로 재생한다. GSAP의 requestAnimationFrame 타이머는
+       탭이 백그라운드로 밀리면 완전히 멈췄다가, 다시 보일 때 밀린 시간을
+       한 번에 처리하며 카드가 "뚝" 나타나는 문제가 있었다. CSS 애니메이션은
+       문서 타임라인(실제 경과 시간) 기준이라 그런 점프 없이 자연스럽게
+       이어진다. animation-fill-mode: both가 지연 구간 동안 시작 상태를
+       잡아주므로 별도의 rAF/setTimeout 트릭이 필요 없다 */
+    var floats = document.querySelectorAll('.card-float');
+    floats.forEach(function (el) { el.classList.remove('ph-card-in'); });
+    void grid.offsetWidth;   /* 강제 리플로우 — 재진입 시에도 애니메이션을 처음부터 다시 태운다 */
+    floats.forEach(function (el, i) {
+      el.style.animationDelay = (0.4 + i * CARD_STAGGER) + 's';
+      el.classList.add('ph-card-in');
+    });
+
+    /* GSAP CDN을 못 불러왔다면(hasGsap === false) 인트로/헤더 전환도
+       애니메이션 없이 즉시 처리한다 — 카드는 위에서 이미 CSS로 처리됐다 */
+    if (!hasGsap) { settle(); return; }
 
     animating = true;
     intro.classList.add('screen-over');
 
     /* .page-bg는 이 타임라인에서 건드리지 않는다 — 인트로에서 리스트로
        넘어가는 동안 배경 광원이 그대로 유지되어야, 카드가 나타나는 구간에
-       배경까지 함께 옅어졌다 되돌아오는 "빈 화면"이 생기지 않는다.
-       카드는 .card-float 하나만 페이드+상승시켜, 조상(#list)과 opacity가
-       겹쳐 곱해지며 흐려지던 문제도 함께 없앤다 */
+       배경까지 함께 옅어졌다 되돌아오는 "빈 화면"이 생기지 않는다 */
     var tl = gsap.timeline({
       onComplete: function () { animating = false; settle(); }
     });
     tl.to(intro, { opacity: 0, scale: 1.06, duration: 0.8, ease: 'power2.in' }, 0)
       .fromTo(['.list-header', '.list-intro'],
         { opacity: 0, y: -10 },
-        { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 0.2)
-      .fromTo('.card-float',
-        { opacity: 0, y: 60 },
-        { opacity: 1, y: 0, duration: 1.1, ease: 'expo.out', stagger: CARD_STAGGER }, 0.4);
+        { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 0.2);
   }
 
   function goToIntro() {
@@ -1488,10 +1440,6 @@
     lastFocused = trigger || document.activeElement;
     modalContent.innerHTML = buildModal(p);
 
-    /* 카드 기울기를 지금 상태로 얼려둔다. 닫았을 때 처음부터 다시
-       시작하지 않고 있던 자리에서 이어진다 */
-    tiltPaused = true;
-
     /* FR-5.2 — 배경 스크롤을 잠그되 위치를 기억해 닫을 때 복원한다 */
     savedScrollY = window.scrollY;
     document.body.style.position = 'fixed';
@@ -1525,7 +1473,6 @@
       }
       lastFocused = null;
       closing = false;
-      tiltPaused = false;   /* 다음 마우스 이동부터 다시 따라온다 */
     };
 
     if (reduceMotion) { finish(); return; }
