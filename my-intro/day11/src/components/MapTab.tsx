@@ -3,29 +3,40 @@
 import { useEffect, useRef } from "react";
 import { Map as MaplibreMap, Marker, LngLatBounds, type StyleSpecification } from "maplibre-gl";
 import mapStyle from "@/lib/mapStyle.json";
-import { MOOD_COLOR } from "@/lib/mood";
+import { MOOD_BG } from "@/lib/mood";
 import type { WalkRecord } from "@/types/walk";
 
 // 사용자가 실제로 걸은 곳이 없을 때 보여줄 기본 중심 — 서울시청.
 const DEFAULT_CENTER: [number, number] = [126.978, 37.5665];
 
-function pinElement(record: WalkRecord) {
+// 테두리를 무드 단색이 아니라 피드 카드와 같은 MOOD_BG 그라디언트로 채워
+// Clay 디자인의 코랄 그라디언트 톤(버튼/아바타/FAB)과 같은 계열로 맞춘다.
+// border는 그라디언트를 못 그려서, padding으로 링 두께를 만드는 방식을 쓴다.
+function pinElement(record: WalkRecord, photoUrl: string | undefined) {
   const el = document.createElement("div");
   el.style.cursor = "pointer";
+  el.style.width = "40px";
+  el.style.height = "40px";
+  el.style.borderRadius = "50%";
+  el.style.padding = "3px";
+  el.style.background = MOOD_BG[record.ai_mood];
+  el.style.boxShadow = "0 2px 6px rgba(46,43,36,0.3)";
+  // signed URL이 아직 도착하지 않았으면 흰 원만 보여준다.
   el.innerHTML = `
-    <svg width="26" height="34" viewBox="0 0 20 26">
-      <path d="M10 0C4.5 0 0 4.5 0 10c0 7 10 16 10 16s10-9 10-16C20 4.5 15.5 0 10 0z" fill="${MOOD_COLOR[record.ai_mood]}"></path>
-      <circle cx="10" cy="10" r="4" fill="#fff"></circle>
-    </svg>
+    <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background:#fff;">
+      ${photoUrl ? `<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />` : ""}
+    </div>
   `;
   return el;
 }
 
 export default function MapTab({
   records,
+  imageUrls,
   onSelectPin,
 }: {
   records: WalkRecord[];
+  imageUrls: Record<string, string>;
   onSelectPin: (record: WalkRecord) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -70,9 +81,9 @@ export default function MapTab({
     function render() {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = records.map((rec) => {
-        const el = pinElement(rec);
+        const el = pinElement(rec, imageUrls[rec.image_url]);
         el.addEventListener("click", () => onSelectPin(rec));
-        return new Marker({ element: el, anchor: "bottom" })
+        return new Marker({ element: el, anchor: "center" })
           .setLngLat([rec.longitude, rec.latitude])
           .addTo(map!);
       });
@@ -87,7 +98,7 @@ export default function MapTab({
     if (map.isStyleLoaded()) render();
     else map.once("load", render);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [records]);
+  }, [records, imageUrls]);
 
   return (
     <div>

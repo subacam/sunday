@@ -42,11 +42,44 @@ export default function Page() {
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const thumbTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [thumbTop, setThumbTop] = useState(0);
+  const [thumbHeight, setThumbHeight] = useState(0);
+  const [thumbOpacity, setThumbOpacity] = useState(0);
+
   const showToast = useCallback((message: string) => {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2200);
   }, []);
+
+  const updateThumb = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollHeight <= clientHeight + 1) {
+      setThumbHeight(0);
+      return;
+    }
+    const height = Math.max(32, (clientHeight / scrollHeight) * clientHeight);
+    const maxTop = clientHeight - height;
+    const top = (scrollTop / (scrollHeight - clientHeight)) * maxTop || 0;
+    setThumbTop(top);
+    setThumbHeight(height);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    updateThumb();
+    setThumbOpacity(1);
+    if (thumbTimer.current) clearTimeout(thumbTimer.current);
+    thumbTimer.current = setTimeout(() => setThumbOpacity(0), 650);
+  }, [updateThumb]);
+
+  // 탭 전환/기록 로딩으로 스크롤 영역 높이가 바뀔 때마다 썸 크기를 다시 계산한다(깜빡임 없이 opacity는 그대로 둠).
+  useEffect(() => {
+    updateThumb();
+  }, [activeTab, records, updateThumb]);
 
   const loadRecords = useCallback(async () => {
     const { data, error } = await supabase
@@ -144,6 +177,40 @@ export default function Page() {
     }
     setStage("app");
     loadRecords();
+  }
+
+  async function handleDeleteRecord(record: WalkRecord) {
+    const { error } = await supabase.from("walk_records").delete().eq("id", record.id);
+    if (error) {
+      showToast("삭제에 실패했어요");
+      return;
+    }
+    await supabase.storage.from(WALK_PHOTOS_BUCKET).remove([record.image_url]);
+    setRecords((prev) => prev.filter((r) => r.id !== record.id));
+    setImageUrls((prev) => {
+      const next = { ...prev };
+      delete next[record.image_url];
+      return next;
+    });
+    setSelectedPin((prev) => (prev?.id === record.id ? null : prev));
+    setSelectedFeedRecord((prev) => (prev?.id === record.id ? null : prev));
+    showToast("기록이 삭제되었어요");
+  }
+
+  async function handleShareRecord(record: WalkRecord) {
+    const url = imageUrls[record.image_url];
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "산책기록", text: record.ai_caption, url });
+      } catch {
+        // 사용자가 공유를 취소한 경우 — 별도 처리 없음
+      }
+      return;
+    }
+    if (url && typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+      showToast("공유 링크가 복사되었어요");
+    }
   }
 
   function handleReopenOnboarding() {
@@ -255,21 +322,52 @@ export default function Page() {
 
       {stage === "app" && (
         <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
-          <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
-            <div style={{ height: "max(20px, env(safe-area-inset-top))" }} />
-            {activeTab === "feed" && (
-              <FeedTab records={records} imageUrls={imageUrls} onOpenDetail={setSelectedFeedRecord} />
-            )}
-            {activeTab === "map" && <MapTab records={records} onSelectPin={setSelectedPin} />}
-            {activeTab === "dashboard" && <DashboardTab records={records} />}
-            {activeTab === "profile" && (
-              <ProfileTab
-                records={records}
-                joinedAt={session?.user.created_at}
-                onReopenOnboarding={handleReopenOnboarding}
-                onLogout={handleLogout}
-              />
-            )}
+          <div style={{ flex: 1, position: "relative" }}>
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="no-scrollbar"
+              style={{ height: "100%", overflow: "auto", WebkitOverflowScrolling: "touch" }}
+            >
+              <div style={{ height: "max(20px, env(safe-area-inset-top))" }} />
+              {activeTab === "feed" && (
+                <FeedTab
+                  records={records}
+                  imageUrls={imageUrls}
+                  onOpenDetail={setSelectedFeedRecord}
+                  onDeleteRecord={handleDeleteRecord}
+                  onShareRecord={handleShareRecord}
+                />
+              )}
+              {activeTab === "map" && (
+                <MapTab records={records} imageUrls={imageUrls} onSelectPin={setSelectedPin} />
+              )}
+              {activeTab === "dashboard" && <DashboardTab records={records} />}
+              {activeTab === "profile" && (
+                <ProfileTab
+                  records={records}
+                  joinedAt={session?.user.created_at}
+                  onReopenOnboarding={handleReopenOnboarding}
+                  onLogout={handleLogout}
+                />
+              )}
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                right: 3,
+                top: 0,
+                width: 3.5,
+                borderRadius: 3,
+                background: "rgba(46,43,36,0.3)",
+                height: thumbHeight,
+                transform: `translateY(${thumbTop}px)`,
+                opacity: thumbHeight ? thumbOpacity : 0,
+                transition: "opacity 0.3s",
+                pointerEvents: "none",
+                zIndex: 6,
+              }}
+            />
           </div>
 
           <TabBar
