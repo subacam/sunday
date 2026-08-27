@@ -16,6 +16,7 @@ import MapTab from "@/components/MapTab";
 import DashboardTab from "@/components/DashboardTab";
 import ProfileTab from "@/components/ProfileTab";
 import PinSheet from "@/components/PinSheet";
+import FeedDetailModal from "@/components/FeedDetailModal";
 import CaptureSheet, { type CaptureStep } from "@/components/CaptureSheet";
 import Toast from "@/components/Toast";
 
@@ -30,6 +31,7 @@ export default function Page() {
   const [records, setRecords] = useState<WalkRecord[]>([]);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [selectedPin, setSelectedPin] = useState<WalkRecord | null>(null);
+  const [selectedFeedRecord, setSelectedFeedRecord] = useState<WalkRecord | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const [captureStep, setCaptureStep] = useState<CaptureStep | null>(null);
@@ -251,7 +253,9 @@ export default function Page() {
         <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
           <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
             <div style={{ height: "max(20px, env(safe-area-inset-top))" }} />
-            {activeTab === "feed" && <FeedTab records={records} imageUrls={imageUrls} />}
+            {activeTab === "feed" && (
+              <FeedTab records={records} imageUrls={imageUrls} onOpenDetail={setSelectedFeedRecord} />
+            )}
             {activeTab === "map" && <MapTab records={records} onSelectPin={setSelectedPin} />}
             {activeTab === "dashboard" && <DashboardTab records={records} />}
             {activeTab === "profile" && (
@@ -295,6 +299,14 @@ export default function Page() {
                 setCaptureStep("choose");
               }}
               onSave={handleSaveRecord}
+            />
+          )}
+
+          {selectedFeedRecord && (
+            <FeedDetailModal
+              record={selectedFeedRecord}
+              photoUrl={imageUrls[selectedFeedRecord.image_url]}
+              onClose={() => setSelectedFeedRecord(null)}
             />
           )}
 

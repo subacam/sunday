@@ -9,9 +9,11 @@ function formatDate(iso: string) {
 export default function FeedTab({
   records,
   imageUrls,
+  onOpenDetail,
 }: {
   records: WalkRecord[];
   imageUrls: Record<string, string>;
+  onOpenDetail: (record: WalkRecord) => void;
 }) {
   return (
     <div>
@@ -66,11 +68,13 @@ export default function FeedTab({
             return (
               <div
                 key={rec.id}
+                onClick={() => onOpenDetail(rec)}
                 style={{
                   background: "#fff",
                   borderRadius: 20,
                   overflow: "hidden",
                   boxShadow: "0 2px 10px rgba(46,43,36,0.07)",
+                  cursor: "pointer",
                 }}
               >
                 <div
