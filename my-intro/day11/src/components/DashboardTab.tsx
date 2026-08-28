@@ -10,7 +10,7 @@ export default function DashboardTab({ records }: { records: WalkRecord[] }) {
   if (records.length === 0) {
     return (
       <div style={{ padding: "2px 20px 30px" }}>
-        <div style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 18px" }}>대시보드</div>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 18px", margin: 0 }}>대시보드</h1>
         <div
           style={{
             display: "flex",

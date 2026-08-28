@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
     apple: "/icon-192.png",
   },
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

@@ -323,7 +323,7 @@ export default function Page() {
       {stage === "app" && (
         <div style={{ height: "100dvh", display: "flex", flexDirection: "column", position: "relative" }}>
           <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-            <div
+            <main
               ref={scrollRef}
               onScroll={handleScroll}
               className="no-scrollbar"
@@ -351,7 +351,7 @@ export default function Page() {
                   onLogout={handleLogout}
                 />
               )}
-            </div>
+            </main>
             <div
               style={{
                 position: "absolute",

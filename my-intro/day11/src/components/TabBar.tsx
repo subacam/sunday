@@ -18,7 +18,8 @@ export default function TabBar({
   const profileColor = active === "profile" ? ACTIVE : MUTED;
 
   return (
-    <div
+    <nav
+      aria-label="주요 메뉴"
       style={{
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
@@ -102,9 +103,9 @@ export default function TabBar({
           <circle cx="12" cy="8" r="3.6" stroke={profileColor} strokeWidth="2" />
           <path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" stroke={profileColor} strokeWidth="2" fill="none" />
         </svg>
-        <span style={{ fontSize: 11, fontWeight: 700, color: profileColor }}>내정보</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: profileColor }}>내 정보</span>
       </div>
-    </div>
+    </nav>
   );
 }
 

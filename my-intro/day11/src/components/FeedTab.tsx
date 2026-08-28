@@ -63,8 +63,13 @@ export default function FeedTab({
 }) {
   const [swipeOffsets, setSwipeOffsets] = useState<Record<number, number>>({});
   const [activeSwipeId, setActiveSwipeId] = useState<number | null>(null);
+  const [loadedPhotoIds, setLoadedPhotoIds] = useState<Set<number>>(new Set());
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const gestureRef = useRef<Gesture | null>(null);
+
+  function handlePhotoLoad(id: number) {
+    setLoadedPhotoIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+  }
 
   // 드래그 중엔 손가락 1px 움직일 때마다 setState로 리렌더하지 않고, DOM에
   // 직접 transform을 써서 프레임을 놓치지 않게 한다 — 최종 스냅 값만 커밋한다.
@@ -199,7 +204,7 @@ export default function FeedTab({
           padding: "2px 20px 12px",
         }}
       >
-        <div style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 0" }}>피드</div>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 0", margin: 0 }}>피드</h1>
         <div style={{ fontSize: 13, color: "#8B8578", fontWeight: 500, padding: "4px 0 0" }}>
           {records.length}개의 기록
         </div>
@@ -239,6 +244,7 @@ export default function FeedTab({
             const photoUrl = imageUrls[rec.image_url];
             const offset = swipeOffsets[rec.id] || 0;
             const swiping = activeSwipeId === rec.id;
+            const photoReady = !photoUrl || loadedPhotoIds.has(rec.id);
             return (
               <div
                 key={rec.id}
@@ -252,6 +258,29 @@ export default function FeedTab({
                 }}
               >
                 <div style={{ position: "absolute", inset: 0, display: "flex" }}>
+                  <div
+                    onClick={(e) => handleShareClick(rec, e)}
+                    style={{
+                      width: 76,
+                      height: "100%",
+                      background: "linear-gradient(135deg,#B9D9AE,#8FAE8C)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 5,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <circle cx="18" cy="5" r="3" stroke="#fff" strokeWidth="2" />
+                      <circle cx="6" cy="12" r="3" stroke="#fff" strokeWidth="2" />
+                      <circle cx="18" cy="19" r="3" stroke="#fff" strokeWidth="2" />
+                      <path d="M8.6 10.5 15.4 6.5M8.6 13.5l6.8 4" stroke="#fff" strokeWidth="2" />
+                    </svg>
+                    <span style={{ fontSize: 12, color: "#fff", fontWeight: 700 }}>공유</span>
+                  </div>
+                  <div style={{ flex: 1 }} />
                   <div
                     onClick={(e) => handleDeleteClick(rec, e)}
                     style={{
@@ -276,29 +305,6 @@ export default function FeedTab({
                       />
                     </svg>
                     <span style={{ fontSize: 12, color: "#fff", fontWeight: 700 }}>삭제</span>
-                  </div>
-                  <div style={{ flex: 1 }} />
-                  <div
-                    onClick={(e) => handleShareClick(rec, e)}
-                    style={{
-                      width: 76,
-                      height: "100%",
-                      background: "linear-gradient(135deg,#B9D9AE,#8FAE8C)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 5,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <circle cx="18" cy="5" r="3" stroke="#fff" strokeWidth="2" />
-                      <circle cx="6" cy="12" r="3" stroke="#fff" strokeWidth="2" />
-                      <circle cx="18" cy="19" r="3" stroke="#fff" strokeWidth="2" />
-                      <path d="M8.6 10.5 15.4 6.5M8.6 13.5l6.8 4" stroke="#fff" strokeWidth="2" />
-                    </svg>
-                    <span style={{ fontSize: 12, color: "#fff", fontWeight: 700 }}>공유</span>
                   </div>
                 </div>
                 <div
@@ -327,61 +333,96 @@ export default function FeedTab({
                     style={{
                       position: "relative",
                       height: 150,
-                      background: photoUrl ? `${MOOD_BG[rec.ai_mood]} center/cover` : MOOD_BG[rec.ai_mood],
+                      background: MOOD_BG[rec.ai_mood],
+                      overflow: "hidden",
                     }}
                   >
                     {photoUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={photoUrl}
-                        alt={rec.ai_caption}
-                        loading="lazy"
-                        decoding="async"
-                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                      />
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photoUrl}
+                          alt={rec.ai_caption}
+                          loading={i === 0 ? "eager" : "lazy"}
+                          fetchPriority={i === 0 ? "high" : "auto"}
+                          decoding="async"
+                          onLoad={() => handlePhotoLoad(rec.id)}
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            opacity: loadedPhotoIds.has(rec.id) ? 1 : 0,
+                            transition: "opacity 0.4s ease",
+                          }}
+                        />
+                        {!loadedPhotoIds.has(rec.id) && (
+                          <div className="wr-skeleton" style={{ position: "absolute", inset: 0 }} />
+                        )}
+                      </>
                     )}
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 12,
-                        left: 12,
-                        padding: "5px 11px",
-                        borderRadius: 20,
-                        background: "rgba(255,255,255,0.88)",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: MOOD_COLOR[rec.ai_mood],
-                      }}
-                    >
-                      {rec.ai_mood}
-                    </div>
+                    {photoReady && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 12,
+                          left: 12,
+                          padding: "5px 11px",
+                          borderRadius: 20,
+                          background: "rgba(255,255,255,0.88)",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: MOOD_COLOR[rec.ai_mood],
+                        }}
+                      >
+                        {rec.ai_mood}
+                      </div>
+                    )}
                   </div>
                   <div style={{ padding: 16 }}>
-                    <div style={{ fontSize: 14.5, color: "#2E2B24", fontWeight: 500, lineHeight: 1.5 }}>
-                      {rec.ai_caption}
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-                      {rec.ai_tags.map((tag) => (
-                        <span
-                          key={tag}
-                          style={{
-                            fontSize: 12,
-                            color: "#6B6656",
-                            background: "#F3F0E6",
-                            padding: "4px 10px",
-                            borderRadius: 14,
-                            fontWeight: 500,
-                          }}
+                    {photoReady ? (
+                      <>
+                        <div style={{ fontSize: 14.5, color: "#2E2B24", fontWeight: 500, lineHeight: 1.5 }}>
+                          {rec.ai_caption}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+                          {rec.ai_tags.map((tag) => (
+                            <span
+                              key={tag}
+                              style={{
+                                fontSize: 12,
+                                color: "#6B6656",
+                                background: "#F3F0E6",
+                                padding: "4px 10px",
+                                borderRadius: 14,
+                                fontWeight: 500,
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div
+                          style={{ fontSize: 12, color: "#B0AA98", fontWeight: 500, marginTop: 12, textAlign: "right" }}
                         >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <div
-                      style={{ fontSize: 12, color: "#B0AA98", fontWeight: 500, marginTop: 12, textAlign: "right" }}
-                    >
-                      {formatDate(rec.created_at)}
-                    </div>
+                          {formatDate(rec.created_at)}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="wr-skeleton" style={{ height: 14, width: "85%", borderRadius: 7, background: "#EEE8DA" }} />
+                        <div className="wr-skeleton" style={{ height: 14, width: "56%", borderRadius: 7, background: "#EEE8DA", marginTop: 8 }} />
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+                          <div className="wr-skeleton" style={{ height: 22, width: 48, borderRadius: 14, background: "#EEE8DA" }} />
+                          <div className="wr-skeleton" style={{ height: 22, width: 64, borderRadius: 14, background: "#EEE8DA" }} />
+                          <div className="wr-skeleton" style={{ height: 22, width: 40, borderRadius: 14, background: "#EEE8DA" }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                          <div className="wr-skeleton" style={{ height: 11, width: 44, borderRadius: 6, background: "#EEE8DA" }} />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

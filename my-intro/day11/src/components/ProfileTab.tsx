@@ -27,7 +27,7 @@ export default function ProfileTab({
 
   return (
     <div style={{ padding: "2px 20px 30px" }}>
-      <div style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 18px" }}>내 정보</div>
+      <h1 style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 18px", margin: 0 }}>내 정보</h1>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingBottom: 16 }}>
         <div
