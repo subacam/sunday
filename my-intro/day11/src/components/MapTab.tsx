@@ -83,10 +83,11 @@ function pinElement(record: WalkRecord) {
   return { el, photoContainer };
 }
 
-function loadPinPhoto(photoContainer: HTMLDivElement, photoUrl: string) {
+function loadPinPhoto(photoContainer: HTMLDivElement, photoUrl: string, onLoad?: () => void) {
   const img = document.createElement("img");
   img.src = photoUrl;
   img.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;";
+  if (onLoad) img.onload = onLoad;
   photoContainer.appendChild(img);
 }
 
@@ -107,6 +108,19 @@ export default function MapTab({
     new Map(),
   );
   const [styleLoaded, setStyleLoaded] = useState(false);
+  // 처음 화면에 들어온 핀들의 사진이 다 로딩돼야 로딩 화면에서 지도로
+  // 넘어간다 — 화면 밖 핀(드래그해야 보이는 핀)은 여기 포함되지 않는다.
+  const initialBatchRef = useRef<Set<number> | null>(null);
+  const loadedIdsRef = useRef<Set<number>>(new Set());
+  const [initialPinsReady, setInitialPinsReady] = useState(false);
+
+  function markPinLoaded(id: number) {
+    loadedIdsRef.current.add(id);
+    const batch = initialBatchRef.current;
+    if (batch && Array.from(batch).every((bid) => loadedIdsRef.current.has(bid))) {
+      setInitialPinsReady(true);
+    }
+  }
 
   const [mapPeriod, setMapPeriod] = useState<PeriodKey>("all");
   const [mapMood, setMapMood] = useState<Mood | "all">("all");
@@ -161,7 +175,7 @@ export default function MapTab({
       const bounds = map.getBounds();
       pendingPinsRef.current.forEach((pending, id) => {
         if (bounds.contains([pending.lng, pending.lat])) {
-          loadPinPhoto(pending.container, pending.photoUrl);
+          loadPinPhoto(pending.container, pending.photoUrl, () => markPinLoaded(id));
           pendingPinsRef.current.delete(id);
         }
       });
@@ -194,6 +208,7 @@ export default function MapTab({
       pendingPinsRef.current.clear();
 
       const bounds = map!.getBounds();
+      const inViewIds: number[] = [];
 
       markersRef.current = mapRecords.map((rec) => {
         const { el, photoContainer } = pinElement(rec);
@@ -202,7 +217,8 @@ export default function MapTab({
         const photoUrl = imageUrls[rec.image_url];
         if (photoUrl) {
           if (bounds.contains([rec.longitude, rec.latitude])) {
-            loadPinPhoto(photoContainer, photoUrl);
+            inViewIds.push(rec.id);
+            loadPinPhoto(photoContainer, photoUrl, () => markPinLoaded(rec.id));
           } else {
             pendingPinsRef.current.set(rec.id, { lng: rec.longitude, lat: rec.latitude, photoUrl, container: photoContainer });
           }
@@ -212,6 +228,17 @@ export default function MapTab({
           .setLngLat([rec.longitude, rec.latitude])
           .addTo(map!);
       });
+
+      // 최초 한 번만 "초기 화면에 들어온 핀들"을 확정한다. imageUrls가 아직
+      // 도착 전이라 사진 URL이 하나도 없는 패스는 건너뛰고 다음 렌더를 기다린다
+      // — 안 그러면 빈 배치를 초기 기준으로 확정해버려 로딩 화면이 곧바로
+      // (아무것도 안 기다리고) 넘어가 버린다.
+      if (initialBatchRef.current === null && (mapRecords.length === 0 || Object.keys(imageUrls).length > 0)) {
+        initialBatchRef.current = new Set(inViewIds);
+        if (inViewIds.every((id) => loadedIdsRef.current.has(id))) {
+          setInitialPinsReady(true);
+        }
+      }
     }
 
     if (map.isStyleLoaded()) render();
@@ -344,7 +371,7 @@ export default function MapTab({
       >
         <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
 
-        {!styleLoaded && (
+        {(!styleLoaded || !initialPinsReady) && (
           <div
             style={{
               position: "absolute",
