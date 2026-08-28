@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오늘 마신 물</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f7ce0">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="물한잔">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #dce9f5;
+  }
+  body {
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 420px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: linear-gradient(180deg,#eaf7ff 0%,#f7fcff 45%,#ffffff 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 64px 24px 28px;
+    font-family: 'Nunito', sans-serif;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; z-index: 2; }
+  .header-label { font-size: 15px; font-weight: 800; color: #5aa9e0; letter-spacing: 0.5px; }
+  .count-row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+  .count-num { font-size: 88px; font-weight: 900; color: #1a5fa8; line-height: 1; }
+  .count-total { font-size: 30px; font-weight: 800; color: #8fc3ec; }
+  .status-pill {
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #7fb3e0;
+    background: #ffffff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(43,120,190,0.12);
+  }
+
+  .glasses {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px 16px;
+    margin-top: 36px;
+    position: relative;
+    z-index: 2;
+  }
+  .glass {
+    width: 56px;
+    height: 72px;
+    position: relative;
+    border-radius: 10px 10px 22px 22px;
+    border: 3px solid #bfe1f7;
+    background: #f4fbff;
+    overflow: hidden;
+    box-shadow: 0 3px 8px rgba(43,120,190,0.08);
+  }
+  .glass.floating { animation: float 2.4s ease-in-out infinite; }
+  .glass-fill {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg,#63c3f5 0%,#2f8fef 100%);
+    transition: height 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .glass-shine {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.35);
+    border-radius: 50%;
+    transform: translateY(-2px);
+  }
+  .glass-index {
+    position: absolute;
+    top: 4px; left: 0; right: 0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .spacer { flex: 1; }
+
+  .actions { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; position: relative; z-index: 2; }
+  .primary-btn {
+    width: 100%;
+    max-width: 320px;
+    height: 64px;
+    border: none;
+    border-radius: 32px;
+    background: linear-gradient(180deg,#4fa8f0 0%,#1f7ce0 100%);
+    color: #ffffff;
+    font-size: 19px;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 10px 24px rgba(31,124,224,0.35);
+    cursor: pointer;
+    letter-spacing: 0.2px;
+  }
+  .primary-btn:active { transform: scale(0.97); }
+  .primary-btn:disabled { opacity: 0.7; cursor: default; }
+  .reset-btn {
+    border: none;
+    background: transparent;
+    color: #9db9cf;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    padding: 6px;
+  }
+
+  .celebration {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,#2f8fef 0%,#1a5fa8 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    box-sizing: border-box;
+    z-index: 10;
+    animation: pop 0.5s ease;
+    overflow: hidden;
+  }
+  .celebration.hidden { display: none; }
+  .confetti-layer { position: absolute; inset: 0; pointer-events: none; }
+  .confetti-piece {
+    position: absolute;
+    top: 0;
+    animation-name: confettiFall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .check-circle-outer {
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    animation: float 2.4s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
+  }
+  .check-circle-inner {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .check-mark {
+    width: 26px;
+    height: 14px;
+    border-left: 5px solid #1f7ce0;
+    border-bottom: 5px solid #1f7ce0;
+    transform: rotate(-45deg) translate(2px,-3px);
+  }
+  .celebrate-title { color: #ffffff; font-size: 26px; font-weight: 900; text-align: center; line-height: 1.35; position: relative; z-index: 1; }
+  .celebrate-sub { color: #cfe8ff; font-size: 15px; font-weight: 700; margin-top: 10px; text-align: center; position: relative; z-index: 1; }
+  .confirm-btn {
+    margin-top: 32px;
+    width: 100%;
+    max-width: 280px;
+    height: 56px;
+    border: none;
+    border-radius: 28px;
+    background: #ffffff;
+    color: #1a5fa8;
+    font-size: 17px;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+  @keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(420px) rotate(320deg); opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-label">오늘 마신 물</div>
+    <div class="count-row">
+      <span class="count-num" id="countNum">0</span>
+      <span class="count-total">/ 8잔</span>
+    </div>
+    <div class="status-pill" id="statusText">물을 마셔볼까요?</div>
+  </div>
+
+  <div class="glasses" id="glasses"></div>
+
+  <div class="spacer"></div>
+
+  <div class="actions">
+    <button class="primary-btn" id="addBtn">물 한잔 마셨어요</button>
+    <button class="reset-btn" id="resetBtn">오늘 기록 지우기</button>
+  </div>
+
+  <div class="celebration hidden" id="celebration">
+    <div class="confetti-layer" id="confettiLayer"></div>
+    <div class="check-circle-outer">
+      <div class="check-circle-inner">
+        <div class="check-mark"></div>
+      </div>
+    </div>
+    <div class="celebrate-title">오늘 목표<br>달성했어요!</div>
+    <div class="celebrate-sub">물 8잔 완료! 내일도 잊지 말고 챙겨 마셔요 💧</div>
+    <button class="confirm-btn" id="confirmBtn">확인</button>
+  </div>
+
+</div>
+
+<script>
+  var GOAL = 8;
+  var STORAGE_KEY = 'water-tracker-state';
+
+  var countNumEl = document.getElementById('countNum');
+  var statusEl = document.getElementById('statusText');
+  var glassesEl = document.getElementById('glasses');
+  var addBtn = document.getElementById('addBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var celebrationEl = document.getElementById('celebration');
+  var confettiLayer = document.getElementById('confettiLayer');
+  var confirmBtn = document.getElementById('confirmBtn');
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { date: todayStr(), count: 0 };
+      var data = JSON.parse(raw);
+      if (data.date !== todayStr()) return { date: todayStr(), count: 0 };
+      return { date: data.date, count: Math.min(Math.max(data.count || 0, 0), GOAL) };
+    } catch (e) {
+      return { date: todayStr(), count: 0 };
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  var state = loadState();
+
+  function statusText(count) {
+    if (count === 0) return '물을 마셔볼까요?';
+    if (count < GOAL) return '목표까지 ' + (GOAL - count) + '잔 남았어요';
+    return '오늘 목표 달성!';
+  }
+
+  function renderGlasses() {
+    glassesEl.innerHTML = '';
+    for (var i = 0; i < GOAL; i++) {
+      var filled = i < state.count;
+      var glass = document.createElement('div');
+      glass.className = 'glass' + (filled && state.count < GOAL ? ' floating' : '');
+
+      var fill = document.createElement('div');
+      fill.className = 'glass-fill';
+      fill.style.height = filled ? '100%' : '0%';
+      var shine = document.createElement('div');
+      shine.className = 'glass-shine';
+      fill.appendChild(shine);
+
+      var index = document.createElement('div');
+      index.className = 'glass-index';
+      index.style.color = filled ? 'rgba(255,255,255,0.85)' : '#a9cbe8';
+      index.textContent = i + 1;
+
+      glass.appendChild(fill);
+      glass.appendChild(index);
+      glassesEl.appendChild(glass);
+    }
+  }
+
+  function render() {
+    countNumEl.textContent = state.count;
+    statusEl.textContent = statusText(state.count);
+    addBtn.textContent = state.count >= GOAL ? '오늘 목표를 달성했어요' : '물 한잔 마셨어요';
+    addBtn.disabled = state.count >= GOAL;
+    renderGlasses();
+  }
+
+  function buildConfetti() {
+    confettiLayer.innerHTML = '';
+    var colors = ['#ffffff', '#bfe1f7', '#ffd166', '#8fe3c4'];
+    for (var i = 0; i < 14; i++) {
+      var piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      var size = 6 + (i % 3) * 3;
+      piece.style.left = (i * 7.3 + 2) + '%';
+      piece.style.width = size + 'px';
+      piece.style.height = size + 'px';
+      piece.style.background = colors[i % colors.length];
+      piece.style.borderRadius = i % 2 === 0 ? '50%' : '3px';
+      piece.style.animationDuration = (2.2 + (i % 4) * 0.4) + 's';
+      piece.style.animationDelay = (i * 0.15) + 's';
+      confettiLayer.appendChild(piece);
+    }
+  }
+
+  function showCelebration() {
+    buildConfetti();
+    celebrationEl.classList.remove('hidden');
+  }
+
+  function hideCelebration() {
+    celebrationEl.classList.add('hidden');
+  }
+
+  addBtn.addEventListener('click', function () {
+    if (state.count >= GOAL) return;
+    state.count += 1;
+    saveState();
+    render();
+    if (state.count === GOAL) {
+      setTimeout(showCelebration, 350);
+    }
+  });
+
+  resetBtn.addEventListener('click', function () {
+    state.count = 0;
+    saveState();
+    render();
+    hideCelebration();
+  });
+
+  confirmBtn.addEventListener('click', hideCelebration);
+
+  render();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>
