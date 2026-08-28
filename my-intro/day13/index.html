@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>야밤 - 자기 전 1시간, 폰 없이</title>
+<meta name="description" content="야밤은 잠들기 전 한 시간, 화면 대신 어둠을 선택하는 30일 디지털 디톡스 챌린지입니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="night-fx" aria-hidden="true"></div>
+
+<header class="gnb">
+  <div class="gnb-inner">
+    <a href="#top" class="logo"><i class="ph-fill ph-moon-stars"></i>야밤</a>
+    <nav class="gnb-links">
+      <a href="#how">참여 방법</a>
+      <a href="#voices">후기</a>
+    </nav>
+    <a href="#join" class="btn btn-primary btn-small">챌린지 참여하기</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- 히어로 -->
+  <section class="hero">
+    <canvas id="spline-canvas" class="spline-bg" aria-hidden="true"></canvas>
+    <div class="hero-scrim" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <h1>자기 전 1시간,<br>폰 없이.</h1>
+        <p class="hero-sub">야밤은 잠들기 전 딱 한 시간, 화면 대신 어둠을 선택하는 사람들의 30일 습관 챌린지입니다.</p>
+        <div class="hero-actions">
+          <a href="#join" class="btn btn-primary">챌린지 참여하기</a>
+          <a href="#how" class="btn btn-ghost">어떻게 진행되나요</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 문제제기 -->
+  <section class="section problem reveal">
+    <div class="section-inner">
+      <h2>잠들기 전 스크롤이 밤잠을 갉아먹습니다.</h2>
+      <p class="section-sub">화면 앞에서 보내는 마지막 한 시간이 그날 수면의 질을 가장 크게 좌우합니다.</p>
+
+      <div class="stat-grid">
+        <div class="stat-card stat-card--lead reveal">
+          <span class="stat-number">10명 중 7명</span>
+          <span class="stat-label">잠들기 직전까지 스마트폰을 보는 성인의 비율</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-number">+23분</span>
+          <span class="stat-label">화면을 끈 뒤에도 실제로 잠들기까지 걸리는 평균 시간</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-number">48%</span>
+          <span class="stat-label">다음날 피로와 집중력 저하를 느낀다고 답한 비율</span>
+        </div>
+      </div>
+      <p class="stat-footnote">국내외 수면 연구 결과를 참고한 수치입니다.</p>
+    </div>
+  </section>
+
+  <!-- 챌린지 방식 -->
+  <section id="how" class="section steps reveal">
+    <div class="section-inner">
+      <h2>참여는 세 단계면 충분합니다.</h2>
+
+      <div class="step-track">
+        <div class="step reveal">
+          <div class="step-icon"><i class="ph ph-pencil-simple-line"></i></div>
+          <h3>신청하기</h3>
+          <p>이메일 하나로 30일 챌린지에 등록합니다.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-icon"><i class="ph ph-envelope-simple-open"></i></div>
+          <h3>메일 인증하기</h3>
+          <p>인증 메일 속 링크 하나로 참여가 확정됩니다.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-icon"><i class="ph-fill ph-medal"></i></div>
+          <h3>30일 채우고 배지 받기</h3>
+          <p>매일 밤 1시간, 화면 대신 어둠을 선택하면 완주 배지를 드립니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 참여자 후기 -->
+  <section id="voices" class="section voices reveal">
+    <div class="section-inner">
+      <h2>먼저 밤을 되찾은 사람들</h2>
+
+      <div class="voice-grid">
+        <figure class="voice-card reveal">
+          <img src="https://i.pravatar.cc/96?img=47" alt="한서진 님의 프로필 사진" class="voice-avatar" width="48" height="48" loading="lazy">
+          <blockquote>처음 사흘이 고비였는데, 지금은 폰보다 책이 먼저 손에 잡혀요.</blockquote>
+          <figcaption><span class="voice-name">한서진</span><span class="voice-role">3주차 참가자</span></figcaption>
+        </figure>
+        <figure class="voice-card voice-card--accent reveal">
+          <img src="https://i.pravatar.cc/96?img=12" alt="김도윤 님의 프로필 사진" class="voice-avatar" width="48" height="48" loading="lazy">
+          <blockquote>배지를 받고 나니 그동안 잠을 얼마나 미뤄왔는지 알았습니다.</blockquote>
+          <figcaption><span class="voice-name">김도윤</span><span class="voice-role">완주 참가자</span></figcaption>
+        </figure>
+        <figure class="voice-card reveal">
+          <img src="https://i.pravatar.cc/96?img=32" alt="오유나 님의 프로필 사진" class="voice-avatar" width="48" height="48" loading="lazy">
+          <blockquote>알람 대신 스스로 불을 끄는 습관이 생긴 게 가장 큰 변화예요.</blockquote>
+          <figcaption><span class="voice-name">오유나</span><span class="voice-role">2주차 참가자</span></figcaption>
+        </figure>
+        <figure class="voice-card reveal">
+          <img src="https://i.pravatar.cc/96?img=68" alt="정민재 님의 프로필 사진" class="voice-avatar" width="48" height="48" loading="lazy">
+          <blockquote>잠들기 전 한 시간이 이렇게 편해질 줄 몰랐어요. 지금은 그 시간이 제일 좋습니다.</blockquote>
+          <figcaption><span class="voice-name">정민재</span><span class="voice-role">완주 참가자</span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 참여 유도 -->
+  <section id="join" class="section join reveal">
+    <div class="join-bg" aria-hidden="true"></div>
+    <div class="section-inner join-inner">
+      <h2>오늘 밤부터, 화면 대신 어둠을.</h2>
+      <p class="section-sub">이메일만 남기면 오늘 밤 챌린지가 시작됩니다.</p>
+      <form class="join-form" id="joinForm">
+        <label for="email" class="visually-hidden">이메일 주소</label>
+        <input type="email" id="email" name="email" placeholder="이메일 주소를 입력하세요" required>
+        <button type="submit" class="btn btn-primary">챌린지 참여하기</button>
+      </form>
+      <p class="join-hint" id="joinHint" role="status"></p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="#top" class="logo"><i class="ph-fill ph-moon-stars"></i>야밤</a>
+      <p>밤을 돌려받는 가장 작은 습관.</p>
+    </div>
+    <nav class="footer-links">
+      <a href="#how">소개</a>
+      <a href="#voices">자주 묻는 질문</a>
+      <a href="mailto:hello@yabam.kr">문의</a>
+    </nav>
+    <div class="footer-social">
+      <a href="#" aria-label="인스타그램"><i class="ph ph-instagram-logo"></i></a>
+      <a href="mailto:hello@yabam.kr" aria-label="이메일 보내기"><i class="ph ph-envelope-simple"></i></a>
+    </div>
+  </div>
+  <p class="footer-copy">© 2026 야밤. All rights reserved.</p>
+</footer>
+
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script type="module" src="spline-hero.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
