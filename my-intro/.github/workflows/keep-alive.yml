@@ -1,0 +1,37 @@
+name: Supabase Keep-Alive
+
+# Supabase 무료 플랜은 일정 기간 요청이 없으면 프로젝트를 자동 일시정지한다.
+# 3일마다 place_saves 테이블에서 1행만 조회해 활성 상태를 유지한다.
+#
+# 필요한 저장소 시크릿 (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL              예: https://xxxxxxxx.supabase.co
+#   SUPABASE_PUBLISHABLE_KEY  Supabase publishable(anon) key
+
+on:
+  schedule:
+    # 매월 1,4,7,...일 00:00 UTC (달 경계에서는 최대 하루 정도 더 자주 실행될 뿐,
+    # 3일보다 길게 비는 경우는 없다 — keep-alive 목적상 문제 없음)
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query one row from place_saves
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          http_status=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/place_saves?limit=1" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}")
+
+          echo "HTTP status: $http_status"
+          cat /tmp/response.json
+
+          if [ "$http_status" -ge 400 ]; then
+            echo "::error::Supabase 요청 실패 (HTTP $http_status)"
+            exit 1
+          fi
