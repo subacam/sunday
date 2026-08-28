@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MaplibreMap, Marker, LngLatBounds, type StyleSpecification } from "maplibre-gl";
+import { Map as MaplibreMap, Marker, type StyleSpecification } from "maplibre-gl";
 import mapStyle from "@/lib/mapStyle.json";
 import { MOOD_BG, MOOD_COLOR, MOOD_LIST, type Mood } from "@/lib/mood";
 import type { WalkRecord } from "@/types/walk";
@@ -65,7 +65,10 @@ function FootIcon({ color, offset, rotate, delay }: { color: string; offset: num
 // 테두리를 무드 단색이 아니라 피드 카드와 같은 MOOD_BG 그라디언트로 채워
 // Clay 디자인의 코랄 그라디언트 톤(버튼/아바타/FAB)과 같은 계열로 맞춘다.
 // border는 그라디언트를 못 그려서, padding으로 링 두께를 만드는 방식을 쓴다.
-function pinElement(record: WalkRecord, photoUrl: string | undefined, onPhotoLoad: (id: number) => void) {
+// 사진은 여기서 바로 넣지 않는다 — 화면 안에 들어온 핀만 즉시 불러오고, 화면
+// 밖 핀은 photoContainer만 만들어둔 채 pendingPinsRef에 넘겨 나중에(드래그로
+// 시야에 들어올 때) loadPinPhoto로 채운다.
+function pinElement(record: WalkRecord) {
   const el = document.createElement("div");
   el.style.cursor = "pointer";
   el.style.width = "40px";
@@ -74,17 +77,17 @@ function pinElement(record: WalkRecord, photoUrl: string | undefined, onPhotoLoa
   el.style.padding = "3px";
   el.style.background = MOOD_BG[record.ai_mood];
   el.style.boxShadow = "0 2px 6px rgba(46,43,36,0.3)";
-  // signed URL이 아직 도착하지 않았으면 흰 원만 보여준다.
-  el.innerHTML = `
-    <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background:#fff;">
-      ${photoUrl ? `<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />` : ""}
-    </div>
-  `;
-  if (photoUrl) {
-    const img = el.querySelector("img");
-    if (img) img.onload = () => onPhotoLoad(record.id);
-  }
-  return el;
+  const photoContainer = document.createElement("div");
+  photoContainer.style.cssText = "width:100%;height:100%;border-radius:50%;overflow:hidden;background:#fff;";
+  el.appendChild(photoContainer);
+  return { el, photoContainer };
+}
+
+function loadPinPhoto(photoContainer: HTMLDivElement, photoUrl: string) {
+  const img = document.createElement("img");
+  img.src = photoUrl;
+  img.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;";
+  photoContainer.appendChild(img);
 }
 
 export default function MapTab({
@@ -99,17 +102,17 @@ export default function MapTab({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MaplibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
-  const [loadedPinPhotoIds, setLoadedPinPhotoIds] = useState<Set<number>>(new Set());
+  // 화면 밖이라 아직 사진을 안 불러온 핀들 — moveend 때마다 현재 시야와 대조한다.
+  const pendingPinsRef = useRef<Map<number, { lng: number; lat: number; photoUrl: string; container: HTMLDivElement }>>(
+    new Map(),
+  );
+  const [styleLoaded, setStyleLoaded] = useState(false);
 
   const [mapPeriod, setMapPeriod] = useState<PeriodKey>("all");
   const [mapMood, setMapMood] = useState<Mood | "all">("all");
   const [showCustomPeriod, setShowCustomPeriod] = useState(false);
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-
-  function handlePinPhotoLoad(id: number) {
-    setLoadedPinPhotoIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-  }
 
   function applyCustomPeriod() {
     if (!customStart || !customEnd) {
@@ -129,20 +132,21 @@ export default function MapTab({
     [records, mapMood, mapPeriod, customStart, customEnd]
   );
 
-  // 핀 사진이 하나라도 아직 로딩 중이면 지도 전체를 "발자취를 따라가는 중..."
-  // 로딩 화면으로 가려, 핀이 하나씩 채워지는 어중간한 모습 대신 준비된 지도가
-  // 한 번에 나타나게 한다. imageUrls가 아직 도착 전이라 photoUrl이 없는 기록도
-  // "이미 준비됨"으로 오인하지 않도록 mapRecords 전체를 기준으로 판단한다.
-  const allPinsReady = mapRecords.every((r) => loadedPinPhotoIds.has(r.id));
-
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+
+    // 처음 열 때는 가진 기록 전체를 한눈에 넣지 않는다 — 가장 최근 기록
+    // 위치(없으면 기본 위치) 근처만 보여주고, 그 밖의 핀은 사용자가 드래그해서
+    // 시야에 들어와야 사진을 불러온다. 안 그러면 핀 사진을 전부 한꺼번에
+    // 내려받아야 해서(사진이 많거나 하나라도 크면) 지도가 느려진다.
+    const latest = records[0];
+    const initialCenter: [number, number] = latest ? [latest.longitude, latest.latitude] : DEFAULT_CENTER;
 
     const map = new MaplibreMap({
       container: containerRef.current,
       style: mapStyle as StyleSpecification,
-      center: DEFAULT_CENTER,
-      zoom: 13,
+      center: initialCenter,
+      zoom: 14,
       attributionControl: { compact: true },
       dragRotate: false,
       pitchWithRotate: false,
@@ -150,6 +154,18 @@ export default function MapTab({
     });
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
+    map.once("load", () => setStyleLoaded(true));
+
+    // 화면 밖에 있던 핀이 드래그/줌으로 시야에 들어오면 그제서야 사진을 불러온다.
+    map.on("moveend", () => {
+      const bounds = map.getBounds();
+      pendingPinsRef.current.forEach((pending, id) => {
+        if (bounds.contains([pending.lng, pending.lat])) {
+          loadPinPhoto(pending.container, pending.photoUrl);
+          pendingPinsRef.current.delete(id);
+        }
+      });
+    });
 
     // 컨테이너 크기가 마운트 시점 레이아웃과 어긋나거나(탭 전환 애니메이션,
     // 카드 접힘 등) 이후 바뀌는 경우를 대비해 캔버스를 계속 동기화한다 —
@@ -163,28 +179,39 @@ export default function MapTab({
       map.remove();
       mapRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 기록이 바뀔 때마다 핀을 다시 그리고, 있으면 그 범위에 맞춰 카메라를 옮긴다.
+  // 기록·필터가 바뀔 때마다 핀을 다시 그린다. 현재 시야 안에 있는 핀만 사진을
+  // 바로 불러오고, 밖에 있는 핀은 pendingPinsRef에 넣어 moveend를 기다린다.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     function render() {
       markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      pendingPinsRef.current.clear();
+
+      const bounds = map!.getBounds();
+
       markersRef.current = mapRecords.map((rec) => {
-        const el = pinElement(rec, imageUrls[rec.image_url], handlePinPhotoLoad);
+        const { el, photoContainer } = pinElement(rec);
         el.addEventListener("click", () => onSelectPin(rec));
+
+        const photoUrl = imageUrls[rec.image_url];
+        if (photoUrl) {
+          if (bounds.contains([rec.longitude, rec.latitude])) {
+            loadPinPhoto(photoContainer, photoUrl);
+          } else {
+            pendingPinsRef.current.set(rec.id, { lng: rec.longitude, lat: rec.latitude, photoUrl, container: photoContainer });
+          }
+        }
+
         return new Marker({ element: el, anchor: "center" })
           .setLngLat([rec.longitude, rec.latitude])
           .addTo(map!);
       });
-
-      if (mapRecords.length > 0) {
-        const bounds = new LngLatBounds();
-        mapRecords.forEach((r) => bounds.extend([r.longitude, r.latitude]));
-        map!.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 0 });
-      }
     }
 
     if (map.isStyleLoaded()) render();
@@ -317,7 +344,7 @@ export default function MapTab({
       >
         <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
 
-        {!allPinsReady && (
+        {!styleLoaded && (
           <div
             style={{
               position: "absolute",
