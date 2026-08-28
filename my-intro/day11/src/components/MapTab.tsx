@@ -91,6 +91,59 @@ function loadPinPhoto(photoContainer: HTMLDivElement, photoUrl: string, onLoad?:
   photoContainer.appendChild(img);
 }
 
+// 기간/무드 필터 칩 행을 마우스로 클릭한 채 드래그해서 좌우로 스크롤할 수 있게
+// 한다 — 터치 스와이프·트랙패드 휠은 브라우저가 기본으로 처리해주지만, 마우스
+// 드래그는 앱이 직접 구현해야 동작한다. 살짝 움직인 정도(4px 이하)는 드래그로
+// 치지 않고 칩 클릭이 그대로 통과하게 두고, 그 이상 움직였으면 드래그로 보고
+// 뒤이은 클릭(필터 선택)을 막는다.
+function useDragScroll(rowRef: React.RefObject<HTMLDivElement | null>) {
+  const gestureRef = useRef<{ startX: number; startScrollLeft: number; pointerId: number } | null>(null);
+  const draggedRef = useRef(false);
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    const row = rowRef.current;
+    if (!row) return;
+    gestureRef.current = { startX: e.clientX, startScrollLeft: row.scrollLeft, pointerId: e.pointerId };
+    draggedRef.current = false;
+    try {
+      row.setPointerCapture(e.pointerId);
+    } catch {
+      // 캡처 미지원 브라우저 — 없어도 대부분의 경우 정상 동작하므로 무시
+    }
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const row = rowRef.current;
+    const g = gestureRef.current;
+    if (!row || !g || g.pointerId !== e.pointerId) return;
+    const dx = e.clientX - g.startX;
+    if (Math.abs(dx) > 4) draggedRef.current = true;
+    if (draggedRef.current) row.scrollLeft = g.startScrollLeft - dx;
+  }
+
+  function endGesture(e: React.PointerEvent<HTMLDivElement>) {
+    const row = rowRef.current;
+    const g = gestureRef.current;
+    if (row && g && g.pointerId === e.pointerId) {
+      try {
+        row.releasePointerCapture(g.pointerId);
+      } catch {
+        // 이미 해제됐거나 캡처 미지원 브라우저 — 없어도 대부분의 경우 정상 동작하므로 무시
+      }
+    }
+    gestureRef.current = null;
+  }
+
+  function onClickCapture(e: React.MouseEvent<HTMLDivElement>) {
+    if (draggedRef.current) {
+      e.stopPropagation();
+      draggedRef.current = false;
+    }
+  }
+
+  return { onPointerDown, onPointerMove, onPointerUp: endGesture, onPointerCancel: endGesture, onClickCapture };
+}
+
 export default function MapTab({
   records,
   imageUrls,
@@ -127,6 +180,11 @@ export default function MapTab({
   const [showCustomPeriod, setShowCustomPeriod] = useState(false);
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+
+  const periodRowRef = useRef<HTMLDivElement | null>(null);
+  const moodRowRef = useRef<HTMLDivElement | null>(null);
+  const periodDrag = useDragScroll(periodRowRef);
+  const moodDrag = useDragScroll(moodRowRef);
 
   function applyCustomPeriod() {
     if (!customStart || !customEnd) {
@@ -255,7 +313,16 @@ export default function MapTab({
         </div>
       </div>
 
-      <div className="no-scrollbar" style={{ display: "flex", gap: 6, padding: "0 20px 10px", overflowX: "auto" }}>
+      <div
+        ref={periodRowRef}
+        className="no-scrollbar"
+        style={{ display: "flex", gap: 6, padding: "0 20px 10px", overflowX: "auto", cursor: "grab", userSelect: "none", WebkitUserSelect: "none" }}
+        onPointerDown={periodDrag.onPointerDown}
+        onPointerMove={periodDrag.onPointerMove}
+        onPointerUp={periodDrag.onPointerUp}
+        onPointerCancel={periodDrag.onPointerCancel}
+        onClickCapture={periodDrag.onClickCapture}
+      >
         {PERIODS.map((p) => {
           const active = mapPeriod === p.key;
           return (
@@ -314,7 +381,16 @@ export default function MapTab({
         </div>
       </div>
 
-      <div className="no-scrollbar" style={{ display: "flex", gap: 6, padding: "0 20px 14px", overflowX: "auto" }}>
+      <div
+        ref={moodRowRef}
+        className="no-scrollbar"
+        style={{ display: "flex", gap: 6, padding: "0 20px 14px", overflowX: "auto", cursor: "grab", userSelect: "none", WebkitUserSelect: "none" }}
+        onPointerDown={moodDrag.onPointerDown}
+        onPointerMove={moodDrag.onPointerMove}
+        onPointerUp={moodDrag.onPointerUp}
+        onPointerCancel={moodDrag.onPointerCancel}
+        onClickCapture={moodDrag.onClickCapture}
+      >
         <div
           onClick={() => setMapMood("all")}
           style={{
