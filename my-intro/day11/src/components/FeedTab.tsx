@@ -1,6 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MOOD_BG, MOOD_COLOR } from "@/lib/mood";
 import type { WalkRecord } from "@/types/walk";
+
+// 처음 몇 장까지 "요청 시작 순서"를 강제할지 — 그 아래는 자연스러운 lazy-load에 맡긴다.
+const STAGGER_COUNT = 6;
+// 완료를 기다리는 게 아니라 "다음 요청을 몇 ms 늦게 시작할지"만 강제한다 — 병렬로
+// 겹치면서 진행되므로 총 로딩 시간에는 거의 영향이 없다. loading="lazy"만으로는
+// 뷰포트 안에 같이 들어온 카드들이 거의 동시에 요청돼 브라우저가 어떤 걸 먼저
+// 끝내줄지 보장이 안 돼(맨 위가 2·3번째보다 늦게 뜨는 문제) 이 방식으로 바꿨다.
+const STAGGER_MS = 80;
 
 const SWIPE_MAX = 76;
 // 이 거리(px)를 넘기 전엔 세로/가로 중 어느 쪽 제스처인지 판단을 보류한다 —
@@ -64,17 +72,35 @@ export default function FeedTab({
   const [swipeOffsets, setSwipeOffsets] = useState<Record<number, number>>({});
   const [activeSwipeId, setActiveSwipeId] = useState<number | null>(null);
   const [loadedPhotoIds, setLoadedPhotoIds] = useState<Set<number>>(new Set());
+  const [staggerReady, setStaggerReady] = useState<Set<number>>(new Set());
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const gestureRef = useRef<Gesture | null>(null);
 
   // 모든 사진을 병렬로 요청하되(빠름), 각 카드는 자기 사진이 도착한 순간에만
   // 스켈레톤→실제 사진으로 바뀐다 — 앞 카드를 기다렸다가 다음을 요청하는
-  // waterfall 방식은 총 로딩 시간이 사진 개수만큼 늘어나 느리다. 맨 위(최신)
-  // 카드만 loading="eager"+fetchPriority="high"로 우선순위를 줘서, 대체로
-  // 위에서 아래로 채워지는 것처럼 보이게 한다.
+  // waterfall 방식은 총 로딩 시간이 사진 개수만큼 늘어나 느리다. 대신 처음
+  // STAGGER_COUNT장은 <img> 마운트(=요청 시작) 자체를 카드 순서대로 살짝
+  // 늦춰, 위 카드가 먼저 네트워크 요청을 나가도록 한다.
   function handlePhotoLoad(id: number) {
     setLoadedPhotoIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
   }
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const count = Math.min(STAGGER_COUNT, records.length);
+    for (let i = 0; i < count; i++) {
+      if (i === 0) {
+        setStaggerReady((prev) => (prev.has(0) ? prev : new Set(prev).add(0)));
+        continue;
+      }
+      timers.push(
+        setTimeout(() => {
+          setStaggerReady((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
+        }, i * STAGGER_MS),
+      );
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [records]);
 
   // 드래그 중엔 손가락 1px 움직일 때마다 setState로 리렌더하지 않고, DOM에
   // 직접 transform을 써서 프레임을 놓치지 않게 한다 — 최종 스냅 값만 커밋한다.
@@ -348,24 +374,26 @@ export default function FeedTab({
                   >
                     {photoUrl && (
                       <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={photoUrl}
-                          alt={rec.ai_caption}
-                          loading={i === 0 ? "eager" : "lazy"}
-                          fetchPriority={i === 0 ? "high" : "auto"}
-                          decoding="async"
-                          onLoad={() => handlePhotoLoad(rec.id)}
-                          style={{
-                            position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            opacity: loadedPhotoIds.has(rec.id) ? 1 : 0,
-                            transition: "opacity 0.4s ease",
-                          }}
-                        />
+                        {(i >= STAGGER_COUNT || staggerReady.has(i)) && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={photoUrl}
+                            alt={rec.ai_caption}
+                            loading={i === 0 ? "eager" : "lazy"}
+                            fetchPriority={i === 0 ? "high" : "auto"}
+                            decoding="async"
+                            onLoad={() => handlePhotoLoad(rec.id)}
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              opacity: loadedPhotoIds.has(rec.id) ? 1 : 0,
+                              transition: "opacity 0.4s ease",
+                            }}
+                          />
+                        )}
                         {!loadedPhotoIds.has(rec.id) && (
                           <div className="wr-skeleton" style={{ position: "absolute", inset: 0 }} />
                         )}
