@@ -6,10 +6,13 @@ import type { PendingAnalysis } from "@/types/walk";
 
 export type CaptureStep = "choose" | "loading" | "result";
 
+export type PhotoSource = "camera" | "gallery";
+
 export default function CaptureSheet({
   step,
   previewUrl,
   pending,
+  locationSource,
   onFileSelected,
   onCancel,
   onRetake,
@@ -18,7 +21,8 @@ export default function CaptureSheet({
   step: CaptureStep;
   previewUrl?: string;
   pending?: PendingAnalysis;
-  onFileSelected: (file: File) => void;
+  locationSource?: "device" | "photo";
+  onFileSelected: (file: File, source: PhotoSource) => void;
   onCancel: () => void;
   onRetake: () => void;
   onSave: () => void;
@@ -26,10 +30,12 @@ export default function CaptureSheet({
   const cameraInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (file) onFileSelected(file);
+  function handleChange(source: PhotoSource) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) onFileSelected(file, source);
+    };
   }
 
   return (
@@ -43,8 +49,8 @@ export default function CaptureSheet({
         alignItems: "flex-end",
       }}
     >
-      <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={handleChange} />
-      <input ref={galleryInput} type="file" accept="image/*" hidden onChange={handleChange} />
+      <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={handleChange("camera")} />
+      <input ref={galleryInput} type="file" accept="image/*" hidden onChange={handleChange("gallery")} />
 
       {step === "choose" && (
         <div style={{ width: "100%", background: "#fff", borderRadius: "24px 24px 0 0", padding: "22px 20px 34px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -119,7 +125,7 @@ export default function CaptureSheet({
               <path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" stroke="#8B8578" strokeWidth="2" fill="none" />
               <circle cx="12" cy="9" r="2.5" stroke="#8B8578" strokeWidth="2" />
             </svg>
-            현재 위치가 기록돼요
+            {locationSource === "photo" ? "사진에 저장된 위치가 기록돼요" : "현재 위치가 기록돼요"}
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
             <div onClick={onRetake} style={{ flex: 1, textAlign: "center", padding: 14, borderRadius: 14, border: "1.5px solid #E3DFD2", color: "#6B6656", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>

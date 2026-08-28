@@ -30,8 +30,13 @@ const RESPONSE_SCHEMA = {
 const PROMPT = `당신은 산책 중 찍은 사진에 감성적인 기록을 붙여주는 도우미입니다.
 아래 이미지 한 장을 보고 JSON으로만 응답하세요.
 
-- caption: 과장되지 않은 감성 톤의 한국어 한 문장 (40자 내외)
-- tags: 사진과 어울리는 한국어 태그 3~5개
+- caption: 과장되지 않은 감성 톤의 한국어 한 문장 (40자 내외).
+  '조용한', '고요한', '평화로운' 같은 뭉뚱그린 분위기 형용사를 남발하지 말고,
+  사진에서 실제로 보이는 구체적인 요소(색·사물·빛·질감·구도·계절감 등)를
+  한두 가지 짚어 문장에 녹여내세요. 매번 같은 표현이 아니라 사진마다
+  다른 어휘를 쓰도록 신경 쓰세요.
+- tags: 사진과 어울리는 한국어 태그 3~5개. 여기도 캡션과 같은 뭉뚱그린
+  분위기 단어 반복 대신 사진 속 구체적인 사물·장소·색·계절 단어를 우선하세요.
 - mood: 다음 후보군 중 정확히 하나만 선택 — ${MOOD_LIST.join("/")}`;
 
 function corsHeaders() {
@@ -66,6 +71,9 @@ async function callGemini(imageBase64: string, mimeType: string, apiKey: string)
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: RESPONSE_SCHEMA,
+        // 기본값(1.0)보다 살짝 높여 사진마다 어휘 선택의 다양성을 늘린다 —
+        // 안 그러면 비슷한 풍경 사진에 매번 "조용한" 류의 같은 표현이 반복된다.
+        temperature: 1.3,
       },
     }),
     signal: AbortSignal.timeout(30_000),

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { GEMINI_VISION_FUNCTION_URL, WALK_PHOTOS_BUCKET, supabase } from "@/lib/supabase";
-import { fileToBase64, getCurrentPosition, resizeImage } from "@/lib/capture";
+import { fileToBase64, getCurrentPosition, readExifPhotoMeta, resizeImage } from "@/lib/capture";
 import { isMood, type Mood } from "@/lib/mood";
 import type { PendingAnalysis, WalkRecord } from "@/types/walk";
 
@@ -17,7 +17,7 @@ import DashboardTab from "@/components/DashboardTab";
 import ProfileTab from "@/components/ProfileTab";
 import PinSheet from "@/components/PinSheet";
 import FeedDetailModal from "@/components/FeedDetailModal";
-import CaptureSheet, { type CaptureStep } from "@/components/CaptureSheet";
+import CaptureSheet, { type CaptureStep, type PhotoSource } from "@/components/CaptureSheet";
 import Toast from "@/components/Toast";
 
 type Stage = "splash" | "onboarding" | "auth" | "app";
@@ -39,6 +39,8 @@ export default function Page() {
   const [capturePreviewUrl, setCapturePreviewUrl] = useState<string | undefined>(undefined);
   const [capturePending, setCapturePending] = useState<PendingAnalysis | undefined>(undefined);
   const [captureLatLng, setCaptureLatLng] = useState<{ lat: number; lng: number } | null>(null);
+  const [captureTakenAt, setCaptureTakenAt] = useState<Date | null>(null);
+  const [captureLocationSource, setCaptureLocationSource] = useState<"device" | "photo">("device");
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -232,17 +234,30 @@ export default function Page() {
     setCapturePreviewUrl(undefined);
     setCapturePending(undefined);
     setCaptureLatLng(null);
+    setCaptureTakenAt(null);
+    setCaptureLocationSource("device");
   }
 
-  async function handleFileSelected(file: File) {
+  async function handleFileSelected(file: File, source: PhotoSource) {
     const previewUrl = URL.createObjectURL(file);
     setCapturePreviewUrl(previewUrl);
     setCaptureStep("loading");
 
     try {
+      // 갤러리 사진(특히 예전 사진)은 "지금 여기"가 아니라 "그때 그곳"을 기록해야
+      // 하므로 EXIF의 GPS·촬영일시를 우선 읽는다 — 리사이즈는 EXIF를 지우므로
+      // 반드시 원본 file에서 먼저 읽는다. EXIF에 GPS가 없으면(카톡 등을 거쳐
+      // 저장됐거나 위치 서비스가 꺼져 있던 사진) 실시간 GPS로 폴백한다.
+      const exifMeta =
+        source === "gallery" ? await readExifPhotoMeta(file) : { lat: null, lng: null, takenAt: null };
+      const hasExifLocation = exifMeta.lat !== null && exifMeta.lng !== null;
+
       // 원본(수 MB) 대신 리사이즈본을 AI 분석과 업로드 양쪽에 쓴다 — Storage 용량과
       // 이후 피드가 내려받는 바이트를 동시에 줄인다. GPS 획득과 겹쳐서 지연을 숨긴다.
-      const [position, resized] = await Promise.all([getCurrentPosition(), resizeImage(file)]);
+      const [position, resized] = await Promise.all([
+        hasExifLocation ? Promise.resolve(null) : getCurrentPosition(),
+        resizeImage(file),
+      ]);
       setCaptureFile(resized);
       const base64 = await fileToBase64(resized);
       const mimeType = resized.type || "image/jpeg";
@@ -268,7 +283,15 @@ export default function Page() {
         tags: Array.isArray(result.tags) ? result.tags.slice(0, 5) : [],
         mood,
       });
-      setCaptureLatLng({ lat: position.coords.latitude, lng: position.coords.longitude });
+      if (hasExifLocation) {
+        setCaptureLatLng({ lat: exifMeta.lat as number, lng: exifMeta.lng as number });
+        setCaptureLocationSource("photo");
+      } else {
+        if (!position) throw new Error("no_position");
+        setCaptureLatLng({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setCaptureLocationSource("device");
+      }
+      setCaptureTakenAt(exifMeta.takenAt);
       setCaptureStep("result");
     } catch {
       showToast("위치 확인 또는 AI 분석에 실패했어요. 다시 시도해주세요");
@@ -299,6 +322,9 @@ export default function Page() {
       ai_caption: capturePending.caption,
       ai_tags: capturePending.tags,
       ai_mood: capturePending.mood,
+      // 갤러리 사진에 촬영일시 EXIF가 있으면 그 시각으로 기록한다(없으면 DB
+      // 기본값 now()가 적용되도록 필드 자체를 생략).
+      ...(captureTakenAt ? { created_at: captureTakenAt.toISOString() } : {}),
     });
 
     if (insertError) {
@@ -392,6 +418,7 @@ export default function Page() {
               step={captureStep}
               previewUrl={capturePreviewUrl}
               pending={capturePending}
+              locationSource={captureLocationSource}
               onFileSelected={handleFileSelected}
               onCancel={resetCapture}
               onRetake={() => {

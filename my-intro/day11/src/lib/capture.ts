@@ -1,3 +1,27 @@
+import exifr from "exifr";
+
+export interface ExifPhotoMeta {
+  lat: number | null;
+  lng: number | null;
+  takenAt: Date | null;
+}
+
+// 갤러리에서 고른 사진(특히 예전 사진)은 "지금 여기"가 아니라 "그때 그곳"을
+// 기록해야 하므로, 실시간 GPS/현재시각 대신 사진 자체의 EXIF(GPS·촬영일시)를
+// 우선 쓴다. 카카오톡 등을 거쳐 저장돼 EXIF가 지워졌거나 위치 서비스를 꺼두고
+// 찍은 사진은 값이 없을 수 있어 호출부가 실시간 GPS/현재시각으로 폴백해야 한다.
+export async function readExifPhotoMeta(file: File): Promise<ExifPhotoMeta> {
+  const [gps, tags] = await Promise.all([
+    exifr.gps(file).catch(() => null),
+    exifr.parse(file, ["DateTimeOriginal"]).catch(() => null),
+  ]);
+  return {
+    lat: gps && typeof gps.latitude === "number" ? gps.latitude : null,
+    lng: gps && typeof gps.longitude === "number" ? gps.longitude : null,
+    takenAt: tags?.DateTimeOriginal instanceof Date ? tags.DateTimeOriginal : null,
+  };
+}
+
 export function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!("geolocation" in navigator)) {
