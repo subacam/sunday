@@ -131,9 +131,9 @@ export default function MapTab({
 
   // 핀 사진이 하나라도 아직 로딩 중이면 지도 전체를 "발자취를 따라가는 중..."
   // 로딩 화면으로 가려, 핀이 하나씩 채워지는 어중간한 모습 대신 준비된 지도가
-  // 한 번에 나타나게 한다.
-  const pinsWithPhoto = mapRecords.filter((r) => !!imageUrls[r.image_url]);
-  const allPinsReady = pinsWithPhoto.every((r) => loadedPinPhotoIds.has(r.id));
+  // 한 번에 나타나게 한다. imageUrls가 아직 도착 전이라 photoUrl이 없는 기록도
+  // "이미 준비됨"으로 오인하지 않도록 mapRecords 전체를 기준으로 판단한다.
+  const allPinsReady = mapRecords.every((r) => loadedPinPhotoIds.has(r.id));
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;

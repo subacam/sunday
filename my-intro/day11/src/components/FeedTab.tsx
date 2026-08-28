@@ -67,6 +67,11 @@ export default function FeedTab({
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const gestureRef = useRef<Gesture | null>(null);
 
+  // 모든 사진을 병렬로 요청하되(빠름), 각 카드는 자기 사진이 도착한 순간에만
+  // 스켈레톤→실제 사진으로 바뀐다 — 앞 카드를 기다렸다가 다음을 요청하는
+  // waterfall 방식은 총 로딩 시간이 사진 개수만큼 늘어나 느리다. 맨 위(최신)
+  // 카드만 loading="eager"+fetchPriority="high"로 우선순위를 줘서, 대체로
+  // 위에서 아래로 채워지는 것처럼 보이게 한다.
   function handlePhotoLoad(id: number) {
     setLoadedPhotoIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
   }
@@ -244,7 +249,11 @@ export default function FeedTab({
             const photoUrl = imageUrls[rec.image_url];
             const offset = swipeOffsets[rec.id] || 0;
             const swiping = activeSwipeId === rec.id;
-            const photoReady = !photoUrl || loadedPhotoIds.has(rec.id);
+            // image_url은 항상 값이 있는 필드라 사진 없는 기록은 없다 — 서명 URL이
+            // 아직 도착하지 않은 잠깐의 순간에도 "사진 없음"으로 오인해 실제 텍스트를
+            // 먼저 보여줬다가 스켈레톤으로 바뀌는 깜빡임이 있었다(photoUrl이 undefined인
+            // 동안만 존재하는 창).
+            const photoReady = loadedPhotoIds.has(rec.id);
             return (
               <div
                 key={rec.id}
