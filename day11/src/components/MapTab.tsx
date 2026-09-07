@@ -292,7 +292,7 @@ export default function MapTab({
         layout: DOT_LINE_LAYOUT,
         paint: {
           "line-color": TRACK_COLOR,
-          "line-width": 5,
+          "line-width": 3,
           "line-opacity": 0.55,
           "line-dasharray": [0.33, 1.2],
         },
@@ -306,7 +306,7 @@ export default function MapTab({
         layout: DOT_LINE_LAYOUT,
         paint: {
           "line-color": TRACK_COLOR,
-          "line-width": 6.5,
+          "line-width": 4,
           "line-opacity": 1,
           "line-dasharray": [0.33, 1.2],
         },
