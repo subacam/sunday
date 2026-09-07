@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MaplibreMap, Marker, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
+import { Map as MaplibreMap, Marker, type ExpressionSpecification, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
 import mapStyle from "@/lib/mapStyle.json";
 import { MOOD_BG, MOOD_COLOR, MOOD_LIST, type Mood } from "@/lib/mood";
 import { formatDistance, formatDuration, tracksToGeoJSON } from "@/lib/track";
@@ -38,18 +38,29 @@ function withinPeriod(iso: string, key: PeriodKey, custom: { start: string; end:
   return diffDays <= period.days;
 }
 
-// 걸어온 길을 그리는 점선 레이어. 원래 Cat Paw Icon 디자인의 "오늘의 산책" 카드 비율
-// (stroke-width 3 · stroke-dasharray "1 9")을 그대로 옮기면 [0.33, 3](점 중심 간격
-// 3.33 × line-width)이었는데, 점 사이 공백이 너무 커 보인다는 피드백으로 간격을 줄였다.
-// MapLibre의 dasharray 단위는 픽셀이 아니라 line-width 배수다. round cap 덕분에
-// 대시가 원형 점으로 찍힌다.
+// 걸어온 길을 그리는 레이어. 원래는 Cat Paw Icon 디자인의 "오늘의 산책" 카드 시안 1(a)
+// 점선 표현을 옮겨서 점선/점 스타일이었는데, Cat Paw Icon 프로젝트의 "발자취 디자인
+// 시안 3종" 중 2b("굵은 그라디언트 리본 — 코랄→옐로우")로 교체했다. MapLibre의
+// line-gradient는 line-dasharray와 함께 쓸 수 없어(점선을 켜면 그라디언트가 무시된다)
+// 점선을 포기하고 실선 그라디언트로 바꿨다 — line-gradient를 쓰려면 소스에
+// lineMetrics: true가 필요하다.
 const TRACK_SOURCE = "walk-tracks";
 const TRACK_LAYER = "walk-tracks-line";
 const ACTIVE_SOURCE = "walk-active-track";
 const ACTIVE_LAYER = "walk-active-track-line";
-const TRACK_COLOR = "#E8927C";
+const TRACK_GRADIENT_START = "#E8927C";
+const TRACK_GRADIENT_END = "#F2C14E";
+const TRACK_GRADIENT: ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["line-progress"],
+  0,
+  TRACK_GRADIENT_START,
+  1,
+  TRACK_GRADIENT_END,
+];
 
-const DOT_LINE_LAYOUT = { "line-cap": "round", "line-join": "round" } as const;
+const TRACK_LINE_LAYOUT = { "line-cap": "round", "line-join": "round" } as const;
 
 function emptyFeatureCollection(): GeoJSON.FeatureCollection {
   return { type: "FeatureCollection", features: [] };
@@ -113,13 +124,13 @@ function pinElement(record: WalkRecord) {
   return { el, photoContainer };
 }
 
-// 진행 중인 산책의 맨 앞(현재 위치)에 찍는 마커 — "오늘의 산책" 카드에서 점선 끝에
-// 코랄 원 + 흰 발바닥이 놓이는 그 표시를 그대로 옮긴 것. MapLibre Marker는 React가
-// 아니라 DOM 엘리먼트를 요구해서 SVG를 문자열로 넣는다.
+// 진행 중인 산책의 맨 앞(현재 위치)에 찍는 마커 — 2b 시안에서 그라디언트 리본 끝에
+// 놓이는 원(그라디언트의 끝 색 #F2C14E) + 흰 발바닥 표시를 그대로 옮긴 것. MapLibre
+// Marker는 React가 아니라 DOM 엘리먼트를 요구해서 SVG를 문자열로 넣는다.
 function activeHeadElement() {
   const el = document.createElement("div");
   el.style.cssText =
-    "width:30px;height:30px;border-radius:50%;background:#E8927C;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(46,43,36,0.25);";
+    "width:30px;height:30px;border-radius:50%;background:#F2C14E;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(46,43,36,0.25);";
   el.innerHTML = `<svg width="17" height="17" viewBox="0 0 100 100" fill="#fff" aria-hidden="true"><ellipse cx="18" cy="42" rx="10" ry="12.5" transform="rotate(-22 18 42)"/><ellipse cx="38.5" cy="27" rx="10.5" ry="13" transform="rotate(-8 38.5 27)"/><ellipse cx="61.5" cy="27" rx="10.5" ry="13" transform="rotate(8 61.5 27)"/><ellipse cx="82" cy="42" rx="10" ry="12.5" transform="rotate(22 82 42)"/><path d="M50 46C62 46 78 60 82 72C85 82 76 89 66 88C58 87.2 42 87.2 34 88C24 89 15 82 18 72C22 60 38 46 50 46Z"/></svg>`;
   return el;
 }
@@ -284,31 +295,30 @@ export default function MapTab({
     map.once("load", () => {
       // 걸어온 길(저장된 트랙 + 진행 중인 산책) 두 레이어를 핀보다 아래에 깔아둔다.
       // 소스는 빈 채로 먼저 만들어두고, 데이터는 아래 effect가 setData로 채운다.
-      map.addSource(TRACK_SOURCE, { type: "geojson", data: emptyFeatureCollection() });
+      // lineMetrics: true가 있어야 line-gradient(아래)가 line-progress를 계산할 수 있다.
+      map.addSource(TRACK_SOURCE, { type: "geojson", data: emptyFeatureCollection(), lineMetrics: true });
       map.addLayer({
         id: TRACK_LAYER,
         type: "line",
         source: TRACK_SOURCE,
-        layout: DOT_LINE_LAYOUT,
+        layout: TRACK_LINE_LAYOUT,
         paint: {
-          "line-color": TRACK_COLOR,
+          "line-gradient": TRACK_GRADIENT,
           "line-width": 3,
           "line-opacity": 0.55,
-          "line-dasharray": [0.33, 1.2],
         },
       });
 
-      map.addSource(ACTIVE_SOURCE, { type: "geojson", data: emptyFeatureCollection() });
+      map.addSource(ACTIVE_SOURCE, { type: "geojson", data: emptyFeatureCollection(), lineMetrics: true });
       map.addLayer({
         id: ACTIVE_LAYER,
         type: "line",
         source: ACTIVE_SOURCE,
-        layout: DOT_LINE_LAYOUT,
+        layout: TRACK_LINE_LAYOUT,
         paint: {
-          "line-color": TRACK_COLOR,
+          "line-gradient": TRACK_GRADIENT,
           "line-width": 4,
           "line-opacity": 1,
-          "line-dasharray": [0.33, 1.2],
         },
       });
 
@@ -645,7 +655,7 @@ export default function MapTab({
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: tracker.tracking ? TRACK_COLOR : "#B0AA98",
+                      background: tracker.tracking ? TRACK_GRADIENT_START : "#B0AA98",
                       animation: tracker.tracking ? "wr-foot-pulse 1.4s ease-in-out infinite" : undefined,
                     }}
                   />
