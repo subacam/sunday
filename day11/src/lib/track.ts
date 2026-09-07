@@ -56,6 +56,34 @@ export function formatDuration(ms: number): string {
   return `${m}분`;
 }
 
+// GPS 좌표는 몇 m씩 좌우로 흔들리는 노이즈가 섞여 있어(MIN_STEP_M=5m을 넘겼다는
+// 이유만으로는 못 거르는 수준의 흔들림), 점을 그대로 이으면 실제로 걷지 않은
+// 지그재그가 지도 위 선에 그대로 드러난다. 거리 계산(trackDistanceMeters)에는
+// 원본 points를 그대로 쓰고, **지도에 그릴 좌표에만** 가중 이동평균을 몇 차례
+// 반복 적용해 매끄럽게 만든다 — 시작점/끝점은 고정해서 진행 중인 산책의 현재
+// 위치 마커(activeHeadElement, 원본 마지막 점을 그대로 씀)와 선의 끝이 어긋나지
+// 않게 한다.
+function smoothCoordinates(coords: [number, number][], passes = 2): [number, number][] {
+  if (coords.length < 3) return coords;
+  let result = coords;
+  for (let pass = 0; pass < passes; pass++) {
+    const next: [number, number][] = [result[0]];
+    for (let i = 1; i < result.length - 1; i++) {
+      const [px, py] = result[i - 1];
+      const [x, y] = result[i];
+      const [nx, ny] = result[i + 1];
+      next.push([x * 0.5 + (px + nx) * 0.25, y * 0.5 + (py + ny) * 0.25]);
+    }
+    next.push(result[result.length - 1]);
+    result = next;
+  }
+  return result;
+}
+
+export function toSmoothedCoordinates(points: TrackPoint[]): [number, number][] {
+  return smoothCoordinates(points.map((p) => [p.lng, p.lat] as [number, number]));
+}
+
 // 트랙을 지도에 그릴 GeoJSON으로 바꾼다. 점이 2개 미만이면 선이 되지 않으므로 제외한다.
 export function tracksToGeoJSON(tracks: WalkTrack[]): GeoJSON.FeatureCollection {
   return {
@@ -67,7 +95,7 @@ export function tracksToGeoJSON(tracks: WalkTrack[]): GeoJSON.FeatureCollection 
         properties: { id: t.id },
         geometry: {
           type: "LineString" as const,
-          coordinates: t.points.map((p) => [p.lng, p.lat] as [number, number]),
+          coordinates: toSmoothedCoordinates(t.points),
         },
       })),
   };

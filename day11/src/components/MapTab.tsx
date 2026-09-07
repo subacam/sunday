@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MaplibreMap, Marker, type ExpressionSpecification, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
 import mapStyle from "@/lib/mapStyle.json";
 import { MOOD_BG, MOOD_COLOR, MOOD_LIST, type Mood } from "@/lib/mood";
-import { formatDistance, formatDuration, tracksToGeoJSON } from "@/lib/track";
+import { formatDistance, formatDuration, toSmoothedCoordinates, tracksToGeoJSON } from "@/lib/track";
 import type { WalkTracker } from "@/lib/useWalkTracker";
 import type { TrackPoint, WalkRecord, WalkTrack } from "@/types/walk";
 import PawIcon from "@/components/PawIcon";
@@ -74,7 +74,7 @@ function activeTrackGeoJSON(points: TrackPoint[]): GeoJSON.FeatureCollection {
       {
         type: "Feature",
         properties: {},
-        geometry: { type: "LineString", coordinates: points.map((p) => [p.lng, p.lat] as [number, number]) },
+        geometry: { type: "LineString", coordinates: toSmoothedCoordinates(points) },
       },
     ],
   };

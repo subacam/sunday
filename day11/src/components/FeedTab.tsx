@@ -4,11 +4,9 @@ import type { WalkRecord } from "@/types/walk";
 
 // 처음 몇 장까지 "요청 시작 순서"를 강제할지 — 그 아래는 자연스러운 lazy-load에 맡긴다.
 const STAGGER_COUNT = 6;
-// 맨 위 카드가 로드(또는 실패)를 마친 뒤부터, 나머지 카드 사이에 두는 간격.
-const STAGGER_MS = 80;
-// 맨 위 사진의 load/error 이벤트가 어떤 이유로든 안 오는 경우(예: URL이 끝내
-// 안 채워짐)를 대비한 안전장치 — 이 시간이 지나면 나머지 카드도 강제로 풀어준다.
-const FIRST_PHOTO_SAFETY_MS = 3000;
+// 카드 i의 load/error 이벤트가 어떤 이유로든 안 오는 경우(예: URL이 끝내 안 채워짐)를
+// 대비한 안전장치 — 이 시간이 지나면 다음 카드가 강제로 풀려난다.
+const CARD_SETTLE_SAFETY_MS = 3000;
 
 const SWIPE_MAX = 76;
 // 이 거리(px)를 넘기 전엔 세로/가로 중 어느 쪽 제스처인지 판단을 보류한다 —
@@ -72,8 +70,11 @@ export default function FeedTab({
   const [swipeOffsets, setSwipeOffsets] = useState<Record<number, number>>({});
   const [activeSwipeId, setActiveSwipeId] = useState<number | null>(null);
   const [loadedPhotoIds, setLoadedPhotoIds] = useState<Set<number>>(new Set());
-  const [staggerReady, setStaggerReady] = useState<Set<number>>(new Set());
-  const [firstPhotoSettled, setFirstPhotoSettled] = useState(false);
+  // 카드 i가 여기 들어있으면 "로드 또는 실패로 정착했다"는 뜻이고, 그래야 카드
+  // i+1의 <img> 마운트(=요청 시작)가 풀린다. settledIndices는 항상 {0,1,...,k-1}
+  // 형태의 이어진 구간이다 — 카드 i+1은 카드 i가 정착하기 전까지 아예 마운트되지
+  // 않으니 자기 load/error도 그보다 먼저 일어날 수 없다.
+  const [settledIndices, setSettledIndices] = useState<Set<number>>(new Set());
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const gestureRef = useRef<Gesture | null>(null);
 
@@ -81,39 +82,34 @@ export default function FeedTab({
     setLoadedPhotoIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
   }
 
-  function handleFirstPhotoSettled() {
-    setFirstPhotoSettled(true);
+  function handleCardSettled(i: number) {
+    setSettledIndices((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
   }
 
-  // 맨 위 카드(i===0)는 지연 없이 바로 마운트한다.
+  // 맨 위 카드(i===0)는 지연 없이 바로 마운트한다. records가 바뀌면(새로고침 등)
+  // 인덱스-사진 매핑이 달라지므로 정착 상태를 리셋한다.
   useEffect(() => {
-    if (records.length === 0) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStaggerReady((prev) => (prev.has(0) ? prev : new Set(prev).add(0)));
-    const safety = setTimeout(handleFirstPhotoSettled, FIRST_PHOTO_SAFETY_MS);
+    setSettledIndices(new Set());
+    if (records.length === 0) return;
+    const safety = setTimeout(() => handleCardSettled(0), CARD_SETTLE_SAFETY_MS);
     return () => clearTimeout(safety);
   }, [records]);
 
-  // 나머지 STAGGER_COUNT장은 맨 위 카드의 사진이 실제로 로드(또는 실패)를
-  // 마치기 전까지는 <img> 마운트(=요청 시작) 자체를 하지 않는다 — 예전엔
-  // 마운트 후 경과 시간(i * STAGGER_MS)만으로 지연을 걸었는데, 네트워크 상황에
-  // 따라 아래 카드가 먼저 도착해 맨 위보다 늦게 뜨는 역전이 생길 수 있었다.
-  // "요청 자체를 늦게 시작"해야 맨 위가 항상 먼저 뜨는 걸 보장할 수 있다.
-  // 서로 간에는(1번 이후) 여전히 STAGGER_MS 간격으로 겹치며 요청해 총 로딩
-  // 시간이 사진 개수만큼 늘어나는 waterfall은 피한다.
+  // 카드 i+1은 카드 i가 실제로 로드(또는 실패)를 마치기 전까지는 <img> 마운트
+  // (=요청 시작) 자체를 하지 않는다 — 그래야 "n번째가 n+1번째보다 항상 먼저
+  // 뜬다"가 사진 개수만큼 전부 성립한다. 마운트 후 경과 시간만으로 지연을 걸면
+  // 네트워크 상황에 따라 뒤 카드가 먼저 도착하는 역전이 생길 수 있어서, 대신
+  // "요청 자체를 늦게 시작"시킨다. 각 단계마다 안전장치(CARD_SETTLE_SAFETY_MS)를
+  // 둬서, 정착 이벤트가 어떤 이유로든 안 오는 카드가 있어도 체인이 영원히 멈추지
+  // 않게 한다.
   useEffect(() => {
-    if (!firstPhotoSettled) return;
-    const timers: ReturnType<typeof setTimeout>[] = [];
     const count = Math.min(STAGGER_COUNT, records.length);
-    for (let i = 1; i < count; i++) {
-      timers.push(
-        setTimeout(() => {
-          setStaggerReady((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
-        }, (i - 1) * STAGGER_MS),
-      );
-    }
-    return () => timers.forEach(clearTimeout);
-  }, [firstPhotoSettled, records]);
+    const frontier = settledIndices.size; // 다음으로 기다리는 인덱스(항상 이어진 구간이므로 size가 곧 인덱스)
+    if (frontier === 0 || frontier >= count) return;
+    const safety = setTimeout(() => handleCardSettled(frontier), CARD_SETTLE_SAFETY_MS);
+    return () => clearTimeout(safety);
+  }, [settledIndices, records.length]);
 
   // 드래그 중엔 손가락 1px 움직일 때마다 setState로 리렌더하지 않고, DOM에
   // 직접 transform을 써서 프레임을 놓치지 않게 한다 — 최종 스냅 값만 커밋한다.
@@ -387,7 +383,7 @@ export default function FeedTab({
                   >
                     {photoUrl && (
                       <>
-                        {(i >= STAGGER_COUNT || staggerReady.has(i)) && (
+                        {(i >= STAGGER_COUNT || i === 0 || settledIndices.has(i - 1)) && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={photoUrl}
@@ -397,9 +393,9 @@ export default function FeedTab({
                             decoding="async"
                             onLoad={() => {
                               handlePhotoLoad(rec.id);
-                              if (i === 0) handleFirstPhotoSettled();
+                              if (i < STAGGER_COUNT) handleCardSettled(i);
                             }}
-                            onError={i === 0 ? handleFirstPhotoSettled : undefined}
+                            onError={i < STAGGER_COUNT ? () => handleCardSettled(i) : undefined}
                             style={{
                               position: "absolute",
                               inset: 0,
