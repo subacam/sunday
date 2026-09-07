@@ -4,7 +4,9 @@ import type { WalkRecord, WalkTrack } from "@/types/walk";
 // 산책기록.dc.html renderVals()의 계산식을 그대로 재사용 — 실데이터에 대해 다시 계산한다.
 
 const WEEK_ORDER = ["월", "화", "수", "목", "금", "토", "일"] as const;
-const CLOUD_COLORS = ["#2E2B24", "#8FAE8B", "#E8927C", "#8B8578"];
+// 리터럴 hex 대신 테마별로 갈라진 CSS 변수를 쓴다 — 라이트의 진한 잉크색(#2E2B24)이
+// 다크 카드 배경(#20242e)과 명도가 거의 같아 다크 모드에서 그 태그만 안 보이던 문제.
+const CLOUD_COLORS = ["var(--wr-cloud-1)", "var(--wr-cloud-2)", "var(--wr-cloud-3)", "var(--wr-cloud-4)"];
 
 function dayLabel(iso: string): (typeof WEEK_ORDER)[number] {
   const jsDay = new Date(iso).getDay(); // 0=일 .. 6=토

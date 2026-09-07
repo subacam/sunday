@@ -40,19 +40,19 @@ export default function DashboardTab({
     <div
       style={{
         ...cardStyle,
-        background: "linear-gradient(135deg,#F0A28C,#D97BA0)",
-        color: "#fff",
-        boxShadow: "0 6px 18px rgba(232,146,124,0.28)",
+        background: "linear-gradient(135deg,var(--wr-cta-start),var(--wr-cta-end))",
+        color: "var(--wr-accent-contrast)",
+        boxShadow: "0 6px 18px rgba(var(--wr-cta-shadow-rgb),0.28)",
       }}
     >
-      <div style={{ ...cardLabel, color: "rgba(255,255,255,0.85)", marginBottom: 10 }}>
+      <div style={{ ...cardLabel, color: "rgba(var(--wr-accent-contrast-rgb),0.85)", marginBottom: 10 }}>
         이번주 걸은 거리
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
         <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -0.5 }}>
           {formatDistance(weekMeters)}
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(var(--wr-accent-contrast-rgb),0.85)" }}>
           산책 {weekTracks.length}회
         </div>
       </div>

@@ -34,6 +34,22 @@
   --wr-track-head-icon: #fff;
   /* mapStyle.json/mapStyle-dark.json의 background 레이어 색과 맞춘 지도 플레이스홀더 배경. */
   --wr-map-bg: #eeede1;
+  /* 카메라 FAB·이번주 걸은 거리 카드·산책 시작 버튼이 같이 쓰는 "포인트 강조" 그라디언트.
+     기존엔 두 번째 정지색이 핑크(#D97BA0)로 튀어서, 이미 피드 스와이프 삭제 액션에 쓰던
+     코랄 계열(#E37F6A)로 맞춰 톤을 통일했다. */
+  --wr-cta-start: #f0a28c;
+  --wr-cta-end: #e37f6a;
+  --wr-cta-shadow-rgb: 232, 146, 124;
+  --wr-accent-contrast: #fff;
+  --wr-accent-contrast-rgb: 255, 255, 255;
+  /* 항상 어두운 표면 위에 흰 글자를 올리는 곳(산책 종료 버튼 등) 전용 — var(--wr-text)와 달리
+     테마가 바뀌어도 뒤집히지 않는다(다크 모드의 --wr-text는 밝은 색이라 흰 글자와 충돌한다). */
+  --wr-ink: #2e2b24;
+  /* 대시보드 태그 워드클라우드 4색 순환. */
+  --wr-cloud-1: #2e2b24;
+  --wr-cloud-2: #8fae8b;
+  --wr-cloud-3: #e8927c;
+  --wr-cloud-4: #8b8578;
 }
 
 :root[data-theme="dark"] {
@@ -59,6 +75,19 @@
   --wr-track-head: #7fd6c2;
   --wr-track-head-icon: #171a21;
   --wr-map-bg: #171a21;
+  /* 카메라 FAB·이번주 걸은 거리·산책 시작 버튼 — 다크에서는 내정보와 같은 포인트 민트 톤으로. */
+  --wr-cta-start: #7fd6c2;
+  --wr-cta-end: #4fb89e;
+  --wr-cta-shadow-rgb: 127, 214, 194;
+  --wr-accent-contrast: #171a21;
+  --wr-accent-contrast-rgb: 23, 26, 33;
+  --wr-ink: #0d1017;
+  /* 라이트의 --wr-cloud-1(#2E2B24)이 카드 배경(#20242e)과 거의 같은 어둠이라 다크에서
+     안 보였다 — 4색 다 다크 카드 위에서 읽히도록 밝게 다시 잡았다. */
+  --wr-cloud-1: #f0ede7;
+  --wr-cloud-2: #9fd8b0;
+  --wr-cloud-3: #f0a28c;
+  --wr-cloud-4: rgba(240, 237, 231, 0.62);
 }
 
 html,

@@ -741,9 +741,9 @@ export default function MapTab({
                   fontSize: 14,
                   fontWeight: 800,
                   cursor: "pointer",
-                  color: "#fff",
-                  background: tracker.tracking ? "var(--wr-text)" : "linear-gradient(135deg,#F0A28C,#D97BA0)",
-                  boxShadow: "0 4px 14px rgba(232,146,124,0.32)",
+                  color: tracker.tracking ? "#fff" : "var(--wr-accent-contrast)",
+                  background: tracker.tracking ? "var(--wr-ink)" : "linear-gradient(135deg,var(--wr-cta-start),var(--wr-cta-end))",
+                  boxShadow: tracker.tracking ? "0 4px 14px var(--wr-shadow)" : "0 4px 14px rgba(var(--wr-cta-shadow-rgb),0.32)",
                 }}
               >
                 {tracker.tracking ? "산책 종료하고 저장" : hasPausedWalk ? "산책 이어가기" : "산책 시작"}

@@ -144,6 +144,11 @@ export default function Page() {
     if (avatarPath) {
       const { data: signed } = await supabase.storage.from(WALK_PHOTOS_BUCKET).createSignedUrl(avatarPath, 3600);
       avatarUrl = signed?.signedUrl ?? null;
+      // 내정보 탭의 <img>가 마운트될 때(=사용자가 탭을 열 때)까지 기다리지 않고, 부팅
+      // 시점에 브라우저 캐시로 미리 받아둔다 — 나중에 실제 <img src>가 같은 URL로
+      // 그려지면 네트워크 왕복 없이 즉시 뜬다. 아바타는 400px로 리사이즈해 올리므로
+      // (handleUpdateAvatar 참고) 부팅 때 미리 받아도 부담이 크지 않다.
+      if (avatarUrl) new Image().src = avatarUrl;
     }
     setProfile({ nickname, avatarPath, avatarUrl });
   }, []);

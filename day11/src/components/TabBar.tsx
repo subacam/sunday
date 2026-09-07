@@ -59,11 +59,11 @@ export default function TabBar({
             width: 56,
             height: 56,
             borderRadius: "50%",
-            background: "linear-gradient(135deg,#F0A28C,#D97BA0)",
+            background: "linear-gradient(135deg,var(--wr-cta-start),var(--wr-cta-end))",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 6px 16px rgba(232,146,124,0.4)",
+            boxShadow: "0 6px 16px rgba(var(--wr-cta-shadow-rgb),0.4)",
             marginTop: -26,
             cursor: "pointer",
           }}
@@ -71,11 +71,11 @@ export default function TabBar({
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path
               d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"
-              stroke="#fff"
+              stroke="var(--wr-accent-contrast)"
               strokeWidth="2"
               fill="none"
             />
-            <circle cx="12" cy="14" r="3.5" stroke="#fff" strokeWidth="2" />
+            <circle cx="12" cy="14" r="3.5" stroke="var(--wr-accent-contrast)" strokeWidth="2" />
           </svg>
         </div>
       </div>
