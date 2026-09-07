@@ -46,26 +46,26 @@ function withinPeriod(iso: string, key: PeriodKey, custom: { start: string; end:
 
 // 걸어온 길을 그리는 레이어. 원래는 Cat Paw Icon 디자인의 "오늘의 산책" 카드 시안 1(a)
 // 점선 표현을 옮겨서 점선/점 스타일이었는데, Cat Paw Icon 프로젝트의 "발자취 디자인
-// 시안 3종" 중 2b("굵은 그라디언트 리본 — 코랄→옐로우")로 교체했다. MapLibre의
-// line-gradient는 line-dasharray와 함께 쓸 수 없어(점선을 켜면 그라디언트가 무시된다)
-// 점선을 포기하고 실선 그라디언트로 바꿨다 — line-gradient를 쓰려면 소스에
-// lineMetrics: true가 필요하다.
+// 시안 3종" 중 2b(굵은 그라디언트 리본)로 교체했다. MapLibre의 line-gradient는
+// line-dasharray와 함께 쓸 수 없어(점선을 켜면 그라디언트가 무시된다) 점선을 포기하고
+// 실선으로 바꿨다 — line-gradient를 쓰려면 소스에 lineMetrics: true가 필요하다.
+// 실제로 색이 바뀌는 그라디언트는 쓰지 않는다(요청: 진행에 따라 노란색으로 바뀌는 게
+// 어색해서 시작색 단색으로 고정) — line-gradient 표현식은 그대로 두되 시작/끝을
+// 같은 색으로 둬서 사실상 단색으로 그린다.
 const TRACK_SOURCE = "walk-tracks";
 const TRACK_LAYER = "walk-tracks-line";
 const TRACK_GLOW_LAYER = "walk-tracks-line-glow";
 const ACTIVE_SOURCE = "walk-active-track";
 const ACTIVE_LAYER = "walk-active-track-line";
 const ACTIVE_GLOW_LAYER = "walk-active-track-line-glow";
-const TRACK_GRADIENT_START = "#E8927C";
-const TRACK_GRADIENT_END = "#F2C14E";
-// 다크 모드(디자인 3c 야간 지도 시안) — 그라디언트 대신 포인트 민트 단색 + 아래 겹치는
-// "글로우" 레이어(굵고 옅은 stroke)로 발광감을 낸다. line-gradient 표현식 자체는
-// 그대로 두되 시작/끝 색을 같은 민트로 둬서 사실상 단색이 되게 한다.
+const TRACK_COLOR = "#E8927C";
+// 다크 모드(디자인 3c 야간 지도 시안) — 포인트 민트 단색 + 아래 겹치는 "글로우"
+// 레이어(굵고 옅은 stroke)로 발광감을 낸다.
 const DARK_TRACK_COLOR = "#7fd6c2";
 
-function trackGradient(theme: Theme, start: string, end: string): ExpressionSpecification {
-  const [from, to] = theme === "dark" ? [DARK_TRACK_COLOR, DARK_TRACK_COLOR] : [start, end];
-  return ["interpolate", ["linear"], ["line-progress"], 0, from, 1, to];
+function trackGradient(theme: Theme): ExpressionSpecification {
+  const color = theme === "dark" ? DARK_TRACK_COLOR : TRACK_COLOR;
+  return ["interpolate", ["linear"], ["line-progress"], 0, color, 1, color];
 }
 
 const TRACK_LINE_LAYOUT = { "line-cap": "round", "line-join": "round" } as const;
@@ -91,7 +91,7 @@ function addTrackLayers(map: MaplibreMap, theme: Theme) {
     source: TRACK_SOURCE,
     layout: TRACK_LINE_LAYOUT,
     paint: {
-      "line-gradient": trackGradient(theme, TRACK_GRADIENT_START, TRACK_GRADIENT_END),
+      "line-gradient": trackGradient(theme),
       "line-width": 3,
       "line-opacity": 0.55,
     },
@@ -113,7 +113,7 @@ function addTrackLayers(map: MaplibreMap, theme: Theme) {
     source: ACTIVE_SOURCE,
     layout: TRACK_LINE_LAYOUT,
     paint: {
-      "line-gradient": trackGradient(theme, TRACK_GRADIENT_START, TRACK_GRADIENT_END),
+      "line-gradient": trackGradient(theme),
       "line-width": 4,
       "line-opacity": 1,
     },
@@ -716,7 +716,7 @@ export default function MapTab({
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: tracker.tracking ? (theme === "dark" ? DARK_TRACK_COLOR : TRACK_GRADIENT_START) : "var(--wr-text-faint)",
+                      background: tracker.tracking ? (theme === "dark" ? DARK_TRACK_COLOR : TRACK_COLOR) : "var(--wr-text-faint)",
                       animation: tracker.tracking ? "wr-foot-pulse 1.4s ease-in-out infinite" : undefined,
                     }}
                   />
