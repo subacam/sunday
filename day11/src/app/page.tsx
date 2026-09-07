@@ -35,6 +35,11 @@ export default function Page() {
   const [selectedPin, setSelectedPin] = useState<WalkRecord | null>(null);
   const [selectedFeedRecord, setSelectedFeedRecord] = useState<WalkRecord | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ nickname: string | null; avatarPath: string | null; avatarUrl: string | null }>({
+    nickname: null,
+    avatarPath: null,
+    avatarUrl: null,
+  });
 
   const [captureStep, setCaptureStep] = useState<CaptureStep | null>(null);
   const [captureFile, setCaptureFile] = useState<File | null>(null);
@@ -126,6 +131,67 @@ export default function Page() {
     if (!error) setTracks((data || []) as WalkTrack[]);
   }, []);
 
+  const loadProfile = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("walk_profiles")
+      .select("nickname, avatar_path")
+      .eq("id", userId)
+      .maybeSingle();
+    const nickname = (data?.nickname as string | null) ?? null;
+    const avatarPath = (data?.avatar_path as string | null) ?? null;
+    let avatarUrl: string | null = null;
+    if (avatarPath) {
+      const { data: signed } = await supabase.storage.from(WALK_PHOTOS_BUCKET).createSignedUrl(avatarPath, 3600);
+      avatarUrl = signed?.signedUrl ?? null;
+    }
+    setProfile({ nickname, avatarPath, avatarUrl });
+  }, []);
+
+  const handleUpdateNickname = useCallback(
+    async (nickname: string) => {
+      if (!session) return;
+      const { error } = await supabase.from("walk_profiles").upsert({ id: session.user.id, nickname });
+      if (error) {
+        showToast("닉네임 저장에 실패했어요");
+        return;
+      }
+      setProfile((prev) => ({ ...prev, nickname }));
+      showToast("닉네임이 변경되었어요");
+    },
+    [session, showToast]
+  );
+
+  const handleUpdateAvatar = useCallback(
+    async (file: File) => {
+      if (!session) return;
+      try {
+        // 원본(수 MB일 수 있는 카메라/갤러리 사진)을 그대로 올리지 않는다 — 아바타는
+        // 76px 원형 썸네일로만 쓰이므로 400px면 충분하고, 사진 기록(1600px)보다
+        // 훨씬 작게 잡아 Storage 용량과 로딩 바이트를 더 아낀다.
+        const resized = await resizeImage(file, 400, 0.85);
+        const path = `${session.user.id}/avatar-${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage.from(WALK_PHOTOS_BUCKET).upload(path, resized);
+        if (uploadError) throw uploadError;
+
+        const { error: dbError } = await supabase.from("walk_profiles").upsert({ id: session.user.id, avatar_path: path });
+        if (dbError) throw dbError;
+
+        // 이전 아바타 파일은 곧바로 정리한다 — 실패해도(예: 처음 설정이라 이전 파일이
+        // 없음) 새 아바타 반영 자체를 막을 이유는 아니라 결과를 기다리지 않는다.
+        if (profile.avatarPath) {
+          supabase.storage.from(WALK_PHOTOS_BUCKET).remove([profile.avatarPath]).then(() => {});
+        }
+
+        const { data: signed } = await supabase.storage.from(WALK_PHOTOS_BUCKET).createSignedUrl(path, 3600);
+        setProfile({ nickname: profile.nickname, avatarPath: path, avatarUrl: signed?.signedUrl ?? null });
+        showToast("프로필 사진이 변경되었어요");
+      } catch {
+        showToast("프로필 사진 변경에 실패했어요");
+      }
+    },
+    [session, profile.avatarPath, profile.nickname, showToast]
+  );
+
   const handleTrackSaved = useCallback(
     (track: WalkTrack) => {
       setTracks((prev) => [track, ...prev]);
@@ -154,12 +220,13 @@ export default function Page() {
         // 온보딩 조회와 겹쳐서 미리 시작 — 두 요청을 순차로 기다리지 않아 피드 체감 로딩이 줄어든다.
         loadRecords();
         loadTracks();
-        const { data: profile } = await supabase
+        loadProfile(currentSession.user.id);
+        const { data: profileRow } = await supabase
           .from("walk_profiles")
           .select("onboarding_seen")
           .eq("id", currentSession.user.id)
           .maybeSingle();
-        seenOnboarding = !!profile?.onboarding_seen;
+        seenOnboarding = !!profileRow?.onboarding_seen;
       } else {
         seenOnboarding = typeof window !== "undefined" && window.localStorage.getItem(ONBOARDING_KEY) === "1";
       }
@@ -197,11 +264,12 @@ export default function Page() {
           supabase.from("walk_profiles").upsert({ id: next.user.id, onboarding_seen: true }).then(() => {});
           loadRecords();
           loadTracks();
+          loadProfile(next.user.id);
         }, 0);
       }
     });
     return () => sub.subscription.unsubscribe();
-  }, [loadRecords, loadTracks]);
+  }, [loadRecords, loadTracks, loadProfile]);
 
   async function handleOnboardingDone() {
     if (session) {
@@ -221,6 +289,7 @@ export default function Page() {
     if (current) {
       await supabase.from("walk_profiles").upsert({ id: current.user.id, onboarding_seen: true });
       window.localStorage.removeItem(ONBOARDING_KEY);
+      loadProfile(current.user.id);
     }
     setStage("app");
     loadRecords();
@@ -425,8 +494,13 @@ export default function Page() {
                 <ProfileTab
                   records={records}
                   joinedAt={session?.user.created_at}
+                  nickname={profile.nickname}
+                  avatarUrl={profile.avatarUrl}
                   onReopenOnboarding={handleReopenOnboarding}
                   onLogout={handleLogout}
+                  onToast={showToast}
+                  onUpdateNickname={handleUpdateNickname}
+                  onUpdateAvatar={handleUpdateAvatar}
                 />
               )}
             </main>

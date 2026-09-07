@@ -4,11 +4,11 @@ import type { WalkRecord } from "@/types/walk";
 
 // 처음 몇 장까지 "요청 시작 순서"를 강제할지 — 그 아래는 자연스러운 lazy-load에 맡긴다.
 const STAGGER_COUNT = 6;
-// 완료를 기다리는 게 아니라 "다음 요청을 몇 ms 늦게 시작할지"만 강제한다 — 병렬로
-// 겹치면서 진행되므로 총 로딩 시간에는 거의 영향이 없다. loading="lazy"만으로는
-// 뷰포트 안에 같이 들어온 카드들이 거의 동시에 요청돼 브라우저가 어떤 걸 먼저
-// 끝내줄지 보장이 안 돼(맨 위가 2·3번째보다 늦게 뜨는 문제) 이 방식으로 바꿨다.
+// 맨 위 카드가 로드(또는 실패)를 마친 뒤부터, 나머지 카드 사이에 두는 간격.
 const STAGGER_MS = 80;
+// 맨 위 사진의 load/error 이벤트가 어떤 이유로든 안 오는 경우(예: URL이 끝내
+// 안 채워짐)를 대비한 안전장치 — 이 시간이 지나면 나머지 카드도 강제로 풀어준다.
+const FIRST_PHOTO_SAFETY_MS = 3000;
 
 const SWIPE_MAX = 76;
 // 이 거리(px)를 넘기 전엔 세로/가로 중 어느 쪽 제스처인지 판단을 보류한다 —
@@ -73,37 +73,47 @@ export default function FeedTab({
   const [activeSwipeId, setActiveSwipeId] = useState<number | null>(null);
   const [loadedPhotoIds, setLoadedPhotoIds] = useState<Set<number>>(new Set());
   const [staggerReady, setStaggerReady] = useState<Set<number>>(new Set());
+  const [firstPhotoSettled, setFirstPhotoSettled] = useState(false);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const gestureRef = useRef<Gesture | null>(null);
 
-  // 모든 사진을 병렬로 요청하되(빠름), 각 카드는 자기 사진이 도착한 순간에만
-  // 스켈레톤→실제 사진으로 바뀐다 — 앞 카드를 기다렸다가 다음을 요청하는
-  // waterfall 방식은 총 로딩 시간이 사진 개수만큼 늘어나 느리다. 대신 처음
-  // STAGGER_COUNT장은 <img> 마운트(=요청 시작) 자체를 카드 순서대로 살짝
-  // 늦춰, 위 카드가 먼저 네트워크 요청을 나가도록 한다.
   function handlePhotoLoad(id: number) {
     setLoadedPhotoIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
   }
 
+  function handleFirstPhotoSettled() {
+    setFirstPhotoSettled(true);
+  }
+
+  // 맨 위 카드(i===0)는 지연 없이 바로 마운트한다.
   useEffect(() => {
+    if (records.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStaggerReady((prev) => (prev.has(0) ? prev : new Set(prev).add(0)));
+    const safety = setTimeout(handleFirstPhotoSettled, FIRST_PHOTO_SAFETY_MS);
+    return () => clearTimeout(safety);
+  }, [records]);
+
+  // 나머지 STAGGER_COUNT장은 맨 위 카드의 사진이 실제로 로드(또는 실패)를
+  // 마치기 전까지는 <img> 마운트(=요청 시작) 자체를 하지 않는다 — 예전엔
+  // 마운트 후 경과 시간(i * STAGGER_MS)만으로 지연을 걸었는데, 네트워크 상황에
+  // 따라 아래 카드가 먼저 도착해 맨 위보다 늦게 뜨는 역전이 생길 수 있었다.
+  // "요청 자체를 늦게 시작"해야 맨 위가 항상 먼저 뜨는 걸 보장할 수 있다.
+  // 서로 간에는(1번 이후) 여전히 STAGGER_MS 간격으로 겹치며 요청해 총 로딩
+  // 시간이 사진 개수만큼 늘어나는 waterfall은 피한다.
+  useEffect(() => {
+    if (!firstPhotoSettled) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const count = Math.min(STAGGER_COUNT, records.length);
-    for (let i = 0; i < count; i++) {
-      if (i === 0) {
-        // 첫 카드만 딜레이 없이 즉시 보이게 하는 의도적인 동기 호출 —
-        // eslint-config-next가 새로 켠 규칙이라 이 줄에서만 끈다.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setStaggerReady((prev) => (prev.has(0) ? prev : new Set(prev).add(0)));
-        continue;
-      }
+    for (let i = 1; i < count; i++) {
       timers.push(
         setTimeout(() => {
           setStaggerReady((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
-        }, i * STAGGER_MS),
+        }, (i - 1) * STAGGER_MS),
       );
     }
     return () => timers.forEach(clearTimeout);
-  }, [records]);
+  }, [firstPhotoSettled, records]);
 
   // 드래그 중엔 손가락 1px 움직일 때마다 setState로 리렌더하지 않고, DOM에
   // 직접 transform을 써서 프레임을 놓치지 않게 한다 — 최종 스냅 값만 커밋한다.
@@ -385,7 +395,11 @@ export default function FeedTab({
                             loading={i === 0 ? "eager" : "lazy"}
                             fetchPriority={i === 0 ? "high" : "auto"}
                             decoding="async"
-                            onLoad={() => handlePhotoLoad(rec.id)}
+                            onLoad={() => {
+                              handlePhotoLoad(rec.id);
+                              if (i === 0) handleFirstPhotoSettled();
+                            }}
+                            onError={i === 0 ? handleFirstPhotoSettled : undefined}
                             style={{
                               position: "absolute",
                               inset: 0,

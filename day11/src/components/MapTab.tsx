@@ -38,10 +38,11 @@ function withinPeriod(iso: string, key: PeriodKey, custom: { start: string; end:
   return diffDays <= period.days;
 }
 
-// 걸어온 길을 그리는 점선 레이어. Cat Paw Icon 디자인의 "오늘의 산책" 카드가
-// stroke-width 3 · stroke-dasharray "1 9" · round cap으로 점선을 그리는데,
-// MapLibre의 dasharray 단위는 픽셀이 아니라 line-width 배수라 그 비율(3px:9px)을
-// 그대로 옮기면 [0.33, 3]이 된다. round cap 덕분에 대시가 원형 점으로 찍힌다.
+// 걸어온 길을 그리는 점선 레이어. 원래 Cat Paw Icon 디자인의 "오늘의 산책" 카드 비율
+// (stroke-width 3 · stroke-dasharray "1 9")을 그대로 옮기면 [0.33, 3](점 중심 간격
+// 3.33 × line-width)이었는데, 점 사이 공백이 너무 커 보인다는 피드백으로 간격을 줄였다.
+// MapLibre의 dasharray 단위는 픽셀이 아니라 line-width 배수다. round cap 덕분에
+// 대시가 원형 점으로 찍힌다.
 const TRACK_SOURCE = "walk-tracks";
 const TRACK_LAYER = "walk-tracks-line";
 const ACTIVE_SOURCE = "walk-active-track";
@@ -293,7 +294,7 @@ export default function MapTab({
           "line-color": TRACK_COLOR,
           "line-width": 5,
           "line-opacity": 0.55,
-          "line-dasharray": [0.33, 3],
+          "line-dasharray": [0.33, 1.2],
         },
       });
 
@@ -307,7 +308,7 @@ export default function MapTab({
           "line-color": TRACK_COLOR,
           "line-width": 6.5,
           "line-opacity": 1,
-          "line-dasharray": [0.33, 3],
+          "line-dasharray": [0.33, 1.2],
         },
       });
 
