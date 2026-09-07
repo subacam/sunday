@@ -2,17 +2,76 @@
   box-sizing: border-box;
 }
 
+:root {
+  --wr-bg: #faf6ec;
+  --wr-bg-gradient:
+    radial-gradient(120% 100% at 10% 0%, #fde7e0 0%, transparent 55%),
+    radial-gradient(100% 90% at 100% 10%, #e7f2e4 0%, transparent 50%),
+    radial-gradient(90% 85% at 50% 105%, #f0e8fb 0%, transparent 55%),
+    #faf6ec;
+  --wr-header-gradient:
+    radial-gradient(120% 100% at 10% 0%, #fde7e0 0%, transparent 55%),
+    radial-gradient(100% 90% at 100% 10%, #e7f2e4 0%, transparent 50%),
+    #faf6ec;
+  --wr-glass: rgba(250, 246, 236, 0.94);
+  --wr-card: #ffffff;
+  --wr-card-alt: #f3f0e6;
+  --wr-text: #2e2b24;
+  --wr-text-muted: #8b8578;
+  --wr-text-faint: #b0aa98;
+  --wr-text-chip: #6b6656;
+  --wr-border: #f1ede2;
+  --wr-border-strong: #e3dfd2;
+  --wr-accent: #e8927c;
+  --wr-skeleton: #eee8da;
+  --wr-shadow: rgba(46, 43, 36, 0.08);
+  --wr-scroll-thumb: rgba(46, 43, 36, 0.3);
+  --wr-overlay: rgba(30, 28, 22, 0.5);
+  /* 통계 숫자처럼 다크 모드에서만 포인트 컬러로 강조되는 값 — 라이트에서는 기존 디자인 그대로 본문 텍스트색. */
+  --wr-stat-value: var(--wr-text);
+  /* 지도 위 "현재 위치" 발자국 마커 — 라이트는 기존 디자인(그라디언트 끝색 #F2C14E + 흰 발바닥) 그대로. */
+  --wr-track-head: #f2c14e;
+  --wr-track-head-icon: #fff;
+  /* mapStyle.json/mapStyle-dark.json의 background 레이어 색과 맞춘 지도 플레이스홀더 배경. */
+  --wr-map-bg: #eeede1;
+}
+
+:root[data-theme="dark"] {
+  --wr-bg: #171a21;
+  --wr-bg-gradient: #171a21;
+  --wr-header-gradient: #171a21;
+  --wr-glass: rgba(23, 26, 33, 0.9);
+  --wr-card: #20242e;
+  --wr-card-alt: #2d3342;
+  --wr-text: #f0ede7;
+  --wr-text-muted: rgba(240, 237, 231, 0.55);
+  --wr-text-faint: rgba(240, 237, 231, 0.4);
+  --wr-text-chip: rgba(240, 237, 231, 0.7);
+  --wr-border: rgba(240, 237, 231, 0.08);
+  --wr-border-strong: rgba(240, 237, 231, 0.16);
+  --wr-accent: #7fd6c2;
+  --wr-skeleton: #2d3342;
+  --wr-shadow: rgba(0, 0, 0, 0.35);
+  --wr-scroll-thumb: rgba(240, 237, 231, 0.3);
+  --wr-overlay: rgba(0, 0, 0, 0.6);
+  --wr-stat-value: var(--wr-accent);
+  /* 디자인 3c 야간 지도 시안 — 현재 위치 마커를 포인트 민트 + 어두운 발바닥으로. */
+  --wr-track-head: #7fd6c2;
+  --wr-track-head-icon: #171a21;
+  --wr-map-bg: #171a21;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
-  background: #faf6ec;
+  background: var(--wr-bg);
   font-family: var(--font-noto-sans-kr), -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 a {
-  color: #e8927c;
+  color: var(--wr-accent);
 }
 a:hover {
   color: #d97c63;
@@ -105,10 +164,6 @@ textarea {
   max-width: 480px;
   margin: 0 auto;
   position: relative;
-  background:
-    radial-gradient(120% 100% at 10% 0%, #fde7e0 0%, transparent 55%),
-    radial-gradient(100% 90% at 100% 10%, #e7f2e4 0%, transparent 50%),
-    radial-gradient(90% 85% at 50% 105%, #f0e8fb 0%, transparent 55%),
-    #faf6ec;
+  background: var(--wr-bg-gradient);
   overflow: hidden;
 }

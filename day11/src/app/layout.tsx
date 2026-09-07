@@ -31,6 +31,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className={notoSansKr.variable}>
+      <head>
+        {/* localStorage 읽기가 React 하이드레이션보다 먼저 끝나야 라이트→다크 깜빡임이 없다. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('walk_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}",
+          }}
+        />
+      </head>
       <body>
         {children}
         <RegisterSW />

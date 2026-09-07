@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getCurrentPosition } from "@/lib/capture";
+import type { Theme } from "@/lib/theme";
 import type { WalkRecord } from "@/types/walk";
 
 const NICKNAME_MAX_LENGTH = 20;
@@ -38,6 +39,8 @@ export default function ProfileTab({
   joinedAt,
   nickname,
   avatarUrl,
+  theme,
+  onToggleTheme,
   onReopenOnboarding,
   onLogout,
   onToast,
@@ -48,6 +51,8 @@ export default function ProfileTab({
   joinedAt?: string;
   nickname: string | null;
   avatarUrl: string | null;
+  theme: Theme;
+  onToggleTheme: () => void;
   onReopenOnboarding: () => void;
   onLogout: () => void;
   onToast: (message: string) => void;
@@ -149,7 +154,7 @@ export default function ProfileTab({
 
   return (
     <div style={{ padding: "2px 20px 30px" }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 18px", margin: 0 }}>내 정보</h1>
+      <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--wr-text)", padding: "6px 0 18px", margin: 0 }}>내 정보</h1>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingBottom: 16 }}>
         <div style={{ position: "relative" }}>
@@ -189,27 +194,27 @@ export default function ProfileTab({
               width: 26,
               height: 26,
               borderRadius: "50%",
-              background: "#fff",
-              border: "2px solid #FAF6EC",
+              background: "var(--wr-card)",
+              border: "2px solid var(--wr-bg)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              boxShadow: "0 2px 6px rgba(46,43,36,0.18)",
+              boxShadow: "0 2px 6px var(--wr-shadow)",
             }}
           >
             {avatarUploading ? (
-              <span style={{ fontSize: 9, color: "#8B8578" }}>···</span>
+              <span style={{ fontSize: 9, color: "var(--wr-text-muted)" }}>···</span>
             ) : (
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M4 8h3l2-3h6l2 3h3v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z"
-                  stroke="#8B8578"
+                  stroke="var(--wr-text-muted)"
                   strokeWidth="1.8"
                   strokeLinejoin="round"
                   strokeLinecap="round"
                 />
-                <circle cx="12" cy="13" r="3.2" stroke="#8B8578" strokeWidth="1.8" />
+                <circle cx="12" cy="13" r="3.2" stroke="var(--wr-text-muted)" strokeWidth="1.8" />
               </svg>
             )}
           </div>
@@ -237,8 +242,9 @@ export default function ProfileTab({
               style={{
                 fontSize: 15,
                 fontWeight: 700,
-                color: "#2E2B24",
-                border: "1.5px solid #E3DFD2",
+                color: "var(--wr-text)",
+                background: "var(--wr-card)",
+                border: "1.5px solid var(--wr-border-strong)",
                 borderRadius: 10,
                 padding: "4px 10px",
                 outline: "none",
@@ -246,10 +252,10 @@ export default function ProfileTab({
                 textAlign: "center",
               }}
             />
-            <span onClick={commitNickname} style={{ fontSize: 13, color: "#E37F6A", fontWeight: 700, cursor: "pointer" }}>
+            <span onClick={commitNickname} style={{ fontSize: 13, color: "var(--wr-accent)", fontWeight: 700, cursor: "pointer" }}>
               저장
             </span>
-            <span onClick={() => setEditingName(false)} style={{ fontSize: 13, color: "#8B8578", cursor: "pointer" }}>
+            <span onClick={() => setEditingName(false)} style={{ fontSize: 13, color: "var(--wr-text-muted)", cursor: "pointer" }}>
               취소
             </span>
           </div>
@@ -258,13 +264,13 @@ export default function ProfileTab({
             onClick={startEditingName}
             style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", marginTop: 6 }}
           >
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#2E2B24" }}>{nickname || "산책자"}</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: "var(--wr-text)" }}>{nickname || "산책자"}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="#C7C2B2" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+              <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="var(--wr-text-faint)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
             </svg>
           </div>
         )}
-        <div style={{ fontSize: 12.5, color: "#8B8578" }}>{joinedLabel(joinedAt)}</div>
+        <div style={{ fontSize: 12.5, color: "var(--wr-text-muted)" }}>{joinedLabel(joinedAt)}</div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, paddingBottom: 16 }}>
@@ -273,7 +279,14 @@ export default function ProfileTab({
         <StatTile label="최근 기록" value={lastRecordLabel(records)} small />
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 8px rgba(46,43,36,0.05)" }}>
+      <div style={{ background: "var(--wr-card)", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 8px var(--wr-shadow)", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 16px" }}>
+          <span style={{ fontSize: 14.5, color: "var(--wr-text)", fontWeight: 500 }}>다크 모드</span>
+          <ThemeSwitch checked={theme === "dark"} onClick={onToggleTheme} />
+        </div>
+      </div>
+
+      <div style={{ background: "var(--wr-card)", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 8px var(--wr-shadow)" }}>
         <Row label="온보딩 다시보기" onClick={onReopenOnboarding} />
         <Row label="알림 설정" badge={permissionText(notifStatus)} onClick={handleNotificationClick} />
         <Row label="위치 권한" badge={permissionText(geoStatus)} onClick={handleLocationClick} last />
@@ -287,11 +300,48 @@ export default function ProfileTab({
   );
 }
 
+// Cat Paw Icon 다크 모드 시안(3d)의 토글 — 켜짐일 때 트랙을 포인트 컬러로 채우고
+// knob을 페이지 배경색으로 비워 트랙 위에 "구멍"처럼 보이게 한다.
+function ThemeSwitch({ checked, onClick }: { checked: boolean; onClick: () => void }) {
+  return (
+    <div
+      role="switch"
+      aria-checked={checked}
+      aria-label="다크 모드"
+      onClick={onClick}
+      style={{
+        width: 38,
+        height: 22,
+        borderRadius: 11,
+        background: checked ? "var(--wr-accent)" : "var(--wr-border-strong)",
+        position: "relative",
+        cursor: "pointer",
+        transition: "background 0.2s ease",
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: checked ? 18 : 2,
+          top: 2,
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: checked ? "var(--wr-bg)" : "var(--wr-card)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+          transition: "left 0.2s ease",
+        }}
+      />
+    </div>
+  );
+}
+
 function StatTile({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
-    <div style={{ background: "#fff", borderRadius: 16, padding: "14px 8px", textAlign: "center", boxShadow: "0 2px 8px rgba(46,43,36,0.05)" }}>
-      <div style={{ fontSize: small ? 14 : 18, fontWeight: 800, color: "#2E2B24" }}>{value}</div>
-      <div style={{ fontSize: 11, color: "#8B8578", marginTop: 2 }}>{label}</div>
+    <div style={{ background: "var(--wr-card)", borderRadius: 16, padding: "14px 8px", textAlign: "center", boxShadow: "0 2px 8px var(--wr-shadow)" }}>
+      <div style={{ fontSize: small ? 14 : 18, fontWeight: 800, color: "var(--wr-stat-value)" }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--wr-text-muted)", marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -315,15 +365,15 @@ function Row({
         alignItems: "center",
         justifyContent: "space-between",
         padding: "15px 16px",
-        borderBottom: last ? "none" : "1px solid #F1EDE2",
+        borderBottom: last ? "none" : "1px solid var(--wr-border)",
         cursor: onClick ? "pointer" : "default",
       }}
     >
-      <span style={{ fontSize: 14.5, color: "#2E2B24", fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 14.5, color: "var(--wr-text)", fontWeight: 500 }}>{label}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {badge && <span style={{ fontSize: 12.5, color: "#8B8578" }}>{badge}</span>}
+        {badge && <span style={{ fontSize: 12.5, color: "var(--wr-text-muted)" }}>{badge}</span>}
         <svg width="8" height="14" viewBox="0 0 8 14">
-          <path d="M1 1l6 6-6 6" stroke="#C7C2B2" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M1 1l6 6-6 6" stroke="var(--wr-text-faint)" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
     </div>

@@ -22,7 +22,7 @@ export default function PinSheet({
         left: 0,
         right: 0,
         bottom: 0,
-        background: "#fff",
+        background: "var(--wr-card)",
         borderRadius: "24px 24px 0 0",
         padding: "18px 20px 30px",
         boxShadow: "0 -8px 24px rgba(0,0,0,0.14)",
@@ -36,7 +36,7 @@ export default function PinSheet({
             width: 28,
             height: 28,
             borderRadius: "50%",
-            background: "#F3F0E6",
+            background: "var(--wr-card-alt)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -44,7 +44,7 @@ export default function PinSheet({
           }}
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M1 1l10 10M11 1L1 11" stroke="#8B8578" strokeWidth="1.6" strokeLinecap="round" />
+            <path d="M1 1l10 10M11 1L1 11" stroke="var(--wr-text-muted)" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         </div>
       </div>
@@ -78,20 +78,20 @@ export default function PinSheet({
           {record.ai_mood}
         </div>
       </div>
-      <div style={{ fontSize: 14.5, color: "#2E2B24", fontWeight: 500, lineHeight: 1.5, marginTop: 14 }}>
+      <div style={{ fontSize: 14.5, color: "var(--wr-text)", fontWeight: 500, lineHeight: 1.5, marginTop: 14 }}>
         {record.ai_caption}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
         {record.ai_tags.map((tag) => (
           <span
             key={tag}
-            style={{ fontSize: 12, color: "#6B6656", background: "#F3F0E6", padding: "4px 10px", borderRadius: 14, fontWeight: 500 }}
+            style={{ fontSize: 12, color: "var(--wr-text-chip)", background: "var(--wr-card-alt)", padding: "4px 10px", borderRadius: 14, fontWeight: 500 }}
           >
             {tag}
           </span>
         ))}
       </div>
-      <div style={{ fontSize: 12, color: "#B0AA98", fontWeight: 500, marginTop: 12, textAlign: "right" }}>
+      <div style={{ fontSize: 12, color: "var(--wr-text-faint)", fontWeight: 500, marginTop: 12, textAlign: "right" }}>
         {formatDate(record.created_at)}
       </div>
     </div>

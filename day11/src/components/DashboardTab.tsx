@@ -10,14 +10,14 @@ import { formatDistance } from "@/lib/track";
 import type { WalkRecord, WalkTrack } from "@/types/walk";
 
 const cardStyle: React.CSSProperties = {
-  background: "#fff",
+  background: "var(--wr-card)",
   borderRadius: 20,
   padding: 20,
   marginBottom: 16,
-  boxShadow: "0 2px 10px rgba(46,43,36,0.06)",
+  boxShadow: "0 2px 10px var(--wr-shadow)",
 };
 
-const cardLabel: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#8B8578" };
+const cardLabel: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "var(--wr-text-muted)" };
 
 export default function DashboardTab({
   records,
@@ -78,7 +78,7 @@ export default function DashboardTab({
               justifyContent: "flex-end",
             }}
           >
-            <div style={{ fontSize: 10.5, color: "#8B8578", fontWeight: 700, whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 10.5, color: "var(--wr-text-muted)", fontWeight: 700, whiteSpace: "nowrap" }}>
               {w.meters > 0 ? (w.meters / 1000).toFixed(1) : ""}
             </div>
             <div
@@ -90,12 +90,12 @@ export default function DashboardTab({
                 background: w.barColor,
               }}
             />
-            <div style={{ fontSize: 12, color: "#8B8578", fontWeight: 600 }}>{w.day}</div>
+            <div style={{ fontSize: 12, color: "var(--wr-text-muted)", fontWeight: 600 }}>{w.day}</div>
           </div>
         ))}
       </div>
       {weekMeters === 0 && (
-        <div style={{ fontSize: 12.5, color: "#9C9683", fontWeight: 600, marginTop: 12, textAlign: "center" }}>
+        <div style={{ fontSize: 12.5, color: "var(--wr-text-faint)", fontWeight: 600, marginTop: 12, textAlign: "center" }}>
           이번 주엔 아직 걸은 기록이 없어요
         </div>
       )}
@@ -104,7 +104,7 @@ export default function DashboardTab({
 
   return (
     <div style={{ padding: "2px 20px 30px" }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 18px", margin: 0 }}>
+      <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--wr-text)", padding: "6px 0 18px", margin: 0 }}>
         대시보드
       </h1>
 
@@ -120,10 +120,10 @@ export default function DashboardTab({
             justifyContent: "center",
             gap: 10,
             padding: "40px 20px",
-            color: "#8B8578",
+            color: "var(--wr-text-muted)",
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#2E2B24" }}>아직 사진 통계가 없어요</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--wr-text)" }}>아직 사진 통계가 없어요</div>
           <div style={{ fontSize: 13, textAlign: "center" }}>사진 기록이 쌓이면 태그와 무드 통계가 여기 나타나요</div>
         </div>
       ) : (
@@ -152,17 +152,17 @@ export default function DashboardTab({
                   flexShrink: 0,
                 }}
               >
-                <div style={{ position: "absolute", inset: 16, borderRadius: "50%", background: "#fff" }} />
+                <div style={{ position: "absolute", inset: 16, borderRadius: "50%", background: "var(--wr-card)" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
                 {moodLegend.map((m) => (
                   <div
                     key={m.mood}
-                    style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#4A463B" }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--wr-text-muted)" }}
                   >
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: m.color, flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>{m.mood}</div>
-                    <div style={{ fontWeight: 700, color: "#2E2B24" }}>{m.pct}%</div>
+                    <div style={{ fontWeight: 700, color: "var(--wr-text)" }}>{m.pct}%</div>
                   </div>
                 ))}
               </div>

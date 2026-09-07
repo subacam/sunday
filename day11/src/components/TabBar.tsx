@@ -2,8 +2,8 @@ import PawIcon from "@/components/PawIcon";
 
 export type TabKey = "feed" | "map" | "dashboard" | "profile";
 
-const ACTIVE = "#E8927C";
-const MUTED = "#B0AA98";
+const ACTIVE = "var(--wr-accent)";
+const MUTED = "var(--wr-text-faint)";
 
 export default function TabBar({
   active,
@@ -27,9 +27,9 @@ export default function TabBar({
         gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
         alignItems: "center",
         padding: "8px 8px 24px",
-        background: "rgba(250,246,236,0.94)",
+        background: "var(--wr-glass)",
         backdropFilter: "blur(10px)",
-        borderTop: "1px solid rgba(46,43,36,0.06)",
+        borderTop: "1px solid var(--wr-border)",
         position: "relative",
         zIndex: 5,
       }}

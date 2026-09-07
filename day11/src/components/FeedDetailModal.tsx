@@ -30,7 +30,7 @@ export default function FeedDetailModal({
       style={{
         position: "absolute",
         inset: 0,
-        background: "rgba(30,28,22,0.5)",
+        background: "var(--wr-overlay)",
         zIndex: 65,
         display: "flex",
         alignItems: "center",
@@ -43,7 +43,7 @@ export default function FeedDetailModal({
         style={{
           width: "calc(100% - 40px)",
           maxWidth: 322,
-          background: "#fff",
+          background: "var(--wr-card)",
           borderRadius: 22,
           overflow: "hidden",
           boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
@@ -111,7 +111,7 @@ export default function FeedDetailModal({
           </div>
         </div>
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, overflow: "auto" }}>
-          <div style={{ fontSize: 14.5, color: "#2E2B24", fontWeight: 500, lineHeight: 1.55 }}>
+          <div style={{ fontSize: 14.5, color: "var(--wr-text)", fontWeight: 500, lineHeight: 1.55 }}>
             {record.ai_caption}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -120,8 +120,8 @@ export default function FeedDetailModal({
                 key={tag}
                 style={{
                   fontSize: 12,
-                  color: "#6B6656",
-                  background: "#F3F0E6",
+                  color: "var(--wr-text-chip)",
+                  background: "var(--wr-card-alt)",
                   padding: "4px 10px",
                   borderRadius: 14,
                   fontWeight: 500,
@@ -131,7 +131,7 @@ export default function FeedDetailModal({
               </span>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: "#B0AA98", fontWeight: 500, textAlign: "right" }}>
+          <div style={{ fontSize: 12, color: "var(--wr-text-faint)", fontWeight: 500, textAlign: "right" }}>
             {formatDate(record.created_at)}
           </div>
         </div>

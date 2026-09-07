@@ -243,13 +243,12 @@ export default function FeedTab({
           position: "sticky",
           top: 0,
           zIndex: 8,
-          background:
-            "radial-gradient(120% 100% at 10% 0%, #FDE7E0 0%, transparent 55%), radial-gradient(100% 90% at 100% 10%, #E7F2E4 0%, transparent 50%), #FAF6EC",
+          background: "var(--wr-header-gradient)",
           padding: "2px 20px 12px",
         }}
       >
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 0", margin: 0 }}>피드</h1>
-        <div style={{ fontSize: 13, color: "#8B8578", fontWeight: 500, padding: "4px 0 0" }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--wr-text)", padding: "6px 0 0", margin: 0 }}>피드</h1>
+        <div style={{ fontSize: 13, color: "var(--wr-text-muted)", fontWeight: 500, padding: "4px 0 0" }}>
           {records.length}개의 기록
         </div>
       </div>
@@ -275,10 +274,10 @@ export default function FeedTab({
             <line x1="118" y1="105" x2="118" y2="119" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
             <line x1="111" y1="112" x2="125" y2="112" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
           </svg>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#2E2B24", textAlign: "center" }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--wr-text)", textAlign: "center" }}>
             지금 첫 기록을 남겨주세요
           </div>
-          <div style={{ fontSize: 13, color: "#8B8578", textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: "var(--wr-text-muted)", textAlign: "center" }}>
             아래 카메라 버튼을 눌러 산책을 기록해보세요
           </div>
         </div>
@@ -368,7 +367,7 @@ export default function FeedTab({
                   onPointerLeave={handlePointerUp(rec)}
                   style={{
                     position: "relative",
-                    background: "#fff",
+                    background: "var(--wr-card)",
                     touchAction: "pan-y",
                     cursor: swiping ? "grabbing" : "pointer",
                     userSelect: swiping ? "none" : undefined,
@@ -437,7 +436,7 @@ export default function FeedTab({
                   <div style={{ padding: 16 }}>
                     {photoReady ? (
                       <>
-                        <div style={{ fontSize: 14.5, color: "#2E2B24", fontWeight: 500, lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 14.5, color: "var(--wr-text)", fontWeight: 500, lineHeight: 1.5 }}>
                           {rec.ai_caption}
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
@@ -446,8 +445,8 @@ export default function FeedTab({
                               key={tag}
                               style={{
                                 fontSize: 12,
-                                color: "#6B6656",
-                                background: "#F3F0E6",
+                                color: "var(--wr-text-chip)",
+                                background: "var(--wr-card-alt)",
                                 padding: "4px 10px",
                                 borderRadius: 14,
                                 fontWeight: 500,
@@ -458,22 +457,22 @@ export default function FeedTab({
                           ))}
                         </div>
                         <div
-                          style={{ fontSize: 12, color: "#B0AA98", fontWeight: 500, marginTop: 12, textAlign: "right" }}
+                          style={{ fontSize: 12, color: "var(--wr-text-faint)", fontWeight: 500, marginTop: 12, textAlign: "right" }}
                         >
                           {formatDate(rec.created_at)}
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="wr-skeleton" style={{ height: 14, width: "85%", borderRadius: 7, background: "#EEE8DA" }} />
-                        <div className="wr-skeleton" style={{ height: 14, width: "56%", borderRadius: 7, background: "#EEE8DA", marginTop: 8 }} />
+                        <div className="wr-skeleton" style={{ height: 14, width: "85%", borderRadius: 7, background: "var(--wr-skeleton)" }} />
+                        <div className="wr-skeleton" style={{ height: 14, width: "56%", borderRadius: 7, background: "var(--wr-skeleton)", marginTop: 8 }} />
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-                          <div className="wr-skeleton" style={{ height: 22, width: 48, borderRadius: 14, background: "#EEE8DA" }} />
-                          <div className="wr-skeleton" style={{ height: 22, width: 64, borderRadius: 14, background: "#EEE8DA" }} />
-                          <div className="wr-skeleton" style={{ height: 22, width: 40, borderRadius: 14, background: "#EEE8DA" }} />
+                          <div className="wr-skeleton" style={{ height: 22, width: 48, borderRadius: 14, background: "var(--wr-skeleton)" }} />
+                          <div className="wr-skeleton" style={{ height: 22, width: 64, borderRadius: 14, background: "var(--wr-skeleton)" }} />
+                          <div className="wr-skeleton" style={{ height: 22, width: 40, borderRadius: 14, background: "var(--wr-skeleton)" }} />
                         </div>
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-                          <div className="wr-skeleton" style={{ height: 11, width: 44, borderRadius: 6, background: "#EEE8DA" }} />
+                          <div className="wr-skeleton" style={{ height: 11, width: 44, borderRadius: 6, background: "var(--wr-skeleton)" }} />
                         </div>
                       </>
                     )}

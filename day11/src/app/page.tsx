@@ -6,6 +6,7 @@ import { GEMINI_VISION_FUNCTION_URL, WALK_PHOTOS_BUCKET, supabase } from "@/lib/
 import { fileToBase64, getCurrentPosition, readExifPhotoMeta, resizeImage } from "@/lib/capture";
 import { isMood, type Mood } from "@/lib/mood";
 import { useWalkTracker } from "@/lib/useWalkTracker";
+import { useTheme } from "@/lib/theme";
 import type { PendingAnalysis, WalkRecord, WalkTrack } from "@/types/walk";
 
 import Splash from "@/components/Splash";
@@ -201,6 +202,7 @@ export default function Page() {
   );
 
   const tracker = useWalkTracker(session?.user.id, handleTrackSaved);
+  const { theme, toggleTheme } = useTheme();
 
   // 스플래시(최소 1500ms) + 세션/온보딩 여부 확인을 동시에 진행한 뒤 다음 화면 결정.
   useEffect(() => {
@@ -487,6 +489,7 @@ export default function Page() {
                   tracker={tracker}
                   imageUrls={imageUrls}
                   onSelectPin={setSelectedPin}
+                  theme={theme}
                 />
               )}
               {activeTab === "dashboard" && <DashboardTab records={records} tracks={tracks} />}
@@ -496,6 +499,8 @@ export default function Page() {
                   joinedAt={session?.user.created_at}
                   nickname={profile.nickname}
                   avatarUrl={profile.avatarUrl}
+                  theme={theme}
+                  onToggleTheme={toggleTheme}
                   onReopenOnboarding={handleReopenOnboarding}
                   onLogout={handleLogout}
                   onToast={showToast}
@@ -511,7 +516,7 @@ export default function Page() {
                 top: 0,
                 width: 3.5,
                 borderRadius: 3,
-                background: "rgba(46,43,36,0.3)",
+                background: "var(--wr-scroll-thumb)",
                 height: thumbHeight,
                 transform: `translateY(${thumbTop}px)`,
                 opacity: thumbHeight ? thumbOpacity : 0,
@@ -535,8 +540,8 @@ export default function Page() {
                 width: 44,
                 height: 44,
                 borderRadius: "50%",
-                border: "1px solid rgba(46,43,36,0.06)",
-                background: "rgba(255,255,255,0.94)",
+                border: "1px solid var(--wr-border)",
+                background: "var(--wr-glass)",
                 backdropFilter: "blur(10px)",
                 boxShadow: "0 4px 14px rgba(46,43,36,0.16)",
                 display: activeTab === "feed" ? "flex" : "none",
@@ -554,7 +559,7 @@ export default function Page() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
                   d="M12 19V6M12 6l-6 6M12 6l6 6"
-                  stroke="#E8927C"
+                  stroke="var(--wr-accent)"
                   strokeWidth="2.2"
                   strokeLinecap="round"
                   strokeLinejoin="round"

@@ -58,6 +58,28 @@ Claude Design 프로젝트 **Cat Paw Icon**(`a131953b-7ff7-467c-9049-3a5dc93643b
 - **1b(통통형)를 쓰지 않은 이유**: 디자인이 1b를 "작은 크기에서 더 잘 보임"으로 제안했지만, 1a를 실제 22·26px로 래스터라이즈해 확대해보니 발가락 4개와 발바닥이 또렷하게 구분됐다. 디자인이 "그대로 복사해서 쓰세요"로 넘겨준 SVG 소스와 PWA 미리보기가 둘 다 1a 기준이라 1a로 통일했다. 더 통통한 쪽을 원하면 1b 좌표로 `PawIcon.tsx`만 바꾸면 된다.
 - **PWA 아이콘**: `node scripts/build-icons.js`가 `public/icon.svg`·`icon-192.png`·`icon-512.png`·`icon-maskable-512.png`를 한 번에 만든다. 디자인 스펙대로 배경 `#E8927C` + 흰 발바닥이고, "any"는 타일의 62%(디자인 미리보기의 112/180), maskable은 그 72%인 45%에 모서리 라운딩 없이 꽉 채운다(런처가 원형/스쿼클로 자르므로). `sharp`는 next의 전이 의존성이라 `package.json`에 직접 넣지 않고 `node_modules`에 있는 걸 그대로 쓴다 — next 버전이 올라 sharp가 빠지면 이 스크립트만 깨지고 앱은 멀쩡하다.
 
+## 다크 모드 (2026-09-08)
+
+Cat Paw Icon 프로젝트의 **섹션 3 "다크 모드 — 전체 탭 + 야간 산책 지도 효과"**(2c 팔레트: 배경 `#171a21`, 카드 `#20242e`, 포인트 민트 `#7fd6c2`)를 그대로 옮겼다. 라이트는 기존 디자인 그대로 두고(디자인 자체는 변경 없음), 다크는 색만 새 팔레트로 교체하는 방식이라 레이아웃/컴포넌트 구조는 손대지 않았다.
+
+- **토큰은 CSS 커스텀 프로퍼티**(`globals.css`의 `:root`/`:root[data-theme="dark"]`) — `--wr-bg`/`--wr-card`/`--wr-card-alt`/`--wr-text`/`--wr-text-muted`/`--wr-text-faint`/`--wr-text-chip`/`--wr-border`/`--wr-border-strong`/`--wr-accent`/`--wr-skeleton`/`--wr-shadow`/`--wr-scroll-thumb`/`--wr-overlay`/`--wr-stat-value`. 인라인 스타일 값 리터럴(`#2E2B24`, `#8B8578`, `#fff` 등)을 `var(--wr-*)` 문자열로 바꿔 넣는 방식이라, day11의 "픽셀 값을 그대로 옮겨적는" 인라인 스타일 관례를 그대로 유지하면서 색만 테마에 따라 바뀐다.
+- **적용 범위**: 앱 셸(`page.tsx`, `.wr-app-root`), `TabBar`, `FeedTab`, `DashboardTab`, `ProfileTab`, `CaptureSheet`, `PinSheet`, `FeedDetailModal`, `MapTab`(아래 "지도 다크 모드" 참고). **`Splash`/`Onboarding`/`AuthScreen`만 이번 범위에서 뺐다** — 로그인 전 화면이라 다크 모드 토글(내정보 안에 있음)에 닿기 전에만 보이고, 각자 `position:absolute;inset:0`으로 전체를 불투명하게 덮는 자체 배경(`#FAF6EC`/`#fff`)을 갖고 있어 뒤의 `.wr-app-root`가 다크로 바뀌어도 비쳐 보이지 않는다.
+- **토글**: `src/lib/theme.ts`의 `useTheme()`(localStorage 키 `walk_theme`, `document.documentElement`에 `data-theme` 속성 설정)을 `page.tsx`가 소유하고 `ProfileTab`에 `theme`/`onToggleTheme`로 내려준다. `ProfileTab`이 디자인 3d 시안 그대로 "다크 모드" 라벨 + 필 스위치(`ThemeSwitch`)를 렌더한다. `layout.tsx`의 `<head>` 인라인 스크립트가 하이드레이션 전에 `localStorage`를 읽어 `data-theme`를 먼저 찍어둬서 라이트→다크 깜빡임(FOUC)이 없다.
+- **통계 숫자만 예외**: 디자인 3d의 다크 프로필 카드는 "312km"/"64" 같은 숫자를 민트 포인트 컬러로 강조했는데, 라이트 원본은 기본 텍스트색이었다. 그래서 `--wr-stat-value` 토큰만 라이트에서 `var(--wr-text)`, 다크에서 `var(--wr-accent)`로 갈라뒀다 — 라이트 디자인은 그대로 두면서 다크에서만 디자인 3d의 강조를 재현하기 위함.
+- **확인한 것**: `npm run build`/`npm run lint` 통과. **브라우저로 실제 토글을 띄워보지는 못했다**(이 세션엔 Chrome 자동화 도구가 없었음) — 다음 세션에서 실제로 켜고 끄며 4개 탭 + 시트 3종을 눈으로 봐야 한다.
+
+### 지도 다크 모드 (2026-09-08 구현)
+
+Cat Paw Icon 디자인 3c("산책 중 — 전체화면 야간 지도")를 따라 지도도 다크 모드에 포함시켰다.
+
+- **타일 스타일**: `src/lib/mapStyle-dark.json`을 `mapStyle.json`과 **동일한 13개 레이어·필터**로 새로 만들고 `paint`만 다크 팔레트로 바꿨다(배경 `#171a21`, 공원/숲 `#1b2b28`, 물 `#141c26`, 건물 `#20242e`, 도로는 대부분 `rgba(240,237,231,0.2~0.45)`, 주요/고속도로 케이싱만 카드-알트 톤 `#2d3342`). OpenFreeMap 벡터 소스·필터는 그대로라 실제 도로/건물/물 형태는 라이트와 동일하고 색만 바뀐다.
+- **테마 전환**: `MapTab`이 `page.tsx`로부터 `theme` prop을 받는다. 마운트 시 `mapStyleFor(theme)`로 초기 스타일을 고르고, 이후 `theme`가 바뀌면 `map.setStyle(mapStyleFor(theme))`를 호출한다. **`setStyle`은 새 스타일 JSON에 없는 런타임 소스/레이어(트랙 두 개)를 지워버리므로**, `map.once("style.load", ...)`에서 `addTrackLayers()`로 트랙 소스·레이어를 다시 만들고 `setData`로 현재 트랙/진행 중 산책 데이터를 즉시 채워 넣는다. 전환 중에는 `styleLoaded`를 잠깐 `false`로 내려 기존 로딩 오버레이(발자국 애니메이션)가 다시 뜨게 했다 — 별도 트랜지션 UI를 새로 만들지 않고 기존 걸 재사용.
+- **트레일 라인**: 라이트는 기존 코랄→옐로우 그라디언트 그대로. 다크는 `line-gradient`의 시작/끝을 같은 포인트 민트(`#7fd6c2`)로 둬 사실상 단색으로 만들고, 그 아래에 같은 소스를 쓰는 **글로우 레이어**(폭 9~11px, opacity 0.18~0.22, 같은 민트)를 한 겹 더 깔아 디자인의 "연한 글로우 + 진한 실선" 이중 stroke를 재현했다(`addTrackLayers()`가 `theme === "dark"`일 때만 글로우 레이어를 추가).
+- **현재 위치 마커·핀**: `activeHeadElement()`(발자국 마커)와 pin의 사진 placeholder 배경은 순수 DOM/SVG라 `var(--wr-track-head)`/`var(--wr-track-head-icon)`/`var(--wr-card)` 같은 CSS 변수를 그대로 써서 — MapLibre 페인트 표현식과 달리 이쪽은 브라우저가 알아서 테마에 맞춰 다시 그려준다(마커를 재생성할 필요 없음). `--wr-track-head`는 라이트에서 기존 디자인 그대로(`#F2C14E` + 흰 발바닥), 다크에서 민트 + 어두운 발바닥(`#171a21`)으로 갈라뒀다.
+- **지도 주변 크롬**(헤더, 기간/무드 필터 칩, 로딩 오버레이, 산책 시작/종료 컨트롤, 기간 직접 설정 시트)도 다른 탭과 같은 `--wr-*` 토큰으로 교체했다. 지도 컨테이너/로딩 오버레이의 플레이스홀더 배경은 `mapStyle*.json`의 `background` 레이어 색과 맞춘 전용 토큰 `--wr-map-bg`(라이트 `#eeede1`, 다크 `#171a21`)를 쓴다 — 타일이 늦게 뜨거나 오프라인일 때도 아래 배경색이 테마와 어긋나지 않는다.
+- **확인한 것**: `npm run build`/`npm run lint` 통과. **브라우저 실측은 못했다** — 다음 세션에서 ① 다크 모드 토글 후 지도 탭이 실제로 어두운 타일로 바뀌는지 ② 토글 도중 저장된 트랙/진행 중 산책 선이 사라지지 않고 다시 그려지는지 ③ 글로우 레이어가 실제로 보기 좋게 겹치는지 눈으로 확인해야 한다.
+- 디자인 3c가 언급한 반투명 달·별점 오버레이는 옮기지 않았다 — 실제 벡터 지도 위에 얹을 마땅한 자리(정적 장식이라 지도가 움직이면 같이 움직여야 자연스러운데, 시간/날씨 데이터도 없어 장식 이상의 의미를 못 준다)가 애매해서 스코프에서 뺐다. 필요하면 지도 컨테이너에 고정된 절대위치 오버레이로 간단히 추가할 수 있다.
+
 ## 산책 경로 추적 (걸어온 길 점선)
 
 지도 탭 아래쪽의 "산책 시작 → 산책 종료하고 저장" 컨트롤이 `navigator.geolocation.watchPosition`으로 위치를 모아 `walk_tracks` 한 행으로 저장한다. 로직은 `src/lib/track.ts`(순수 계산)와 `src/lib/useWalkTracker.ts`(훅)로 나뉘어 있고, 상태 소유자는 `page.tsx`다(기록과 같은 자리).

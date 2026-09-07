@@ -2,12 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MaplibreMap, Marker, type ExpressionSpecification, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
-import mapStyle from "@/lib/mapStyle.json";
+import mapStyleLight from "@/lib/mapStyle.json";
+import mapStyleDark from "@/lib/mapStyle-dark.json";
 import { MOOD_BG, MOOD_COLOR, MOOD_LIST, type Mood } from "@/lib/mood";
 import { formatDistance, formatDuration, toSmoothedCoordinates, tracksToGeoJSON } from "@/lib/track";
+import type { Theme } from "@/lib/theme";
 import type { WalkTracker } from "@/lib/useWalkTracker";
 import type { TrackPoint, WalkRecord, WalkTrack } from "@/types/walk";
 import PawIcon from "@/components/PawIcon";
+
+function mapStyleFor(theme: Theme): StyleSpecification {
+  return (theme === "dark" ? mapStyleDark : mapStyleLight) as StyleSpecification;
+}
 
 // 사용자가 실제로 걸은 곳이 없을 때 보여줄 기본 중심 — 서울시청.
 const DEFAULT_CENTER: [number, number] = [126.978, 37.5665];
@@ -46,21 +52,73 @@ function withinPeriod(iso: string, key: PeriodKey, custom: { start: string; end:
 // lineMetrics: true가 필요하다.
 const TRACK_SOURCE = "walk-tracks";
 const TRACK_LAYER = "walk-tracks-line";
+const TRACK_GLOW_LAYER = "walk-tracks-line-glow";
 const ACTIVE_SOURCE = "walk-active-track";
 const ACTIVE_LAYER = "walk-active-track-line";
+const ACTIVE_GLOW_LAYER = "walk-active-track-line-glow";
 const TRACK_GRADIENT_START = "#E8927C";
 const TRACK_GRADIENT_END = "#F2C14E";
-const TRACK_GRADIENT: ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["line-progress"],
-  0,
-  TRACK_GRADIENT_START,
-  1,
-  TRACK_GRADIENT_END,
-];
+// 다크 모드(디자인 3c 야간 지도 시안) — 그라디언트 대신 포인트 민트 단색 + 아래 겹치는
+// "글로우" 레이어(굵고 옅은 stroke)로 발광감을 낸다. line-gradient 표현식 자체는
+// 그대로 두되 시작/끝 색을 같은 민트로 둬서 사실상 단색이 되게 한다.
+const DARK_TRACK_COLOR = "#7fd6c2";
+
+function trackGradient(theme: Theme, start: string, end: string): ExpressionSpecification {
+  const [from, to] = theme === "dark" ? [DARK_TRACK_COLOR, DARK_TRACK_COLOR] : [start, end];
+  return ["interpolate", ["linear"], ["line-progress"], 0, from, 1, to];
+}
 
 const TRACK_LINE_LAYOUT = { "line-cap": "round", "line-join": "round" } as const;
+
+// 저장된 트랙 + 진행 중인 트랙, 두 소스와 그 위 레이어(다크에서는 글로우 포함)를
+// 만든다. 최초 마운트와, 테마가 바뀌어 setStyle로 스타일을 통째로 교체한 뒤 둘
+// 다에서 쓴다 — setStyle은 새 스타일 JSON에 없는 런타임 소스/레이어를 지워버리므로
+// 스타일이 바뀔 때마다 다시 호출해야 한다.
+function addTrackLayers(map: MaplibreMap, theme: Theme) {
+  map.addSource(TRACK_SOURCE, { type: "geojson", data: emptyFeatureCollection(), lineMetrics: true });
+  if (theme === "dark") {
+    map.addLayer({
+      id: TRACK_GLOW_LAYER,
+      type: "line",
+      source: TRACK_SOURCE,
+      layout: TRACK_LINE_LAYOUT,
+      paint: { "line-color": DARK_TRACK_COLOR, "line-width": 9, "line-opacity": 0.18 },
+    });
+  }
+  map.addLayer({
+    id: TRACK_LAYER,
+    type: "line",
+    source: TRACK_SOURCE,
+    layout: TRACK_LINE_LAYOUT,
+    paint: {
+      "line-gradient": trackGradient(theme, TRACK_GRADIENT_START, TRACK_GRADIENT_END),
+      "line-width": 3,
+      "line-opacity": 0.55,
+    },
+  });
+
+  map.addSource(ACTIVE_SOURCE, { type: "geojson", data: emptyFeatureCollection(), lineMetrics: true });
+  if (theme === "dark") {
+    map.addLayer({
+      id: ACTIVE_GLOW_LAYER,
+      type: "line",
+      source: ACTIVE_SOURCE,
+      layout: TRACK_LINE_LAYOUT,
+      paint: { "line-color": DARK_TRACK_COLOR, "line-width": 11, "line-opacity": 0.22 },
+    });
+  }
+  map.addLayer({
+    id: ACTIVE_LAYER,
+    type: "line",
+    source: ACTIVE_SOURCE,
+    layout: TRACK_LINE_LAYOUT,
+    paint: {
+      "line-gradient": trackGradient(theme, TRACK_GRADIENT_START, TRACK_GRADIENT_END),
+      "line-width": 4,
+      "line-opacity": 1,
+    },
+  });
+}
 
 function emptyFeatureCollection(): GeoJSON.FeatureCollection {
   return { type: "FeatureCollection", features: [] };
@@ -119,7 +177,7 @@ function pinElement(record: WalkRecord) {
   el.style.background = MOOD_BG[record.ai_mood];
   el.style.boxShadow = "0 2px 6px rgba(46,43,36,0.3)";
   const photoContainer = document.createElement("div");
-  photoContainer.style.cssText = "width:100%;height:100%;border-radius:50%;overflow:hidden;background:#fff;";
+  photoContainer.style.cssText = "width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--wr-card);";
   el.appendChild(photoContainer);
   return { el, photoContainer };
 }
@@ -130,8 +188,8 @@ function pinElement(record: WalkRecord) {
 function activeHeadElement() {
   const el = document.createElement("div");
   el.style.cssText =
-    "width:30px;height:30px;border-radius:50%;background:#F2C14E;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(46,43,36,0.25);";
-  el.innerHTML = `<svg width="17" height="17" viewBox="0 0 100 100" fill="#fff" aria-hidden="true"><ellipse cx="18" cy="42" rx="10" ry="12.5" transform="rotate(-22 18 42)"/><ellipse cx="38.5" cy="27" rx="10.5" ry="13" transform="rotate(-8 38.5 27)"/><ellipse cx="61.5" cy="27" rx="10.5" ry="13" transform="rotate(8 61.5 27)"/><ellipse cx="82" cy="42" rx="10" ry="12.5" transform="rotate(22 82 42)"/><path d="M50 46C62 46 78 60 82 72C85 82 76 89 66 88C58 87.2 42 87.2 34 88C24 89 15 82 18 72C22 60 38 46 50 46Z"/></svg>`;
+    "width:30px;height:30px;border-radius:50%;background:var(--wr-track-head);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(46,43,36,0.25);";
+  el.innerHTML = `<svg width="17" height="17" viewBox="0 0 100 100" fill="var(--wr-track-head-icon)" aria-hidden="true"><ellipse cx="18" cy="42" rx="10" ry="12.5" transform="rotate(-22 18 42)"/><ellipse cx="38.5" cy="27" rx="10.5" ry="13" transform="rotate(-8 38.5 27)"/><ellipse cx="61.5" cy="27" rx="10.5" ry="13" transform="rotate(8 61.5 27)"/><ellipse cx="82" cy="42" rx="10" ry="12.5" transform="rotate(22 82 42)"/><path d="M50 46C62 46 78 60 82 72C85 82 76 89 66 88C58 87.2 42 87.2 34 88C24 89 15 82 18 72C22 60 38 46 50 46Z"/></svg>`;
   return el;
 }
 
@@ -202,12 +260,14 @@ export default function MapTab({
   tracker,
   imageUrls,
   onSelectPin,
+  theme,
 }: {
   records: WalkRecord[];
   tracks: WalkTrack[];
   tracker: WalkTracker;
   imageUrls: Record<string, string>;
   onSelectPin: (record: WalkRecord) => void;
+  theme: Theme;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MaplibreMap | null>(null);
@@ -282,7 +342,7 @@ export default function MapTab({
 
     const map = new MaplibreMap({
       container: containerRef.current,
-      style: mapStyle as StyleSpecification,
+      style: mapStyleFor(theme),
       center: initialCenter,
       zoom: 14,
       attributionControl: { compact: true },
@@ -293,35 +353,9 @@ export default function MapTab({
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
     map.once("load", () => {
-      // 걸어온 길(저장된 트랙 + 진행 중인 산책) 두 레이어를 핀보다 아래에 깔아둔다.
+      // 걸어온 길(저장된 트랙 + 진행 중인 산책) 레이어를 핀보다 아래에 깔아둔다.
       // 소스는 빈 채로 먼저 만들어두고, 데이터는 아래 effect가 setData로 채운다.
-      // lineMetrics: true가 있어야 line-gradient(아래)가 line-progress를 계산할 수 있다.
-      map.addSource(TRACK_SOURCE, { type: "geojson", data: emptyFeatureCollection(), lineMetrics: true });
-      map.addLayer({
-        id: TRACK_LAYER,
-        type: "line",
-        source: TRACK_SOURCE,
-        layout: TRACK_LINE_LAYOUT,
-        paint: {
-          "line-gradient": TRACK_GRADIENT,
-          "line-width": 3,
-          "line-opacity": 0.55,
-        },
-      });
-
-      map.addSource(ACTIVE_SOURCE, { type: "geojson", data: emptyFeatureCollection(), lineMetrics: true });
-      map.addLayer({
-        id: ACTIVE_LAYER,
-        type: "line",
-        source: ACTIVE_SOURCE,
-        layout: TRACK_LINE_LAYOUT,
-        paint: {
-          "line-gradient": TRACK_GRADIENT,
-          "line-width": 4,
-          "line-opacity": 1,
-        },
-      });
-
+      addTrackLayers(map, theme);
       setStyleLoaded(true);
     });
 
@@ -350,6 +384,33 @@ export default function MapTab({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 다크 모드 토글 시 타일 스타일 자체를 통째로 교체한다(마운트 시 이미 반영된
+  // 첫 렌더는 건너뛴다). setStyle은 새 스타일 JSON에 없는 런타임 소스/레이어를
+  // 지워버리므로, 새 스타일이 다 뜨면(style.load) 트랙 레이어를 다시 만들고
+  // 현재 데이터를 즉시 채운다 — 그동안은 styleLoaded를 잠깐 false로 내려
+  // 로딩 오버레이(발자국 애니메이션)를 다시 보여준다.
+  const isFirstThemeRender = useRef(true);
+  useEffect(() => {
+    if (isFirstThemeRender.current) {
+      isFirstThemeRender.current = false;
+      return;
+    }
+    const map = mapRef.current;
+    if (!map) return;
+
+    setStyleLoaded(false);
+    map.setStyle(mapStyleFor(theme));
+    map.once("style.load", () => {
+      addTrackLayers(map, theme);
+      const trackSource = map.getSource(TRACK_SOURCE) as GeoJSONSource | undefined;
+      trackSource?.setData(tracksToGeoJSON(mapTracks));
+      const activeSource = map.getSource(ACTIVE_SOURCE) as GeoJSONSource | undefined;
+      activeSource?.setData(activeTrackGeoJSON(tracker.points));
+      setStyleLoaded(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme]);
 
   // 기록·필터가 바뀔 때마다 핀을 다시 그린다. 현재 시야 안에 있는 핀만 사진을
   // 바로 불러오고, 밖에 있는 핀은 pendingPinsRef에 넣어 moveend를 기다린다.
@@ -443,8 +504,8 @@ export default function MapTab({
   return (
     <div>
       <div style={{ padding: "2px 20px 12px" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: "#2E2B24", padding: "6px 0 0", margin: 0 }}>지도</h1>
-        <div style={{ fontSize: 13, color: "#8B8578", fontWeight: 500, padding: "4px 0 14px" }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--wr-text)", padding: "6px 0 0", margin: 0 }}>지도</h1>
+        <div style={{ fontSize: 13, color: "var(--wr-text-muted)", fontWeight: 500, padding: "4px 0 14px" }}>
           발자취가 쌓인 곳
         </div>
       </div>
@@ -472,8 +533,8 @@ export default function MapTab({
                 fontSize: 12.5,
                 fontWeight: 700,
                 cursor: "pointer",
-                background: active ? "#2E2B24" : "#EFEBDD",
-                color: active ? "#FAF6EC" : "#8B8578",
+                background: active ? "var(--wr-text)" : "var(--wr-card-alt)",
+                color: active ? "var(--wr-bg)" : "var(--wr-text-muted)",
               }}
             >
               {p.label}
@@ -492,8 +553,8 @@ export default function MapTab({
             fontSize: 12.5,
             fontWeight: 700,
             cursor: "pointer",
-            background: mapPeriod === "custom" ? "#2E2B24" : "#EFEBDD",
-            color: mapPeriod === "custom" ? "#FAF6EC" : "#8B8578",
+            background: mapPeriod === "custom" ? "var(--wr-text)" : "var(--wr-card-alt)",
+            color: mapPeriod === "custom" ? "var(--wr-bg)" : "var(--wr-text-muted)",
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -503,12 +564,12 @@ export default function MapTab({
               width="18"
               height="16"
               rx="3"
-              stroke={mapPeriod === "custom" ? "#FAF6EC" : "#8B8578"}
+              stroke={mapPeriod === "custom" ? "var(--wr-bg)" : "var(--wr-text-muted)"}
               strokeWidth="2"
             />
             <path
               d="M3 10h18M8 3v4M16 3v4"
-              stroke={mapPeriod === "custom" ? "#FAF6EC" : "#8B8578"}
+              stroke={mapPeriod === "custom" ? "var(--wr-bg)" : "var(--wr-text-muted)"}
               strokeWidth="2"
               strokeLinecap="round"
             />
@@ -538,8 +599,8 @@ export default function MapTab({
             fontSize: 12.5,
             fontWeight: 700,
             cursor: "pointer",
-            background: mapMood === "all" ? "#2E2B24" : "#EFEBDD",
-            color: mapMood === "all" ? "#FAF6EC" : "#8B8578",
+            background: mapMood === "all" ? "var(--wr-text)" : "var(--wr-card-alt)",
+            color: mapMood === "all" ? "var(--wr-bg)" : "var(--wr-text-muted)",
           }}
         >
           전체
@@ -560,8 +621,8 @@ export default function MapTab({
                 fontSize: 12.5,
                 fontWeight: 700,
                 cursor: "pointer",
-                background: active ? MOOD_COLOR[mood] : "#EFEBDD",
-                color: active ? "#FAF6EC" : "#8B8578",
+                background: active ? MOOD_COLOR[mood] : "var(--wr-card-alt)",
+                color: active ? "var(--wr-bg)" : "var(--wr-text-muted)",
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: MOOD_COLOR[mood] }} />
@@ -578,7 +639,7 @@ export default function MapTab({
           height: 540,
           borderRadius: 24,
           overflow: "hidden",
-          background: "#EEEDE1",
+          background: "var(--wr-map-bg)",
         }}
       >
         <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
@@ -588,7 +649,7 @@ export default function MapTab({
             style={{
               position: "absolute",
               inset: 0,
-              background: "#EEEDE1",
+              background: "var(--wr-map-bg)",
               zIndex: 4,
               display: "flex",
               flexDirection: "column",
@@ -602,7 +663,7 @@ export default function MapTab({
                 <FootIcon key={i} {...f} />
               ))}
             </div>
-            <div style={{ fontSize: 14, color: "#8B8578", fontWeight: 600 }}>발자취를 따라가는 중...</div>
+            <div style={{ fontSize: 14, color: "var(--wr-text-muted)", fontWeight: 600 }}>발자취를 따라가는 중...</div>
           </div>
         )}
 
@@ -645,7 +706,7 @@ export default function MapTab({
                   gap: 12,
                   padding: "11px 16px",
                   borderRadius: 16,
-                  background: "rgba(255,255,255,0.94)",
+                  background: "var(--wr-glass)",
                   boxShadow: "0 4px 14px rgba(46,43,36,0.14)",
                 }}
               >
@@ -655,15 +716,15 @@ export default function MapTab({
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: tracker.tracking ? TRACK_GRADIENT_START : "#B0AA98",
+                      background: tracker.tracking ? (theme === "dark" ? DARK_TRACK_COLOR : TRACK_GRADIENT_START) : "var(--wr-text-faint)",
                       animation: tracker.tracking ? "wr-foot-pulse 1.4s ease-in-out infinite" : undefined,
                     }}
                   />
-                  <span style={{ fontSize: 13, fontWeight: 800, color: "#2E2B24" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "var(--wr-text)" }}>
                     {formatDistance(tracker.distance)}
                   </span>
                 </div>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#8B8578" }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--wr-text-muted)" }}>
                   {tracker.startedAt ? formatDuration(now - tracker.startedAt) : "0분"} · 점 {tracker.points.length}개
                 </span>
               </div>
@@ -681,7 +742,7 @@ export default function MapTab({
                   fontWeight: 800,
                   cursor: "pointer",
                   color: "#fff",
-                  background: tracker.tracking ? "#2E2B24" : "linear-gradient(135deg,#F0A28C,#D97BA0)",
+                  background: tracker.tracking ? "var(--wr-text)" : "linear-gradient(135deg,#F0A28C,#D97BA0)",
                   boxShadow: "0 4px 14px rgba(232,146,124,0.32)",
                 }}
               >
@@ -697,8 +758,8 @@ export default function MapTab({
                     fontSize: 14,
                     fontWeight: 700,
                     cursor: "pointer",
-                    color: "#8B8578",
-                    background: "rgba(255,255,255,0.94)",
+                    color: "var(--wr-text-muted)",
+                    background: "var(--wr-glass)",
                     boxShadow: "0 4px 14px rgba(46,43,36,0.12)",
                   }}
                 >
@@ -718,9 +779,9 @@ export default function MapTab({
               top: 16,
               padding: "10px 14px",
               borderRadius: 14,
-              background: "rgba(255,255,255,0.88)",
+              background: "var(--wr-glass)",
               fontSize: 13,
-              color: "#8B8578",
+              color: "var(--wr-text-muted)",
               fontWeight: 600,
               textAlign: "center",
               pointerEvents: "none",
@@ -743,7 +804,7 @@ export default function MapTab({
               pointerEvents: "none",
             }}
           >
-            <span style={{ fontSize: 13, color: "#9C9683", fontWeight: 600 }}>조건에 맞는 발자취가 없어요</span>
+            <span style={{ fontSize: 13, color: "var(--wr-text-faint)", fontWeight: 600 }}>조건에 맞는 발자취가 없어요</span>
           </div>
         )}
       </div>
@@ -754,7 +815,7 @@ export default function MapTab({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(46,43,36,0.4)",
+            background: "var(--wr-overlay)",
             zIndex: 70,
             display: "flex",
             alignItems: "flex-end",
@@ -766,7 +827,7 @@ export default function MapTab({
             style={{
               width: "100%",
               maxWidth: 480,
-              background: "#FAF6EC",
+              background: "var(--wr-bg)",
               borderRadius: "24px 24px 0 0",
               padding: "22px 22px 30px",
               display: "flex",
@@ -774,38 +835,38 @@ export default function MapTab({
               gap: 16,
             }}
           >
-            <div style={{ fontSize: 17, fontWeight: 800, color: "#2E2B24" }}>기간 직접 설정</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "var(--wr-text)" }}>기간 직접 설정</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 12.5, color: "#8B8578", fontWeight: 600 }}>시작일</span>
+              <span style={{ fontSize: 12.5, color: "var(--wr-text-muted)", fontWeight: 600 }}>시작일</span>
               <input
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
                 style={{
-                  border: "1.5px solid #E4DFCF",
+                  border: "1.5px solid var(--wr-border-strong)",
                   borderRadius: 12,
                   padding: "10px 12px",
                   fontSize: 14,
                   fontFamily: "inherit",
-                  color: "#2E2B24",
-                  background: "#fff",
+                  color: "var(--wr-text)",
+                  background: "var(--wr-card)",
                 }}
               />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 12.5, color: "#8B8578", fontWeight: 600 }}>종료일</span>
+              <span style={{ fontSize: 12.5, color: "var(--wr-text-muted)", fontWeight: 600 }}>종료일</span>
               <input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
                 style={{
-                  border: "1.5px solid #E4DFCF",
+                  border: "1.5px solid var(--wr-border-strong)",
                   borderRadius: 12,
                   padding: "10px 12px",
                   fontSize: 14,
                   fontFamily: "inherit",
-                  color: "#2E2B24",
-                  background: "#fff",
+                  color: "var(--wr-text)",
+                  background: "var(--wr-card)",
                 }}
               />
             </div>
@@ -815,8 +876,8 @@ export default function MapTab({
                 marginTop: 6,
                 padding: 14,
                 borderRadius: 16,
-                background: "#2E2B24",
-                color: "#FAF6EC",
+                background: "var(--wr-text)",
+                color: "var(--wr-bg)",
                 textAlign: "center",
                 fontSize: 14.5,
                 fontWeight: 700,
