@@ -36,23 +36,18 @@ export default function DashboardTab({
 
   // 걸은 거리 카드는 사진 기록이 하나도 없어도 보여준다 — 산책 트랙과 사진 기록은
   // 별개로 쌓이기 때문에, 사진 없이 걷기만 한 주에도 거리는 나와야 한다.
+  // 원래는 코랄 그라디언트를 채운 카드였는데, 대시보드의 다른 카드(요일별 거리·태그
+  // 워드클라우드·무드 분포)는 전부 같은 var(--wr-card) 흰/다크 카드라 이질감이 있었다
+  // — 다른 카드와 같은 배경으로 맞추고, 숫자만 var(--wr-stat-value)로 강조한다
+  // (ProfileTab 통계 숫자와 같은 패턴: 라이트는 본문 텍스트색, 다크는 포인트 민트).
   const weekCard = (
-    <div
-      style={{
-        ...cardStyle,
-        background: "linear-gradient(135deg,var(--wr-cta-start),var(--wr-cta-end))",
-        color: "var(--wr-accent-contrast)",
-        boxShadow: "0 6px 18px rgba(var(--wr-cta-shadow-rgb),0.28)",
-      }}
-    >
-      <div style={{ ...cardLabel, color: "rgba(var(--wr-accent-contrast-rgb),0.85)", marginBottom: 10 }}>
-        이번주 걸은 거리
-      </div>
+    <div style={cardStyle}>
+      <div style={{ ...cardLabel, marginBottom: 10 }}>이번주 걸은 거리</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-        <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -0.5 }}>
+        <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -0.5, color: "var(--wr-stat-value)" }}>
           {formatDistance(weekMeters)}
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(var(--wr-accent-contrast-rgb),0.85)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--wr-text-muted)" }}>
           산책 {weekTracks.length}회
         </div>
       </div>
