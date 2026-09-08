@@ -7,6 +7,7 @@ import { fileToBase64, getCurrentPosition, readExifPhotoMeta, resizeImage } from
 import { isMood, type Mood } from "@/lib/mood";
 import { useWalkTracker } from "@/lib/useWalkTracker";
 import { useTheme } from "@/lib/theme";
+import { readRecordsCache, writeRecordsCache } from "@/lib/offlineCache";
 import type { PendingAnalysis, WalkRecord, WalkTrack } from "@/types/walk";
 
 import Splash from "@/components/Splash";
@@ -25,6 +26,12 @@ import Toast from "@/components/Toast";
 type Stage = "splash" | "onboarding" | "auth" | "app";
 
 const ONBOARDING_KEY = "walk_onboarding_seen";
+// 아바타 서명 URL 유효기간. 원래 1시간(3600)이었는데, 내정보 탭은 boot() 때 한 번
+// 계산해둔 avatarUrl을 계속 들고 있다가 탭을 열 때마다 <img>를 새로 마운트한다 —
+// 그래서 앱을 1시간 넘게 켜둔 채 내정보 탭을 다시 열면 서명이 만료돼 사진이
+// 깨져 보였다("이따금 프로필 사진을 못 불러올 때가 있다"). 세션 하나가 그렇게
+// 오래갈 일이 거의 없도록 24시간으로 늘렸다.
+const AVATAR_SIGNED_URL_TTL = 60 * 60 * 24;
 
 export default function Page() {
   const [stage, setStage] = useState<Stage>("splash");
@@ -100,16 +107,33 @@ export default function Page() {
   }, [activeTab, records, updateThumb]);
 
   const loadRecords = useCallback(async () => {
+    // 캐시 키로 쓸 사용자 id — 클로저의 session state는 boot() 최초 호출 시점엔
+    // 아직 반영 전이라 못 믿는다(setSession 직후 곧바로 loadRecords를 부르므로),
+    // 매번 직접 다시 물어본다.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+
     const { data, error } = await supabase
       .from("walk_records")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) {
-      showToast("기록을 불러오지 못했어요");
+      // 요청 자체가 실패한 경우(전형적으로 PWA가 백그라운드에서 종료됐다가 재개
+      // 직후라 네트워크가 아직 안 붙었을 때) — 마지막으로 성공했던 기록이
+      // 로컬에 남아있으면 그걸로라도 채운다. 안 그러면 진짜로는 기록이 있는데도
+      // 피드가 "지금 첫 기록을 남겨주세요"로 보여 데이터가 사라진 것처럼 보인다.
+      const cached = userId ? readRecordsCache(userId) : null;
+      if (cached && cached.length > 0) {
+        setRecords(cached);
+        showToast("네트워크가 불안정해서 마지막으로 불러온 기록을 보여드려요");
+      } else {
+        showToast("기록을 불러오지 못했어요");
+      }
       return;
     }
     const list = (data || []) as WalkRecord[];
     setRecords(list);
+    if (userId) writeRecordsCache(userId, list);
 
     const paths = [...new Set(list.map((r) => r.image_url))];
     if (paths.length > 0) {
@@ -142,7 +166,9 @@ export default function Page() {
     const avatarPath = (data?.avatar_path as string | null) ?? null;
     let avatarUrl: string | null = null;
     if (avatarPath) {
-      const { data: signed } = await supabase.storage.from(WALK_PHOTOS_BUCKET).createSignedUrl(avatarPath, 3600);
+      const { data: signed } = await supabase.storage
+        .from(WALK_PHOTOS_BUCKET)
+        .createSignedUrl(avatarPath, AVATAR_SIGNED_URL_TTL);
       avatarUrl = signed?.signedUrl ?? null;
       // 내정보 탭의 <img>가 마운트될 때(=사용자가 탭을 열 때)까지 기다리지 않고, 부팅
       // 시점에 브라우저 캐시로 미리 받아둔다 — 나중에 실제 <img src>가 같은 URL로
@@ -152,6 +178,23 @@ export default function Page() {
     }
     setProfile({ nickname, avatarPath, avatarUrl });
   }, []);
+
+  // avatarUrl이 어떤 이유로든(서명 만료, 일시적 네트워크 오류 등) 못 뜨면 <img>의
+  // onError에서 한 번 불러 서명을 새로 발급받는다 — avatarPath 하나당 한 번만
+  // 재시도해서, 파일 자체가 없어졌거나 접근 불가능한 경우(재시도해도 계속 실패)
+  // 새 서명 URL을 무한히 발급받아 <img>가 계속 다시 로드를 시도하는 걸 막는다.
+  const avatarRetriedForRef = useRef<string | null>(null);
+  const refreshAvatarUrl = useCallback(async () => {
+    const path = profile.avatarPath;
+    if (!path || avatarRetriedForRef.current === path) return;
+    avatarRetriedForRef.current = path;
+    const { data: signed } = await supabase.storage
+      .from(WALK_PHOTOS_BUCKET)
+      .createSignedUrl(path, AVATAR_SIGNED_URL_TTL);
+    if (signed?.signedUrl) {
+      setProfile((prev) => (prev.avatarPath === path ? { ...prev, avatarUrl: signed.signedUrl } : prev));
+    }
+  }, [profile.avatarPath]);
 
   const handleUpdateNickname = useCallback(
     async (nickname: string) => {
@@ -188,7 +231,9 @@ export default function Page() {
           supabase.storage.from(WALK_PHOTOS_BUCKET).remove([profile.avatarPath]).then(() => {});
         }
 
-        const { data: signed } = await supabase.storage.from(WALK_PHOTOS_BUCKET).createSignedUrl(path, 3600);
+        const { data: signed } = await supabase.storage
+          .from(WALK_PHOTOS_BUCKET)
+          .createSignedUrl(path, AVATAR_SIGNED_URL_TTL);
         setProfile({ nickname: profile.nickname, avatarPath: path, avatarUrl: signed?.signedUrl ?? null });
         showToast("프로필 사진이 변경되었어요");
       } catch {
@@ -504,6 +549,7 @@ export default function Page() {
                   joinedAt={session?.user.created_at}
                   nickname={profile.nickname}
                   avatarUrl={profile.avatarUrl}
+                  onAvatarError={refreshAvatarUrl}
                   theme={theme}
                   onToggleTheme={toggleTheme}
                   onReopenOnboarding={handleReopenOnboarding}

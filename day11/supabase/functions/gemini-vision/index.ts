@@ -52,8 +52,17 @@ function pickMock() {
   return { ...pick, caption: `${pick.caption} (mock)` };
 }
 
-async function callGemini(imageBase64: string, mimeType: string, apiKey: string) {
-  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.6-flash";
+// 503(모델 과부하)/429(레이트리밋)은 Google 쪽의 일시적인 상태라 재시도하면 곧잘
+// 성공한다 — 그 외(401/400 등)는 재시도해도 똑같이 실패하므로 바로 포기한다.
+const RETRYABLE_STATUS = new Set([429, 503]);
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 900;
+// 시도당 타임아웃을 30s에서 15s로 줄여, 재시도 1번을 더해도 클라이언트가 체감하는
+// 최악의 대기시간(둘 다 타임아웃 나는 극단적 경우)이 예전 한 번 시도(30s)보다
+// 크게 늘어나지 않게 했다.
+const REQUEST_TIMEOUT_MS = 15_000;
+
+async function callGeminiOnce(imageBase64: string, mimeType: string, apiKey: string, model: string) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const res = await fetch(url, {
@@ -76,13 +85,15 @@ async function callGemini(imageBase64: string, mimeType: string, apiKey: string)
         temperature: 1.3,
       },
     }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!res.ok) {
     const body = await res.text();
     console.error("[gemini-vision] Gemini upstream error:", res.status, body);
-    throw new Error(`gemini_upstream_${res.status}`);
+    const err = new Error(`gemini_upstream_${res.status}`);
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
   }
 
   const payload = await res.json();
@@ -92,6 +103,24 @@ async function callGemini(imageBase64: string, mimeType: string, apiKey: string)
     throw new Error("gemini_empty_response");
   }
   return JSON.parse(text);
+}
+
+async function callGemini(imageBase64: string, mimeType: string, apiKey: string) {
+  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.6-flash";
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await callGeminiOnce(imageBase64, mimeType, apiKey, model);
+    } catch (err) {
+      const status = (err as Error & { status?: number }).status;
+      const canRetry = attempt < MAX_ATTEMPTS && status !== undefined && RETRYABLE_STATUS.has(status);
+      if (!canRetry) throw err;
+      console.error(`[gemini-vision] attempt ${attempt} failed with ${status}, retrying...`);
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
+  }
+  // MAX_ATTEMPTS >= 1이라 루프가 항상 return/throw로 끝나지만, TS가 이를 모르므로 형식상 필요.
+  throw new Error("gemini_unreachable");
 }
 
 Deno.serve(async (req: Request) => {

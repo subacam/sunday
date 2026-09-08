@@ -46,6 +46,7 @@ export default function ProfileTab({
   onToast,
   onUpdateNickname,
   onUpdateAvatar,
+  onAvatarError,
 }: {
   records: WalkRecord[];
   joinedAt?: string;
@@ -58,6 +59,7 @@ export default function ProfileTab({
   onToast: (message: string) => void;
   onUpdateNickname: (nickname: string) => void;
   onUpdateAvatar: (file: File) => Promise<void>;
+  onAvatarError: () => void;
 }) {
   const uniqueTagCount = new Set(records.flatMap((r) => r.ai_tags)).size;
 
@@ -176,6 +178,7 @@ export default function ProfileTab({
               <img
                 src={avatarUrl}
                 alt="프로필 사진"
+                onError={onAvatarError}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             ) : (
